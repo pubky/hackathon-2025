@@ -20,7 +20,7 @@ Repository: `pubky/hackathon-lugano-2025`
 
    - Use team or individual name, **no spaces**. Prefer `kebab-case` .
    - Example: `super-team/` or `jane-doe/`.
-   - If you want your project to be a stand alone repository. Feel free commit add it here as a [gitsubmodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
+   - If you want your project to be a stand alone repository. Feel free commit it here as a [gitsubmodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
 4. Build **only inside your subfolder**.
 5. Include **README.md**, **MIT LICENSE**, and all required assets to build/run.
