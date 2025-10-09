@@ -1,6 +1,6 @@
 # Pubky Internal Hackathon Lugano 2025
 
-_If it hurts, document it. If it works, demo it._
+<img width="1536" height="1024" alt="ChatGPT Image Oct 9, 2025, 01_44_28 PM" src="https://github.com/user-attachments/assets/73777d5a-d277-45e0-a020-3d8e1dcc2f52" />
 
 ---
 
@@ -12,7 +12,7 @@ This repository contains the project submissions for the Lugano Plan B Pubky Hac
 
 ## Repository Workflow
 
-Repository: `pubky-hackathon-2025-lugano`
+Repository: `ubky/hackathon-lugano-2025`
 
 1. **Fork** the repository.
 2. **Clone** your fork locally.
@@ -20,6 +20,7 @@ Repository: `pubky-hackathon-2025-lugano`
 
    - Use team or individual name, **no spaces**. Prefer `kebab-case` .
    - Example: `super-team/` or `jane-doe/`.
+   - If you want your project to be a stand alone repository. Feel free commit add it here as a [gitsubmodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
 4. Build **only inside your subfolder**.
 5. Include **README.md**, **MIT LICENSE**, and all required assets to build/run.
