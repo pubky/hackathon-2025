@@ -123,13 +123,9 @@ Check out [examples/testnet](https://github.com/pubky/pubky-core/blob/refactor/b
 
 ### 2) Staging Homeserver (shared)
 
-- Staging homeserver public key:
+- Staging homeserver public key: `ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy`
 
-  ```
-  ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
-  ```
-
-- Generate more tokens:
+- Staging homeserver requires invitation codes to create users. You can generate invitation codes by running:
 
 ```sh
 curl -X GET \
