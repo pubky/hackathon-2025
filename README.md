@@ -12,7 +12,7 @@ This repository contains the project submissions for the Lugano Plan B Pubky Hac
 
 ## Repository Workflow
 
-Repository: `pubky/hackathon-lugano-2025`
+Repository: `pubky/hackathon-2025`
 
 1. **Fork** the repository.
 2. **Clone** your fork locally.
