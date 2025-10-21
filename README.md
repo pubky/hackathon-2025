@@ -1,1 +1,1 @@
-# Pubky Desktop App
+# Pubky Decentralized Wiki
