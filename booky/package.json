@@ -1,0 +1,30 @@
+{
+  "name": "booky",
+  "version": "1.0.0",
+  "description": "Browser extension for syncing bookmarks using Pubky",
+  "main": "src/background/background.js",
+  "scripts": {
+    "build:chrome": "webpack --config webpack.config.js --env target=chrome",
+    "build:firefox": "webpack --config webpack.config.js --env target=firefox",
+    "build:all": "npm run build:chrome && npm run build:firefox",
+    "watch:chrome": "webpack --watch --config webpack.config.js --env target=chrome",
+    "watch:firefox": "webpack --watch --config webpack.config.js --env target=firefox"
+  },
+  "keywords": [
+    "bookmarks",
+    "sync",
+    "pubky",
+    "browser-extension"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "copy-webpack-plugin": "^11.0.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@synonymdev/pubky": "0.6.0-rc.6"
+  }
+}
+

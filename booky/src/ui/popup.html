@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Booky</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="screen" style="display: none;">
+      <div class="header">
+        <h1>Welcome to Booky</h1>
+        <p>Sync your bookmarks using Pubky</p>
+      </div>
+
+      <div class="setup-form">
+        <label for="invite-code">Invite Code (optional)</label>
+        <input type="text" id="invite-code" placeholder="Enter invite code">
+
+        <button id="setup-button" class="primary-button">Setup Booky</button>
+      </div>
+
+      <div id="setup-result" style="display: none;">
+        <div class="success-message">
+          <p>Setup complete!</p>
+          <p><strong>Your Pubkey:</strong> <span id="generated-pubkey"></span></p>
+          <p><strong>Folder:</strong> <span id="generated-folder"></span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main-screen" class="screen" style="display: none;">
+      <div class="header">
+        <h1>Booky</h1>
+      </div>
+
+      <div class="info-section">
+        <div class="info-row">
+          <span class="label">Your Pubkey:</span>
+          <span id="user-pubkey" class="value"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Main Folder:</span>
+          <span id="user-folder" class="value"></span>
+        </div>
+      </div>
+
+      <div class="add-pubkey-section">
+        <h3>Monitor Other Pubkeys</h3>
+        <div class="input-group">
+          <input type="text" id="monitor-pubkey" placeholder="Enter pubkey to monitor">
+          <button id="add-pubkey-button" class="secondary-button">Add</button>
+        </div>
+      </div>
+
+      <div class="folders-section">
+        <h3>Synced Folders</h3>
+        <div id="folders-list"></div>
+      </div>
+
+      <div class="actions">
+        <button id="manual-sync-button" class="primary-button">Sync Now</button>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" style="display: none;">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+
