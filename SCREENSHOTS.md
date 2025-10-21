@@ -35,15 +35,13 @@ Since this is a GUI application that requires a display server, here are detaile
 ║                                                           ║
 ║      Scan this QR code with your Pubky app to login:     ║
 ║                                                           ║
-║               ┌─────────────────────┐                     ║
-║               │ ████  █ ██  █ ████ │                     ║
-║               │ █  █ ██ █  ██ █  █ │                     ║
-║               │ █  █  ███ ███ █  █ │                     ║
-║               │ ████ ██  ██  █████ │                     ║
-║               │  ██ ███ ███ ██  ██ │                     ║
-║               │ █  █ ██ █  ██ █  █ │                     ║
-║               │ ████  █ ██  █ ████ │                     ║
-║               └─────────────────────┘                     ║
+║                 ┌───────────────┐                         ║
+║                 │ ███ █ ██ ███ │                         ║
+║                 │ █ █ █ █  █ █ │                         ║
+║                 │ ███ ███ ████ │                         ║
+║                 │  ██ █ █ ██ █ │                         ║
+║                 │ ███ █ ██ ███ │                         ║
+║                 └───────────────┘                         ║
 ║                                                           ║
 ║                   Or use this URL:                        ║
 ║  ┌─────────────────────────────────────────────────────┐ ║
@@ -57,12 +55,13 @@ Since this is a GUI application that requires a display server, here are detaile
 ```
 
 **Description:**
-- Large QR code (scaled 4x from original size)
+- QR code (scaled 2x, max 300x300px to fit window)
 - Black and white QR code with sharp edges
 - Scrollable text box showing the full authorization URL
 - Spinner animation at the bottom indicating waiting state
 - URL is selectable and copyable
 - QR code encodes the complete `pubkyauth://` URL
+- QR code properly fits within the 600x700px window boundaries
 
 **Technical Details:**
 - QR code contains: relay URL, capabilities, and client secret
