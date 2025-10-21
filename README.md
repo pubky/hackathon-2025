@@ -91,7 +91,7 @@ You can embed an ephimeral testnet using the `pubky-testnet` crate for full loca
 cargo add pubky-testnet@=0.6.0-rc.1
 ```
 
-Check out [examples/testnet](https://github.com/pubky/pubky-core/main/examples/rust/1-testnet) to learn how to create from a tiny app performing signup/put/get against an ephemeral local testnet.
+Check out [examples/testnet](https://github.com/pubky/pubky-core/tree/main/examples/rust/1-testnet) to learn how to create from a tiny app performing signup/put/get against an ephemeral local testnet.
 
 You can also run it as a separate process by:
 
