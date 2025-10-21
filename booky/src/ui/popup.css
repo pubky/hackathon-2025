@@ -115,6 +115,15 @@ body {
   font-weight: 600;
 }
 
+.success-message span {
+  font-family: monospace;
+  font-size: 12px;
+  word-break: break-all;
+  display: block;
+  margin-top: 4px;
+  user-select: all;
+}
+
 .info-section {
   margin-bottom: 20px;
   padding: 12px;
@@ -141,7 +150,14 @@ body {
 .info-row .value {
   color: #333;
   font-family: monospace;
-  font-size: 12px;
+  font-size: 11px;
+  word-break: break-all;
+  user-select: all;
+}
+
+.info-row .value:hover {
+  background: #e9ecef;
+  border-radius: 2px;
 }
 
 .add-pubkey-section {
@@ -285,5 +301,31 @@ body {
   color: #721c24;
   font-size: 14px;
   margin-top: 12px;
+}
+
+.toast-message {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #28a745;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 

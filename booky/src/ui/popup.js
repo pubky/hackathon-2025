@@ -74,8 +74,14 @@ function showMainScreen(data) {
   setupScreen.style.display = 'none';
   mainScreen.style.display = 'block';
 
-  // Display user info
-  userPubkey.textContent = data.pubkey.substring(0, 7) + '...';
+  // Display user info - full pubkey
+  userPubkey.textContent = data.pubkey;
+  userPubkey.title = 'Click to copy';
+  userPubkey.style.cursor = 'pointer';
+  
+  // Make pubkey copyable
+  userPubkey.onclick = () => copyToClipboard(data.pubkey, 'Pubkey copied!');
+  
   userFolder.textContent = data.folderName;
 
   // Display synced folders
@@ -202,6 +208,27 @@ function sendMessage(message) {
 }
 
 /**
+ * Copy text to clipboard
+ */
+function copyToClipboard(text, successMessage) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Show success message
+    const toast = document.createElement('div');
+    toast.className = 'toast-message';
+    toast.textContent = successMessage;
+    document.body.appendChild(toast);
+    
+    // Remove after 2 seconds
+    setTimeout(() => {
+      toast.remove();
+    }, 2000);
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    showError('Failed to copy to clipboard');
+  });
+}
+
+/**
  * Handle setup
  */
 async function handleSetup() {
@@ -220,7 +247,7 @@ async function handleSetup() {
       // Get status to show result
       const statusResponse = await sendMessage({ action: 'getStatus' });
       if (statusResponse.success && statusResponse.data.setup) {
-        generatedPubkey.textContent = statusResponse.data.pubkey.substring(0, 20) + '...';
+        generatedPubkey.textContent = statusResponse.data.pubkey;
         generatedFolder.textContent = statusResponse.data.folderName;
         setupResult.style.display = 'block';
 

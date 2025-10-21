@@ -18,6 +18,7 @@ export class BookmarkSync {
     this.folderCache = new Map(); // Cache bookmark folder IDs
     this.deletingUrls = new Set(); // Track URLs currently being deleted
     this.ignoreEvents = false; // Flag to ignore bookmark events during sync
+    this.urlCache = new Map(); // Cache browser ID -> URL mapping
   }
 
   /**
@@ -52,9 +53,11 @@ export class BookmarkSync {
       if (this.ignoreEvents) {
         return;
       }
-      
-      // Update local timestamp for this bookmark
+
+      // Cache the URL for this browser ID
       if (bookmark.url) {
+        this.urlCache.set(id, bookmark.url);
+        
         const timestamp = Date.now();
         this.storage.setBookmarkMeta(bookmark.url, {
           url: bookmark.url,
@@ -75,26 +78,30 @@ export class BookmarkSync {
       const bookmarks = await browser.bookmarks.get(id);
       if (bookmarks.length > 0 && bookmarks[0].url) {
         const timestamp = Date.now();
-        
-        // Handle URL change
+        const newUrl = bookmarks[0].url;
+
+        // Handle URL change - get old URL from cache
         if (changeInfo.url) {
-          const oldUrl = changeInfo.url;
-          const newUrl = bookmarks[0].url;
+          // changeInfo.url is the NEW url, get old from cache
+          const oldUrl = this.urlCache.get(id);
           
-          logger.log('Bookmark URL changed:', oldUrl, '->', newUrl);
-          
-          // Mark old URL as deleted
-          await this.storage.markDeleted(oldUrl, timestamp);
-          await this.storage.removeBookmarkMeta(oldUrl);
+          if (oldUrl && oldUrl !== newUrl) {
+            logger.log('Bookmark URL changed:', oldUrl, '->', newUrl);
+
+            // Mark old URL as deleted
+            await this.storage.markDeleted(oldUrl, timestamp);
+            await this.storage.removeBookmarkMeta(oldUrl);
+          }
         }
-        
-        // Update timestamp for current URL
-        await this.storage.setBookmarkMeta(bookmarks[0].url, {
-          url: bookmarks[0].url,
+
+        // Update URL cache and metadata for new/current URL
+        this.urlCache.set(id, newUrl);
+        await this.storage.setBookmarkMeta(newUrl, {
+          url: newUrl,
           timestamp: timestamp
         });
-        
-        logger.log('Bookmark changed, triggering sync:', bookmarks[0].url);
+
+        logger.log('Bookmark changed, triggering sync:', newUrl);
         this.triggerSyncAfterDelay();
       }
     });
@@ -105,19 +112,22 @@ export class BookmarkSync {
         return;
       }
 
-      // Get URL from removeInfo.node or metadata
-      let url = null;
-      if (removeInfo.node && removeInfo.node.url) {
+      // Get URL from cache first, fallback to removeInfo
+      let url = this.urlCache.get(id);
+      if (!url && removeInfo.node && removeInfo.node.url) {
         url = removeInfo.node.url;
       }
 
       if (url) {
         const timestamp = Date.now();
-        
+
         // Mark as deleted
         await this.storage.markDeleted(url, timestamp);
         await this.storage.removeBookmarkMeta(url);
         
+        // Remove from cache
+        this.urlCache.delete(id);
+
         logger.log('Bookmark removed, triggering sync:', url);
         this.triggerSyncAfterDelay();
       }
@@ -270,6 +280,9 @@ export class BookmarkSync {
         await this.mergeReadOnly(folderId, localBookmarks, remoteBookmarks);
       }
 
+      // Remove any duplicates (same URL)
+      await this.removeDuplicates(folderId);
+
       await this.storage.setLastSync(pubkey, Date.now());
       await this.storage.setSyncStatus(pubkey, 'synced');
 
@@ -291,6 +304,9 @@ export class BookmarkSync {
 
     const traverse = (node) => {
       if (node.url) {
+        // Cache the browser ID -> URL mapping
+        this.urlCache.set(node.id, node.url);
+        
         // Use our stored timestamp if available (keyed by URL)
         const meta = bookmarkMeta[node.url];
         const timestamp = meta ? meta.timestamp : (node.dateAdded || Date.now());
@@ -370,51 +386,56 @@ export class BookmarkSync {
     const localMap = new Map(localBookmarks.map(b => [b.url, b]));
     const remoteMap = new Map(remoteBookmarks.map(b => [b.url, b]));
 
-    // Process each local bookmark
+    // PHASE 1: Process deletions FIRST (tombstones take priority)
+    for (const remote of remoteBookmarks) {
+      const local = localMap.get(remote.url);
+      const deletedInfo = await this.storage.isDeleted(remote.url);
+
+      if (!local && deletedInfo) {
+        // We deleted this URL locally - delete from remote
+        logger.log('Deleting from remote (tombstone):', remote.url);
+        await this.deleteBookmarkByUrl(remote.url);
+      }
+    }
+
+    // PHASE 2: Push local bookmarks (new or updated)
     for (const local of localBookmarks) {
       const remote = remoteMap.get(local.url);
       if (!remote) {
         // Exists locally but not remotely - push to remote
+        logger.log('Pushing to remote (new):', local.url);
         await this.pushBookmark(local);
       } else if (local.timestamp > remote.timestamp) {
         // Local is newer - update remote
+        logger.log('Pushing to remote (newer):', local.url);
         await this.pushBookmark(local);
       }
-      // If remote.timestamp >= local.timestamp, remote wins (handled below)
     }
 
-    // Process each remote bookmark
+    // PHASE 3: Pull remote bookmarks (new or updated)
     for (const remote of remoteBookmarks) {
       const local = localMap.get(remote.url);
       const deletedInfo = await this.storage.isDeleted(remote.url);
-      
+
+      // Skip if we already deleted it in phase 1
+      if (deletedInfo) {
+        continue;
+      }
+
       if (!local) {
-        // Exists remotely but not locally
-        // Check if we deleted it
-        if (deletedInfo && deletedInfo.timestamp > remote.timestamp) {
-          // We deleted it after this version - delete from remote
-          logger.log('Deleting from remote (tombstone):', remote.url);
-          await this.deleteBookmarkByUrl(remote.url);
-        } else {
-          // We don't have it and didn't delete it - pull from remote
-          logger.log('Pulling from remote:', remote.url);
-          await browser.bookmarks.create({
-            parentId: folderId,
-            title: remote.title,
-            url: remote.url
-          });
-          
-          // Store metadata
-          await this.storage.setBookmarkMeta(remote.url, {
-            url: remote.url,
-            timestamp: remote.timestamp
-          });
-          
-          // Clear any old tombstone
-          if (deletedInfo) {
-            await this.storage.clearDeleted(remote.url);
-          }
-        }
+        // Doesn't exist locally and not deleted - pull from remote
+        logger.log('Pulling from remote (new):', remote.url);
+        await browser.bookmarks.create({
+          parentId: folderId,
+          title: remote.title,
+          url: remote.url
+        });
+
+        // Store metadata
+        await this.storage.setBookmarkMeta(remote.url, {
+          url: remote.url,
+          timestamp: remote.timestamp
+        });
       } else if (remote.timestamp > local.timestamp) {
         // Remote is newer - update local
         logger.log('Updating from remote (newer):', remote.url);
@@ -422,61 +443,8 @@ export class BookmarkSync {
           title: remote.title,
           url: remote.url
         });
-        
+
         // Update metadata
-        await this.storage.setBookmarkMeta(remote.url, {
-          url: remote.url,
-          timestamp: remote.timestamp
-        });
-      }
-    }
-
-    // Pull new/updated remote bookmarks to local
-    for (const remote of remoteBookmarks) {
-      // CRITICAL: Skip if currently being deleted
-      if (this.deletingUrls.has(remote.url)) {
-        logger.log('Skipping restore - deletion in progress:', remote.url);
-        continue;
-      }
-      
-      const local = localMap.get(remote.url);
-
-      // Check if this URL was deleted locally (tombstone check)
-      const deletedInfo = await this.storage.isDeleted(remote.url);
-
-      if (!local) {
-        // Check if we deleted it locally after this remote version
-        if (deletedInfo && deletedInfo.timestamp > remote.timestamp) {
-          // We deleted it locally after this version, don't restore
-          logger.log('Skipping restore of deleted bookmark (tombstone):', remote.url);
-          continue;
-        }
-
-        // Doesn't exist locally and wasn't deleted, create it
-        await browser.bookmarks.create({
-          parentId: folderId,
-          title: remote.title,
-          url: remote.url
-        });
-
-        // Store metadata for the bookmark (keyed by URL)
-        await this.storage.setBookmarkMeta(remote.url, {
-          url: remote.url,
-          timestamp: remote.timestamp
-        });
-
-        // Clear deletion marker if exists (remote has newer version)
-        if (deletedInfo) {
-          await this.storage.clearDeleted(remote.url);
-        }
-      } else if (remote.timestamp > local.timestamp) {
-        // Remote is newer, update local
-        await browser.bookmarks.update(local.id, {
-          title: remote.title,
-          url: remote.url
-        });
-
-        // Update metadata (keyed by URL)
         await this.storage.setBookmarkMeta(remote.url, {
           url: remote.url,
           timestamp: remote.timestamp
@@ -575,6 +543,47 @@ export class BookmarkSync {
       logger.log('Deleted bookmark by URL:', url);
     } catch (error) {
       logger.warn('Failed to delete bookmark by URL:', error);
+    }
+  }
+
+  /**
+   * Remove duplicate bookmarks (same URL) from a folder
+   */
+  async removeDuplicates(folderId) {
+    try {
+      const bookmarks = await this.getBookmarksInFolder(folderId);
+      const urlMap = new Map();
+      const duplicates = [];
+
+      // Find duplicates
+      for (const bookmark of bookmarks) {
+        if (urlMap.has(bookmark.url)) {
+          // Duplicate found
+          const existing = urlMap.get(bookmark.url);
+          
+          // Keep the one with newer timestamp, remove the other
+          if (bookmark.timestamp > existing.timestamp) {
+            duplicates.push(existing.id);
+            urlMap.set(bookmark.url, bookmark);
+          } else {
+            duplicates.push(bookmark.id);
+          }
+        } else {
+          urlMap.set(bookmark.url, bookmark);
+        }
+      }
+
+      // Remove duplicates
+      if (duplicates.length > 0) {
+        logger.log(`Found ${duplicates.length} duplicate(s), removing...`);
+        for (const id of duplicates) {
+          await browser.bookmarks.remove(id);
+        }
+        logger.log('Duplicates removed');
+      }
+    } catch (error) {
+      logger.warn('Failed to remove duplicates:', error);
+      // Don't throw - this is a cleanup operation
     }
   }
 
