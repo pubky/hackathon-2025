@@ -150,6 +150,23 @@ export class HomeserverClient {
   }
 
   /**
+   * Delete data from homeserver (session path)
+   */
+  async delete(path) {
+    try {
+      if (!this.session) {
+        throw new Error('Not signed in');
+      }
+
+      await this.session.storage.delete(path);
+      logger.log('Deleted from:', path);
+    } catch (error) {
+      logger.error('Failed to delete data:', error);
+      throw error;
+    }
+  }
+
+  /**
    * List entries at a session path
    */
   async list(path) {

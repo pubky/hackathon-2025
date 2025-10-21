@@ -16,9 +16,6 @@ let homeserverClient;
 let bookmarkSync;
 let storageManager;
 
-// Sync interval: 20 seconds for development
-const SYNC_INTERVAL_MINUTES = 20 / 60; // 20 seconds as fraction of minute
-
 /**
  * Initialize the extension
  */
@@ -36,34 +33,11 @@ async function initialize() {
     // Initialize sync engine
     await bookmarkSync.initialize();
 
-    // Start periodic sync
-    startPeriodicSync();
-
-    // Do initial sync
+    // Do initial sync on startup
     await bookmarkSync.syncAll();
   }
 
   logger.log('Booky extension initialized');
-}
-
-/**
- * Start periodic sync alarm
- */
-function startPeriodicSync() {
-  // Create alarm for periodic sync
-  browser.alarms.create('periodicSync', {
-    periodInMinutes: SYNC_INTERVAL_MINUTES
-  });
-
-  // Listen for alarm
-  browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'periodicSync') {
-      logger.log('Running periodic sync');
-      bookmarkSync.syncAll().catch(error => {
-        logger.error('Periodic sync failed:', error);
-      });
-    }
-  });
 }
 
 /**
@@ -132,9 +106,6 @@ async function handleSetup(inviteCode) {
 
   // Initialize sync engine
   await bookmarkSync.initialize();
-
-  // Start periodic sync
-  startPeriodicSync();
 
   // Do initial sync
   await bookmarkSync.syncAll();

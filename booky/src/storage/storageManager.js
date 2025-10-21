@@ -116,6 +116,89 @@ export class StorageManager {
   }
 
   /**
+   * Get bookmark metadata by URL (our own timestamps)
+   */
+  async getBookmarkMeta(url) {
+    const key = `bookmark_${this.hashUrl(url)}`;
+    const result = await this.storage.get(key);
+    return result[key] || null;
+  }
+
+  /**
+   * Set bookmark metadata by URL
+   */
+  async setBookmarkMeta(url, meta) {
+    const key = `bookmark_${this.hashUrl(url)}`;
+    await this.storage.set({ [key]: meta });
+  }
+
+  /**
+   * Remove bookmark metadata by URL
+   */
+  async removeBookmarkMeta(url) {
+    const key = `bookmark_${this.hashUrl(url)}`;
+    await this.storage.remove([key]);
+  }
+
+  /**
+   * Get all bookmark metadata
+   */
+  async getAllBookmarkMeta() {
+    const result = await this.storage.get(null);
+    const bookmarkMeta = {};
+
+    for (const [key, value] of Object.entries(result)) {
+      if (key.startsWith('bookmark_')) {
+        // Value contains the URL and timestamp
+        if (value && value.url) {
+          bookmarkMeta[value.url] = value;
+        }
+      }
+    }
+
+    return bookmarkMeta;
+  }
+
+  /**
+   * Simple hash function for URLs to use as storage keys
+   */
+  hashUrl(url) {
+    // Simple hash - for production might want better collision resistance
+    let hash = 0;
+    for (let i = 0; i < url.length; i++) {
+      const char = url.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
+   * Mark a bookmark URL as deleted (tombstone)
+   */
+  async markDeleted(url, timestamp) {
+    const key = `deleted_${url}`;
+    await this.storage.set({ [key]: { timestamp } });
+  }
+
+  /**
+   * Check if a URL was deleted locally
+   */
+  async isDeleted(url) {
+    const key = `deleted_${url}`;
+    const result = await this.storage.get(key);
+    return result[key] || null;
+  }
+
+  /**
+   * Remove deletion marker (when we re-create from remote)
+   */
+  async clearDeleted(url) {
+    const key = `deleted_${url}`;
+    await this.storage.remove([key]);
+  }
+
+  /**
    * Clear all data (for debugging)
    */
   async clearAll() {
