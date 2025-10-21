@@ -72,12 +72,12 @@ Rust:
 
 - Crate: https://crates.io/crates/pubky/0.6.0-rc.6
 - Docs: https://docs.rs/pubky/0.6.0-rc.6/pubky/index.html
-- Examples: https://github.com/pubky/pubky-core/tree/refactor/breaking-pubky-client/examples/rust
+- Examples: https://github.com/pubky/pubky-core/tree/main/examples/rust
 
 Javascript:
 
 - NPM package: https://www.npmjs.com/package/@synonymdev/pubky/v/0.6.0-rc.6
-- Examples: https://github.com/pubky/pubky-core/tree/refactor/breaking-pubky-client/examples/javascript
+- Examples: https://github.com/pubky/pubky-core/tree/main/examples/javascript
 
 Two kind of development environments:
 
