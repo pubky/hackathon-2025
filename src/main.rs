@@ -79,7 +79,7 @@ impl PubkyApp {
         let qr_image = qr.render::<image::Luma<u8>>().build();
 
         let (width, height) = qr_image.dimensions();
-        let scale = 4; // Make QR code bigger
+        let scale = 2; // Scale QR code to fit within window
         let scaled_width = (width * scale) as usize;
         let scaled_height = (height * scale) as usize;
 
@@ -137,7 +137,9 @@ impl eframe::App for PubkyApp {
                         }
 
                         if let Some(texture) = &self.qr_texture {
-                            ui.image(texture);
+                            // Constrain QR code size to fit within window
+                            let max_size = egui::vec2(300.0, 300.0);
+                            ui.add(egui::Image::from_texture(texture).max_size(max_size));
                         }
 
                         ui.add_space(20.0);
