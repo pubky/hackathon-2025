@@ -10,6 +10,11 @@ const loading = document.getElementById('loading');
 const setupButton = document.getElementById('setup-button');
 const importButton = document.getElementById('import-button');
 const recoveryFileInput = document.getElementById('recovery-file-input');
+const signinRecoveryCodeButton = document.getElementById('signin-recovery-code-button');
+const recoveryCodeInputSection = document.getElementById('recovery-code-input-section');
+const recoveryCodeInput = document.getElementById('recovery-code-input');
+const signinWithCodeButton = document.getElementById('signin-with-code-button');
+const cancelCodeSigninButton = document.getElementById('cancel-code-signin-button');
 const homeserverInput = document.getElementById('homeserver');
 const inviteCodeInput = document.getElementById('invite-code');
 const setupResult = document.getElementById('setup-result');
@@ -23,6 +28,7 @@ const addPubkeyButton = document.getElementById('add-pubkey-button');
 const foldersList = document.getElementById('folders-list');
 const manualSyncButton = document.getElementById('manual-sync-button');
 const exportButton = document.getElementById('export-button');
+const copyRecoveryCodeMainButton = document.getElementById('copy-recovery-code-main-button');
 const signOutButton = document.getElementById('sign-out-button');
 
 // Browser API compatibility
@@ -268,12 +274,13 @@ async function handleSetup() {
       if (statusResponse.success && statusResponse.data.setup) {
         generatedPubkey.textContent = statusResponse.data.pubkey;
         generatedFolder.textContent = statusResponse.data.folderName;
+
         setupResult.style.display = 'block';
 
         // Switch to main screen after a delay
         setTimeout(() => {
           showMainScreen(statusResponse.data);
-        }, 2000);
+        }, 3000);
       }
     } else {
       // Show detailed error message
@@ -281,7 +288,7 @@ async function handleSetup() {
       showError(errorMsg);
       setupButton.disabled = false;
       setupButton.textContent = 'Setup Booky';
-      
+
       // Log for debugging
       console.error('Setup failed:', errorMsg);
     }
@@ -522,13 +529,92 @@ async function handleSignOut() {
   }
 }
 
+/**
+ * Show recovery code input section
+ */
+function showRecoveryCodeInput() {
+  // Hide the setup form and result, but keep setup screen visible
+  document.querySelector('.setup-form').style.display = 'none';
+  setupResult.style.display = 'none';
+  recoveryCodeInputSection.style.display = 'block';
+}
+
+/**
+ * Hide recovery code input section
+ */
+function hideRecoveryCodeInput() {
+  recoveryCodeInputSection.style.display = 'none';
+  document.querySelector('.setup-form').style.display = 'block';
+  recoveryCodeInput.value = '';
+}
+
+/**
+ * Handle sign in with recovery code
+ */
+async function handleSignInWithRecoveryCode() {
+  const recoveryCode = recoveryCodeInput.value.trim();
+
+  if (!recoveryCode) {
+    showError('Please enter a recovery code');
+    return;
+  }
+
+  signinWithCodeButton.disabled = true;
+  signinWithCodeButton.textContent = 'Signing in...';
+
+  try {
+    const response = await sendMessage({
+      action: 'signInWithRecoveryCode',
+      recoveryCode: recoveryCode
+    });
+
+    if (response.success) {
+      showToast('Signed in successfully');
+      // Reload popup to show main screen
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showError(response.error || 'Sign in failed');
+      signinWithCodeButton.disabled = false;
+      signinWithCodeButton.textContent = 'Sign In';
+    }
+  } catch (error) {
+    console.error('Sign in error:', error);
+    showError(error.message);
+    signinWithCodeButton.disabled = false;
+    signinWithCodeButton.textContent = 'Sign In';
+  }
+}
+
+/**
+ * Handle copy recovery code from main screen
+ */
+async function handleCopyRecoveryCodeMain() {
+  try {
+    const response = await sendMessage({ action: 'getRecoveryCode' });
+    if (response.success) {
+      copyToClipboard(response.data, 'Recovery code copied to clipboard!');
+    } else {
+      showError('Failed to get recovery code');
+    }
+  } catch (error) {
+    console.error('Error getting recovery code:', error);
+    showError(error.message);
+  }
+}
+
 // Event listeners
 setupButton.addEventListener('click', handleSetup);
 importButton.addEventListener('click', handleImportRecoveryFile);
 recoveryFileInput.addEventListener('change', handleRecoveryFileSelect);
+signinRecoveryCodeButton.addEventListener('click', showRecoveryCodeInput);
+signinWithCodeButton.addEventListener('click', handleSignInWithRecoveryCode);
+cancelCodeSigninButton.addEventListener('click', hideRecoveryCodeInput);
 addPubkeyButton.addEventListener('click', handleAddPubkey);
 manualSyncButton.addEventListener('click', handleManualSync);
 exportButton.addEventListener('click', handleExportRecoveryFile);
+copyRecoveryCodeMainButton.addEventListener('click', handleCopyRecoveryCodeMain);
 signOutButton.addEventListener('click', handleSignOut);
 
 // Initialize on load

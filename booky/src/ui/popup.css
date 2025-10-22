@@ -51,6 +51,13 @@ body {
   color: #aaa;
 }
 
+.header-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .header-export-button {
   padding: 6px 12px;
   background: #1a1a1a;
@@ -61,7 +68,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .header-export-button:hover {
@@ -408,5 +415,111 @@ body {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+}
+
+/* Recovery code styles */
+.recovery-code-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+}
+
+.recovery-code-display code {
+  flex: 1;
+  font-family: monospace;
+  font-size: 11px;
+  color: #e0e0e0;
+  word-break: break-all;
+  user-select: all;
+  line-height: 1.4;
+}
+
+.copy-button {
+  padding: 6px 12px;
+  background: #1a1a1a;
+  color: white;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.copy-button:hover {
+  background: #2a2a2a;
+}
+
+.warning-text {
+  color: #f5a8a8;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+#recovery-code-input-section {
+  background: #242424;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#recovery-code-input-section h2 {
+  font-size: 20px;
+  color: #f5f5f5;
+  margin-bottom: 12px;
+}
+
+.recovery-instructions {
+  color: #aaa;
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+#recovery-code-input-section label {
+  display: block;
+  font-size: 14px;
+  color: #f5f5f5;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+#recovery-code-input-section input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  background: #2d2d2d;
+  color: #f5f5f5;
+}
+
+#recovery-code-input-section input::placeholder {
+  color: #888;
+}
+
+#recovery-code-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  margin-bottom: 16px;
+  background: #2d2d2d;
+  color: #f5f5f5;
+  resize: vertical;
+  min-height: 80px;
+}
+
+#recovery-code-input::placeholder {
+  color: #888;
 }
 

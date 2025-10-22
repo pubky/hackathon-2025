@@ -158,11 +158,31 @@ export class KeyManager {
 
       // Use Pubky SDK's createRecoveryFile method
       const recoveryFile = await keypair.createRecoveryFile('booky');
-      
+
       logger.log('Created recovery file');
       return recoveryFile;
     } catch (error) {
       logger.error('Failed to export recovery file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recovery code (base64-encoded secret key) for display/backup
+   */
+  async getRecoveryCode() {
+    try {
+      const encrypted = await this.storage.getEncryptedKey();
+      if (!encrypted) {
+        throw new Error('No key found');
+      }
+
+      // The encrypted key is already base64-encoded in storage
+      // Return it directly as the recovery code
+      logger.log('Retrieved recovery code');
+      return encrypted;
+    } catch (error) {
+      logger.error('Failed to get recovery code:', error);
       throw error;
     }
   }
@@ -188,6 +208,33 @@ export class KeyManager {
       };
     } catch (error) {
       logger.error('Failed to import recovery file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Import keypair from base64-encoded secret key (recovery code)
+   */
+  async importFromSecretKey(secretKeyBase64) {
+    try {
+      // Decode base64 to get secret key bytes
+      const secretKey = this.base64ToArrayBuffer(secretKeyBase64);
+
+      // Create keypair from secret key using Pubky SDK
+      const keypair = Keypair.fromSecretKey(secretKey);
+
+      // Get the public key string
+      const publicKeyStr = keypair.publicKey.z32();
+
+      logger.log('Imported keypair from secret key, pubkey:', publicKeyStr);
+
+      return {
+        keypair,
+        publicKey: publicKeyStr,
+        secretKey: secretKey
+      };
+    } catch (error) {
+      logger.error('Failed to import from secret key:', error);
       throw error;
     }
   }

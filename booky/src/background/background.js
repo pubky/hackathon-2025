@@ -92,8 +92,16 @@ async function handleMessage(message) {
       const recoveryFileArray = Array.from(recoveryFile);
       return { success: true, data: recoveryFileArray };
 
+    case 'getRecoveryCode':
+      const recoveryCode = await keyManager.getRecoveryCode();
+      return { success: true, data: recoveryCode };
+
     case 'importRecoveryFile':
       await handleImportRecoveryFile(message.recoveryFileContent, message.homeserver, message.inviteCode);
+      return { success: true };
+
+    case 'signInWithRecoveryCode':
+      await handleSignInWithRecoveryCode(message.recoveryCode, message.homeserver, message.inviteCode);
       return { success: true };
 
     case 'signOut':
@@ -165,7 +173,7 @@ async function handleImportRecoveryFile(recoveryFileContent, homeserver, inviteC
   try {
     // Convert array back to Uint8Array for the key manager
     const recoveryFileUint8 = new Uint8Array(recoveryFileContent);
-    
+
     // Import key from recovery file (don't store yet)
     const keyData = await keyManager.importRecoveryFile(recoveryFileUint8);
     keypair = keyData.keypair;
@@ -192,10 +200,56 @@ async function handleImportRecoveryFile(recoveryFileContent, homeserver, inviteC
     logger.log('Import and setup completed');
   } catch (error) {
     logger.error('Import failed:', error);
-    
+
     // Don't store the key if signin failed
     logger.log('Key not stored due to signin failure');
-    
+
+    // Re-throw to send error to popup
+    throw new Error(`Signin failed: ${error.message || 'Unknown error'}`);
+  }
+}
+
+/**
+ * Handle signing in with recovery code (base64-encoded secret key)
+ */
+async function handleSignInWithRecoveryCode(recoveryCode) {
+  logger.log('Starting sign in with recovery code');
+
+  let keypair = null;
+  let publicKeyStr = null;
+  let secretKey = null;
+
+  try {
+    // Import key from base64 recovery code (don't store yet)
+    const keyData = await keyManager.importFromSecretKey(recoveryCode);
+    keypair = keyData.keypair;
+    publicKeyStr = keyData.publicKey;
+    secretKey = keyData.secretKey;
+
+    logger.log('Imported keypair from recovery code (not stored yet)');
+
+    // Try to sign in with homeserver (automatically resolves homeserver via PKDNS)
+    await homeserverClient.initialize();
+    await homeserverClient.signin(keypair);
+
+    logger.log('Signin successful, now storing key');
+
+    // Only store the key AFTER successful signin
+    await keyManager.storeGeneratedKey(publicKeyStr, secretKey);
+
+    // Initialize sync engine
+    await bookmarkSync.initialize();
+
+    // Do initial sync
+    await bookmarkSync.syncAll();
+
+    logger.log('Recovery code sign in completed');
+  } catch (error) {
+    logger.error('Recovery code sign in failed:', error);
+
+    // Don't store the key if signin failed
+    logger.log('Key not stored due to signin failure');
+
     // Re-throw to send error to popup
     throw new Error(`Signin failed: ${error.message || 'Unknown error'}`);
   }

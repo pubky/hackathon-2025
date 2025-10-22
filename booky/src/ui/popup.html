@@ -27,9 +27,23 @@
         <div class="setup-options">
           <button id="setup-button" class="primary-button">Setup Booky</button>
           <button id="import-button" class="secondary-button">Import Recovery File</button>
+          <button id="signin-recovery-code-button" class="secondary-button">Sign In with Recovery Code</button>
         </div>
-        
+
         <input type="file" id="recovery-file-input" accept=".pkarr" style="display: none;">
+      </div>
+
+      <div id="recovery-code-input-section" style="display: none;">
+        <h2>Sign In with Recovery Code</h2>
+        <p class="recovery-instructions">Paste your recovery code below to sign back in to your account.</p>
+
+        <label for="recovery-code-input">Recovery Code</label>
+        <textarea id="recovery-code-input" placeholder="Paste your recovery code here" rows="4"></textarea>
+
+        <div class="setup-options">
+          <button id="signin-with-code-button" class="primary-button">Sign In</button>
+          <button id="cancel-code-signin-button" class="secondary-button">Cancel</button>
+        </div>
       </div>
 
       <div id="setup-result" style="display: none;">
@@ -37,6 +51,7 @@
           <p>Setup complete!</p>
           <p><strong>Your Public key:</strong> <span id="generated-pubkey"></span></p>
           <p><strong>Folder:</strong> <span id="generated-folder"></span></p>
+          <p class="warning-text">⚠️ Make sure to download your recovery file or copy your recovery code from the main screen - you'll need it to sign in after signing out!</p>
         </div>
       </div>
     </div>
@@ -48,7 +63,10 @@
         <div class="header-text">
           <h1>Booky</h1>
         </div>
-        <button id="export-button" class="header-export-button">Download Recovery File</button>
+        <div class="header-buttons">
+          <button id="export-button" class="header-export-button">Download Recovery File</button>
+          <button id="copy-recovery-code-main-button" class="header-export-button">Copy Recovery Code</button>
+        </div>
       </div>
 
       <div class="info-section">
