@@ -182,21 +182,6 @@ impl eframe::App for PubkyApp {
                             ui.add(egui::Image::from_texture(texture).max_size(max_size));
                         }
 
-                        ui.add_space(20.0);
-                        ui.label("Or use this URL:");
-                        ui.add_space(5.0);
-
-                        // Display URL in a scrollable area
-                        egui::ScrollArea::vertical()
-                            .max_height(100.0)
-                            .show(ui, |ui| {
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut auth_url.as_str())
-                                        .desired_width(f32::INFINITY)
-                                        .interactive(true),
-                                );
-                            });
-
                         ui.add_space(10.0);
                         ui.label("Waiting for authentication...");
                         ui.spinner();
