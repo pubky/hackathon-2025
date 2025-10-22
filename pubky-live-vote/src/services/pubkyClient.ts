@@ -10,13 +10,20 @@ declare global {
 const STAGING_SERVER = 'https://homeserver.staging.pubky.app';
 const STAGING_PUBLIC_KEY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
+const resolveDefaultHomeserverUrl = () => {
+  if (import.meta.env.DEV && typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return STAGING_SERVER;
+};
+
 type HomeserverConfig = {
   homeserverUrl: string;
   homeserverPublicKey: string;
 };
 
 let resolvedConfig: HomeserverConfig = {
-  homeserverUrl: STAGING_SERVER,
+  homeserverUrl: resolveDefaultHomeserverUrl(),
   homeserverPublicKey: STAGING_PUBLIC_KEY
 };
 
@@ -105,7 +112,7 @@ const createAdapter = async (lib: any): Promise<PubkyClient | null> => {
 const resolveSdkInstance = async (lib: any) => {
   if (!lib) return null;
   const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
-  const homeserverUrl = config?.homeserverUrl ?? STAGING_SERVER;
+  const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
   const homeserverPublicKey = config?.homeserverPublicKey ?? STAGING_PUBLIC_KEY;
   resolvedConfig = { homeserverUrl, homeserverPublicKey };
   if (typeof lib.testnet === 'function') {
@@ -127,7 +134,10 @@ const resolveSdkInstance = async (lib: any) => {
 };
 
 const createMockClient = (): PubkyClient => {
-  resolvedConfig = { homeserverUrl: STAGING_SERVER, homeserverPublicKey: STAGING_PUBLIC_KEY };
+  resolvedConfig = {
+    homeserverUrl: resolveDefaultHomeserverUrl(),
+    homeserverPublicKey: STAGING_PUBLIC_KEY
+  };
   let pendingLogin: RingLogin | null = null;
   return {
     beginRingLogin: async () => {

@@ -41,6 +41,8 @@ From the repository root you can use `npm run dev` as well—the root `package.j
 
 The dev server runs on [http://localhost:5173](http://localhost:5173). The first load will automatically request a Pubky Ring session and render the QR code. Scan it with the Ring mobile app to authenticate. Without the app you can use the bundled mock client, which auto-accepts the login after a short delay.
 
+For convenience, local development now serves a baked-in leaderboard snapshot and ballot history from `/pubky-live-vote/`. This means the leaderboard and activity panels light up immediately without relying on the remote staging homeserver. If you prefer to point at a live homeserver you can still override the target using the configuration snippet below.
+
 ### Production build
 
 ```bash

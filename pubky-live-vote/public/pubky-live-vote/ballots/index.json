@@ -1,0 +1,143 @@
+[
+  {
+    "voterId": "demo-voter-1",
+    "submittedAt": "2025-02-15T10:00:00.000Z",
+    "scores": [
+      {
+        "projectId": "pubky-live-vote",
+        "scores": {
+          "complexity": 9,
+          "creativity": 9,
+          "presentation": 9,
+          "feedback": 9
+        },
+        "readiness": true,
+        "comment": "Polished end-to-end flow with clear UX.",
+        "tags": ["ux", "realtime"]
+      },
+      {
+        "projectId": "pubky-mcp-server",
+        "scores": {
+          "complexity": 8,
+          "creativity": 8,
+          "presentation": 8,
+          "feedback": 8
+        },
+        "readiness": true,
+        "comment": "Solid developer tooling story.",
+        "tags": ["sdk", "automation"]
+      },
+      {
+        "projectId": "pubky-homeserver-cli",
+        "scores": {
+          "complexity": 7,
+          "creativity": 7,
+          "presentation": 7,
+          "feedback": 7
+        },
+        "readiness": true,
+        "comment": "CLI is nearly production ready.",
+        "tags": ["cli", "ops"]
+      }
+    ],
+    "popularRanking": [
+      "pubky-live-vote",
+      "pubky-mcp-server",
+      "pubky-homeserver-cli"
+    ]
+  },
+  {
+    "voterId": "demo-voter-2",
+    "submittedAt": "2025-02-15T10:05:00.000Z",
+    "scores": [
+      {
+        "projectId": "pubky-live-vote",
+        "scores": {
+          "complexity": 8,
+          "creativity": 9,
+          "presentation": 9,
+          "feedback": 8
+        },
+        "readiness": true,
+        "comment": "Great QR onboarding and leaderboard polish.",
+        "tags": ["polish"]
+      },
+      {
+        "projectId": "pubky-mcp-server",
+        "scores": {
+          "complexity": 8,
+          "creativity": 8,
+          "presentation": 7,
+          "feedback": 8
+        },
+        "readiness": true,
+        "comment": "Nice automation of common flows.",
+        "tags": ["cli"]
+      },
+      {
+        "projectId": "pubky-homeserver-cli",
+        "scores": {
+          "complexity": 7,
+          "creativity": 7,
+          "presentation": 7,
+          "feedback": 6
+        },
+        "readiness": true,
+        "comment": "Would love additional docs.",
+        "tags": ["docs"]
+      }
+    ],
+    "popularRanking": [
+      "pubky-live-vote",
+      "pubky-homeserver-cli",
+      "pubky-mcp-server"
+    ]
+  },
+  {
+    "voterId": "demo-voter-3",
+    "submittedAt": "2025-02-15T10:15:00.000Z",
+    "scores": [
+      {
+        "projectId": "pubky-live-vote",
+        "scores": {
+          "complexity": 8,
+          "creativity": 8,
+          "presentation": 9,
+          "feedback": 9
+        },
+        "readiness": true,
+        "comment": "Impressive offline fallback story.",
+        "tags": ["offline"]
+      },
+      {
+        "projectId": "pubky-mcp-server",
+        "scores": {
+          "complexity": 7,
+          "creativity": 7,
+          "presentation": 8,
+          "feedback": 8
+        },
+        "readiness": true,
+        "comment": "Sensible defaults for new developers.",
+        "tags": ["getting-started"]
+      },
+      {
+        "projectId": "pubky-homeserver-cli",
+        "scores": {
+          "complexity": 7,
+          "creativity": 6,
+          "presentation": 7,
+          "feedback": 7
+        },
+        "readiness": false,
+        "comment": "Needs more validation but promising.",
+        "tags": ["roadmap"]
+      }
+    ],
+    "popularRanking": [
+      "pubky-live-vote",
+      "pubky-mcp-server",
+      "pubky-homeserver-cli"
+    ]
+  }
+]
