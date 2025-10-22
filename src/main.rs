@@ -38,9 +38,17 @@ enum AuthState {
     Error(String),
 }
 
+#[derive(Clone, PartialEq)]
+enum ViewState {
+    Main,
+    CreateWiki,
+}
+
 struct PubkyApp {
     state: Arc<Mutex<AuthState>>,
     qr_texture: Option<egui::TextureHandle>,
+    view_state: ViewState,
+    wiki_content: String,
 }
 
 impl PubkyApp {
@@ -102,6 +110,8 @@ impl PubkyApp {
         Self {
             state,
             qr_texture: None,
+            view_state: ViewState::Main,
+            wiki_content: String::new(),
         }
     }
 }
@@ -169,41 +179,86 @@ impl eframe::App for PubkyApp {
                         ref session,
                         files: _,
                     } => {
-                        ui.label("✓ Authentication Successful!");
-                        ui.add_space(20.0);
-                        ui.label("Your Public Key:");
-                        ui.add_space(10.0);
+                        // Show different views based on view_state
+                        match self.view_state {
+                            ViewState::Main => {
+                                ui.label("✓ Authentication Successful!");
+                                ui.add_space(20.0);
+                                ui.label("Your Public Key:");
+                                ui.add_space(10.0);
 
-                        // Display public key in a scrollable text area
-                        egui::Frame::new()
-                            .fill(egui::Color32::from_gray(240))
-                            .inner_margin(10.0)
-                            .show(ui, |ui| {
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut public_key.as_str())
-                                        .desired_width(f32::INFINITY)
-                                        .font(egui::TextStyle::Monospace),
-                                );
-                            });
+                                // Display public key in a scrollable text area
+                                egui::Frame::new()
+                                    .fill(egui::Color32::from_gray(240))
+                                    .inner_margin(10.0)
+                                    .show(ui, |ui| {
+                                        ui.add(
+                                            egui::TextEdit::multiline(&mut public_key.as_str())
+                                                .desired_width(f32::INFINITY)
+                                                .font(egui::TextStyle::Monospace),
+                                        );
+                                    });
 
-                        ui.add_space(20.0);
+                                ui.add_space(20.0);
 
-                        // Create new wiki page button
-                        if ui.button("Create new wiki page").clicked() {
-                            let session_clone = session.clone();
-                            std::thread::spawn(move || {
-                                let rt = tokio::runtime::Runtime::new().unwrap();
-                                rt.block_on(async {
-                                    match create_wiki_post(&session_clone).await {
-                                        Ok(path) => {
-                                            println!("Created wiki post at: {}", path);
-                                        }
-                                        Err(e) => {
-                                            println!("Failed to create wiki post: {}", e);
-                                        }
+                                // Create new wiki page button
+                                if ui.button("Create new wiki page").clicked() {
+                                    self.view_state = ViewState::CreateWiki;
+                                }
+                            }
+                            ViewState::CreateWiki => {
+                                ui.label("Create New Wiki Page");
+                                ui.add_space(20.0);
+
+                                // Textarea for wiki content
+                                ui.label("Content:");
+                                ui.add_space(10.0);
+
+                                egui::ScrollArea::vertical()
+                                    .max_height(400.0)
+                                    .show(ui, |ui| {
+                                        ui.add(
+                                            egui::TextEdit::multiline(&mut self.wiki_content)
+                                                .desired_width(f32::INFINITY)
+                                                .desired_rows(15),
+                                        );
+                                    });
+
+                                ui.add_space(20.0);
+
+                                // Save and Cancel buttons
+                                ui.horizontal(|ui| {
+                                    if ui.button("Save wiki").clicked() {
+                                        let session_clone = session.clone();
+                                        let content = self.wiki_content.clone();
+                                        std::thread::spawn(move || {
+                                            let rt = tokio::runtime::Runtime::new().unwrap();
+                                            rt.block_on(async {
+                                                match create_wiki_post(&session_clone, &content)
+                                                    .await
+                                                {
+                                                    Ok(path) => {
+                                                        println!("Created wiki post at: {}", path);
+                                                    }
+                                                    Err(e) => {
+                                                        println!(
+                                                            "Failed to create wiki post: {}",
+                                                            e
+                                                        );
+                                                    }
+                                                }
+                                            });
+                                        });
+                                        self.wiki_content.clear();
+                                        self.view_state = ViewState::Main;
+                                    }
+
+                                    if ui.button("Cancel").clicked() {
+                                        self.wiki_content.clear();
+                                        self.view_state = ViewState::Main;
                                     }
                                 });
-                            });
+                            }
                         }
                     }
                     AuthState::Error(ref error) => {
@@ -226,11 +281,11 @@ async fn initialize_auth() -> Result<(PubkyAuthFlow, String)> {
     Ok((flow, auth_url))
 }
 
-async fn create_wiki_post(session: &PubkySession) -> Result<String> {
+async fn create_wiki_post(session: &PubkySession, content: &str) -> Result<String> {
     let path = format!("/pub/wiki.app/{}", Uuid::new_v4());
 
-    // Create the post with "test" content
-    session.storage().put(&path, "test").await?;
+    // Create the post with the provided content
+    session.storage().put(&path, content.to_string()).await?;
 
     println!("Created post at path: {}", path);
 
