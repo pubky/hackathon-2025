@@ -1,6 +1,7 @@
 use crate::{PubkyApp, ViewState};
 
 use eframe::egui::{Context, Ui};
+use egui::CollapsingHeader;
 use egui_commonmark::CommonMarkViewer;
 use pubky::{PublicKey, PublicStorage};
 
@@ -14,9 +15,10 @@ pub(crate) fn update(
     ui.label("View Wiki Post");
     ui.add_space(20.0);
 
-    ui.label(format!("User ID: {}", &app.selected_wiki_user_id));
-    ui.add_space(10.0);
-    ui.label(format!("Page ID: {}", &app.selected_wiki_page_id));
+    CollapsingHeader::new("Page details").show(ui, |ui| {
+        ui.label(format!("Page ID: {}", &app.selected_wiki_page_id));
+        ui.label(format!("User ID: {}", &app.selected_wiki_user_id));
+    });
 
     // Add "Share Page Link" button with tooltip support
     let share_button = ui.button("Share Page Link");

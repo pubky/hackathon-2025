@@ -195,9 +195,6 @@ impl PubkyApp {
 
 impl eframe::App for PubkyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Request repaint to keep UI responsive
-        ctx.request_repaint();
-
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
