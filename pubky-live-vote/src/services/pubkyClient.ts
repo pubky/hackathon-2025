@@ -98,14 +98,15 @@ const persistSecret = (keypair: Keypair) => {
 const createPubkyClient = (): PubkyClient => {
   const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
   const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
+  const homeserverPublicKey = config?.homeserverPublicKey ?? HOMESERVER_PUBLIC_KEY;
   resolvedConfig = {
     homeserverUrl,
-    homeserverPublicKey: HOMESERVER_PUBLIC_KEY
+    homeserverPublicKey
   };
 
   const pubky = Pubky.testnet(DEFAULT_TESTNET_HOST);
   const publicStorage = pubky.publicStorage;
-  const homeserverKey = PublicKey.from(HOMESERVER_PUBLIC_KEY);
+  const homeserverKey = PublicKey.from(homeserverPublicKey);
 
   let signer: Signer | null = null;
   let signerWasPersisted = false;
@@ -197,9 +198,12 @@ const createPubkyClient = (): PubkyClient => {
 };
 
 const createMockClient = (): PubkyClient => {
+  const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
+  const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
+  const homeserverPublicKey = config?.homeserverPublicKey ?? HOMESERVER_PUBLIC_KEY;
   resolvedConfig = {
-    homeserverUrl: resolveDefaultHomeserverUrl(),
-    homeserverPublicKey: HOMESERVER_PUBLIC_KEY
+    homeserverUrl,
+    homeserverPublicKey
   };
   let sessionPublicKey: string | null = null;
   let lastAuthMethod: AuthMethod | null = null;

@@ -1,6 +1,6 @@
-import type { Session } from '@synonymdev/pubky';
+import type { Address, Session } from '@synonymdev/pubky';
 import type { BallotPayload, LeaderboardSummaryResponse } from '../types/project';
-import { getHomeserverConfig } from './pubkyClient';
+import { ensurePubkyClient, getHomeserverConfig } from './pubkyClient';
 
 export type SessionPath = `/pub/${string}`;
 
@@ -21,25 +21,20 @@ export const createBallotStorageSender = (storage: Session['storage']) => {
   };
 };
 
-const buildHomeserverUrl = (path: string) => {
-  const { homeserverUrl } = getHomeserverConfig();
-  const trimmedBase = homeserverUrl.replace(/\/$/, '');
-  const trimmedPath = path.replace(/^\//, '');
-  return `${trimmedBase}/${trimmedPath}`;
-};
-
-const fetchJson = async <T>(path: string): Promise<T> => {
-  const url = buildHomeserverUrl(path);
-  const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${path}: ${response.status} ${response.statusText}`);
+const fetchPublicStorageJson = async <T>(path: string): Promise<T> => {
+  const { homeserverPublicKey } = getHomeserverConfig();
+  const normalizedPath = path.replace(/^\//, '');
+  const addr: Address = `pubky${homeserverPublicKey}/pub/${normalizedPath}`;
+  const client = await ensurePubkyClient();
+  if (!client.publicStorage) {
+    throw new Error('Pubky public storage is unavailable');
   }
-  return (await response.json()) as T;
+  return (await client.publicStorage.getJson(addr)) as T;
 };
 
 export const fetchLeaderboardSummary = async (): Promise<LeaderboardSummaryResponse | null> => {
   try {
-    return await fetchJson<LeaderboardSummaryResponse>(SUMMARY_PATH);
+    return await fetchPublicStorageJson<LeaderboardSummaryResponse>(SUMMARY_PATH);
   } catch (error) {
     console.debug('Leaderboard summary unavailable, falling back to ballots', error);
     return null;
@@ -48,7 +43,7 @@ export const fetchLeaderboardSummary = async (): Promise<LeaderboardSummaryRespo
 
 export const fetchBallotSnapshot = async (): Promise<BallotPayload[]> => {
   try {
-    return await fetchJson<BallotPayload[]>(BALLOT_INDEX_PATH);
+    return await fetchPublicStorageJson<BallotPayload[]>(BALLOT_INDEX_PATH);
   } catch (error) {
     console.debug('Ballot index unavailable, checking mock storage', error);
     return readMockBallots();
