@@ -2,10 +2,11 @@ use crate::{PubkyApp, ViewState};
 
 use eframe::egui::{Context, Ui};
 use egui_commonmark::CommonMarkViewer;
-use pubky::PublicStorage;
+use pubky::{PublicKey, PublicStorage};
 
 pub(crate) fn update(
     app: &mut PubkyApp,
+    pk: &PublicKey,
     public_storage: &PublicStorage,
     _ctx: &Context,
     ui: &mut Ui,
@@ -81,7 +82,7 @@ pub(crate) fn update(
             for url in clicked_urls {
                 let mut parts = url.split('/'); // Split on the '/' character
                 if let (Some(user_pk), Some(page_id)) = (parts.next(), parts.next()) {
-                    app.navigate_to_wiki_page(user_pk, page_id);
+                    app.navigate_to_view_wiki_page(user_pk, page_id);
                 } else {
                     log::warn!("Invalid Pubky Wiki link: {url}");
                 };
@@ -90,10 +91,20 @@ pub(crate) fn update(
 
     ui.add_space(20.0);
 
-    // Go back button
-    if ui.button("Go back").clicked() {
-        app.selected_wiki_page_id.clear();
-        app.selected_wiki_content.clear();
-        app.view_state = ViewState::WikiList;
-    }
+    // Check if this is the user's own page
+    let is_own_page = app.selected_wiki_user_id == pk.to_string();
+
+    ui.horizontal(|ui| {
+        // Show Edit button only for own pages
+        if is_own_page && ui.button("Edit").clicked() {
+            app.navigate_to_edit_selected_wiki_page();
+        }
+
+        // Go back button
+        if ui.button("Go back").clicked() {
+            app.selected_wiki_page_id.clear();
+            app.selected_wiki_content.clear();
+            app.view_state = ViewState::WikiList;
+        }
+    });
 }

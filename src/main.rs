@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use crate::utils::generate_qr_image;
 
+mod create_wiki;
 mod edit_wiki;
 mod utils;
 mod view_wiki;
@@ -40,7 +41,7 @@ pub(crate) enum AuthState {
     },
     Authenticated {
         session: PubkySession,
-        public_storage: PublicStorage,
+        pub_storage: PublicStorage,
         files: Vec<String>,
     },
     Error(String),
@@ -51,13 +52,15 @@ pub(crate) enum ViewState {
     WikiList,
     CreateWiki,
     ViewWiki,
+    EditWiki,
 }
 
 pub(crate) struct PubkyApp {
     pub(crate) state: Arc<Mutex<AuthState>>,
     qr_texture: Option<egui::TextureHandle>,
     pub(crate) view_state: ViewState,
-    pub(crate) wiki_content: String,
+    /// Content for the Edit Wiki view
+    pub(crate) edit_wiki_content: String,
     pub(crate) selected_wiki_page_id: String,
     pub(crate) selected_wiki_content: String,
     pub(crate) selected_wiki_user_id: String,
@@ -105,7 +108,7 @@ impl PubkyApp {
 
                             *state_clone.lock().unwrap() = AuthState::Authenticated {
                                 session,
-                                public_storage: pubky.public_storage(),
+                                pub_storage: pubky.public_storage(),
                                 files,
                             };
                         }
@@ -126,7 +129,7 @@ impl PubkyApp {
             state,
             qr_texture: None,
             view_state: ViewState::WikiList,
-            wiki_content: String::new(),
+            edit_wiki_content: String::new(),
             selected_wiki_page_id: String::new(),
             selected_wiki_content: String::new(),
             selected_wiki_user_id: String::new(),
@@ -136,11 +139,17 @@ impl PubkyApp {
         }
     }
 
-    fn navigate_to_wiki_page(&mut self, user_pk: &str, page_id: &str) {
+    fn navigate_to_view_wiki_page(&mut self, user_pk: &str, page_id: &str) {
         self.selected_wiki_user_id = user_pk.to_string();
         self.selected_wiki_page_id = page_id.to_string();
-        self.selected_wiki_content = String::new();
+        self.selected_wiki_content.clear();
+
         self.view_state = ViewState::ViewWiki;
+    }
+
+    fn navigate_to_edit_selected_wiki_page(&mut self) {
+        self.edit_wiki_content = self.selected_wiki_content.clone();
+        self.view_state = ViewState::EditWiki;
     }
 }
 
@@ -189,7 +198,7 @@ impl eframe::App for PubkyApp {
                     }
                     AuthState::Authenticated {
                         ref session,
-                        ref public_storage,
+                        ref pub_storage,
                         ref files,
                     } => {
                         // Check if we need to refresh the files list
@@ -220,6 +229,8 @@ impl eframe::App for PubkyApp {
                             self.needs_refresh = false;
                         }
 
+                        let own_pk = session.info().public_key();
+
                         // Show different views based on view_state
                         match self.view_state {
                             ViewState::WikiList => {
@@ -244,16 +255,20 @@ impl eframe::App for PubkyApp {
                                                 file_url.split('/').last().unwrap_or(file_url);
 
                                             if ui.button(file_name).clicked() {
-                                                let own_pk =
-                                                    session.info().public_key().to_string();
-                                                self.navigate_to_wiki_page(&own_pk, file_name);
+                                                self.navigate_to_view_wiki_page(
+                                                    own_pk.to_string().as_str(),
+                                                    file_name,
+                                                );
                                             }
                                         }
                                     }
                                 });
                             }
-                            ViewState::CreateWiki => edit_wiki::update(self, session, ctx, ui),
-                            ViewState::ViewWiki => view_wiki::update(self, public_storage, ctx, ui),
+                            ViewState::CreateWiki => create_wiki::update(self, session, ctx, ui),
+                            ViewState::EditWiki => edit_wiki::update(self, session, ctx, ui),
+                            ViewState::ViewWiki => {
+                                view_wiki::update(self, own_pk, pub_storage, ctx, ui)
+                            }
                         }
                     }
                     AuthState::Error(ref error) => {
@@ -285,4 +300,30 @@ pub(crate) async fn create_wiki_post(session: &PubkySession, content: &str) -> R
     log::info!("Created post at path: {}", path);
 
     Ok(path)
+}
+
+pub(crate) async fn update_wiki_post(
+    session: &PubkySession,
+    page_id: &str,
+    content: &str,
+) -> Result<()> {
+    let path = format!("/pub/wiki.app/{}", page_id);
+
+    // Update the post with the provided content
+    session.storage().put(&path, content.to_string()).await?;
+
+    log::info!("Updated post at path: {}", path);
+
+    Ok(())
+}
+
+pub(crate) async fn delete_wiki_post(session: &PubkySession, page_id: &str) -> Result<()> {
+    let path = format!("/pub/wiki.app/{}", page_id);
+
+    // Delete the post
+    session.storage().delete(&path).await?;
+
+    log::info!("Deleted post at path: {}", path);
+
+    Ok(())
 }
