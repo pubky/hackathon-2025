@@ -23,6 +23,7 @@ const addPubkeyButton = document.getElementById('add-pubkey-button');
 const foldersList = document.getElementById('folders-list');
 const manualSyncButton = document.getElementById('manual-sync-button');
 const exportButton = document.getElementById('export-button');
+const signOutButton = document.getElementById('sign-out-button');
 
 // Browser API compatibility
 const browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
@@ -488,6 +489,39 @@ async function handleRecoveryFileSelect(event) {
   }
 }
 
+/**
+ * Handle sign out
+ */
+async function handleSignOut() {
+  if (!confirm('Are you sure you want to sign out? This will remove your keys from local storage. Make sure you have downloaded your recovery file first!')) {
+    return;
+  }
+
+  signOutButton.disabled = true;
+  signOutButton.textContent = 'Signing out...';
+
+  try {
+    const response = await sendMessage({ action: 'signOut' });
+
+    if (response.success) {
+      showToast('Signed out successfully');
+      // Reload popup to show setup screen
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showError(response.error || 'Sign out failed');
+      signOutButton.disabled = false;
+      signOutButton.textContent = 'Sign Out';
+    }
+  } catch (error) {
+    console.error('Sign out error:', error);
+    showError(error.message);
+    signOutButton.disabled = false;
+    signOutButton.textContent = 'Sign Out';
+  }
+}
+
 // Event listeners
 setupButton.addEventListener('click', handleSetup);
 importButton.addEventListener('click', handleImportRecoveryFile);
@@ -495,6 +529,7 @@ recoveryFileInput.addEventListener('change', handleRecoveryFileSelect);
 addPubkeyButton.addEventListener('click', handleAddPubkey);
 manualSyncButton.addEventListener('click', handleManualSync);
 exportButton.addEventListener('click', handleExportRecoveryFile);
+signOutButton.addEventListener('click', handleSignOut);
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', init);

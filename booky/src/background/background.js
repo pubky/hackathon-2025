@@ -96,6 +96,10 @@ async function handleMessage(message) {
       await handleImportRecoveryFile(message.recoveryFileContent, message.homeserver, message.inviteCode);
       return { success: true };
 
+    case 'signOut':
+      await handleSignOut();
+      return { success: true };
+
     default:
       return { success: false, error: 'Unknown action' };
   }
@@ -230,6 +234,34 @@ async function handleRemoveMonitoredPubkey(pubkey) {
   await storageManager.removeMonitoredPubkey(pubkey);
 
   logger.log('Monitored pubkey removed:', pubkey);
+}
+
+/**
+ * Handle sign out
+ */
+async function handleSignOut() {
+  logger.log('Signing out user');
+
+  try {
+    // Clear homeserver session
+    if (homeserverClient) {
+      homeserverClient.session = null;
+      homeserverClient.signer = null;
+    }
+
+    // Clear all local storage
+    await storageManager.clearAll();
+
+    // Clear cached keypair
+    if (keyManager) {
+      keyManager.cachedKeypair = null;
+    }
+
+    logger.log('Sign out completed');
+  } catch (error) {
+    logger.error('Error during sign out:', error);
+    throw error;
+  }
 }
 
 /**

@@ -325,6 +325,33 @@ body {
 
 .actions {
   margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sign-out-button {
+  padding: 8px 12px;
+  background: #5a2e2e;
+  color: #f5a8a8;
+  border: 1px solid #6a3e3e;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sign-out-button:hover {
+  background: #6a3e3e;
+  color: #ffc8c8;
+}
+
+.sign-out-button:disabled {
+  background: #3a2e2e;
+  color: #888;
+  cursor: not-allowed;
+  border-color: #4a3e3e;
 }
 
 #loading {
