@@ -2,11 +2,14 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use eframe::egui;
-use pubky::{Capabilities, Pubky, PubkyAuthFlow};
+use pubky::{Capabilities, Pubky, PubkyAuthFlow, PubkySession};
+use uuid::Uuid;
 
 use crate::utils::generate_qr_image;
 
+mod edit_wiki;
 mod utils;
+mod view_wiki;
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -23,17 +26,34 @@ fn main() -> Result<(), eframe::Error> {
     )
 }
 
-#[derive(Debug, Clone)]
-enum AuthState {
+#[derive(Clone)]
+pub(crate) enum AuthState {
     Initializing,
-    ShowingQR { auth_url: String },
-    Authenticated { public_key: String },
+    ShowingQR {
+        auth_url: String,
+    },
+    Authenticated {
+        session: PubkySession,
+        files: Vec<String>,
+    },
     Error(String),
 }
 
-struct PubkyApp {
-    state: Arc<Mutex<AuthState>>,
+#[derive(Clone, PartialEq)]
+pub(crate) enum ViewState {
+    WikiList,
+    CreateWiki,
+    ViewWiki,
+}
+
+pub(crate) struct PubkyApp {
+    pub(crate) state: Arc<Mutex<AuthState>>,
     qr_texture: Option<egui::TextureHandle>,
+    pub(crate) view_state: ViewState,
+    pub(crate) wiki_content: String,
+    pub(crate) selected_wiki_path: String,
+    pub(crate) selected_wiki_content: String,
+    pub(crate) needs_refresh: bool,
 }
 
 impl PubkyApp {
@@ -54,9 +74,28 @@ impl PubkyApp {
                         // Poll for authentication
                         match flow.await_approval().await {
                             Ok(session) => {
-                                let pk = session.info().public_key().to_string();
+                                // List files from the homeserver
+                                let mut files = Vec::new();
+                                match session
+                                    .storage()
+                                    .list("/pub/wiki.app/")
+                                    .unwrap()
+                                    .send()
+                                    .await
+                                {
+                                    Ok(entries) => {
+                                        for entry in &entries {
+                                            let path = entry.to_pubky_url();
+                                            files.push(path);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        println!("Failed to list files: {}", e);
+                                    }
+                                }
+
                                 *state_clone.lock().unwrap() =
-                                    AuthState::Authenticated { public_key: pk };
+                                    AuthState::Authenticated { session, files };
                             }
                             Err(e) => {
                                 *state_clone.lock().unwrap() =
@@ -75,6 +114,11 @@ impl PubkyApp {
         Self {
             state,
             qr_texture: None,
+            view_state: ViewState::WikiList,
+            wiki_content: String::new(),
+            selected_wiki_path: String::new(),
+            selected_wiki_content: String::new(),
+            needs_refresh: false,
         }
     }
 }
@@ -137,23 +181,89 @@ impl eframe::App for PubkyApp {
                         ui.label("Waiting for authentication...");
                         ui.spinner();
                     }
-                    AuthState::Authenticated { ref public_key } => {
-                        ui.label("✓ Authentication Successful!");
-                        ui.add_space(20.0);
-                        ui.label("Your Public Key:");
-                        ui.add_space(10.0);
+                    AuthState::Authenticated {
+                        ref session,
+                        ref files,
+                    } => {
+                        // Check if we need to refresh the files list
+                        if self.needs_refresh {
+                            let session_clone = session.clone();
+                            let state_clone = self.state.clone();
+                            std::thread::spawn(move || {
+                                let rt = tokio::runtime::Runtime::new().unwrap();
+                                rt.block_on(async {
+                                    let mut new_files = Vec::new();
+                                    match session_clone
+                                        .storage()
+                                        .list("/pub/wiki.app/")
+                                        .unwrap()
+                                        .send()
+                                        .await
+                                    {
+                                        Ok(entries) => {
+                                            for entry in &entries {
+                                                let path = entry.to_pubky_url();
+                                                new_files.push(path);
+                                            }
+                                        }
+                                        Err(e) => {
+                                            println!("Failed to refresh files: {}", e);
+                                        }
+                                    }
 
-                        // Display public key in a scrollable text area
-                        egui::Frame::new()
-                            .fill(egui::Color32::from_gray(240))
-                            .inner_margin(10.0)
-                            .show(ui, |ui| {
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut public_key.as_str())
-                                        .desired_width(f32::INFINITY)
-                                        .font(egui::TextStyle::Monospace),
-                                );
+                                    // Update the state with new files
+                                    if let Ok(mut state) = state_clone.lock() {
+                                        if let AuthState::Authenticated { ref mut files, .. } =
+                                            *state
+                                        {
+                                            *files = new_files;
+                                        }
+                                    }
+                                });
                             });
+                            self.needs_refresh = false;
+                        }
+
+                        // Show different views based on view_state
+                        match self.view_state {
+                            ViewState::WikiList => {
+                                ui.label("My Wiki Posts");
+                                ui.add_space(20.0);
+
+                                // Create new wiki page button
+                                if ui.button("Create new wiki page").clicked() {
+                                    self.view_state = ViewState::CreateWiki;
+                                }
+
+                                ui.add_space(20.0);
+
+                                // List all wiki posts as buttons
+                                egui::ScrollArea::vertical().show(ui, |ui| {
+                                    if files.is_empty() {
+                                        ui.label("No wiki posts yet. Create your first one!");
+                                    } else {
+                                        for file_url in files {
+                                            // Extract just the filename from the URL
+                                            let file_name =
+                                                file_url.split('/').last().unwrap_or(file_url);
+
+                                            if ui.button(file_name).clicked() {
+                                                // Extract the path from the pubky URL
+                                                let path_start = file_url.find("/pub/");
+                                                if let Some(start_idx) = path_start {
+                                                    let file_path = &file_url[start_idx..];
+                                                    self.selected_wiki_path = file_path.to_string();
+                                                    self.selected_wiki_content = String::new();
+                                                    self.view_state = ViewState::ViewWiki;
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            ViewState::CreateWiki => edit_wiki::update(self, session, ctx, ui),
+                            ViewState::ViewWiki => view_wiki::update(self, session, ctx, ui),
+                        }
                     }
                     AuthState::Error(ref error) => {
                         ui.colored_label(egui::Color32::RED, "Error");
@@ -168,9 +278,20 @@ impl eframe::App for PubkyApp {
 
 async fn initialize_auth() -> Result<(PubkyAuthFlow, String)> {
     let pubky = Pubky::new()?;
-    let caps = Capabilities::default();
+    let caps = Capabilities::builder().write("/pub/wiki.app/").finish();
     let flow = pubky.start_auth_flow(&caps)?;
     let auth_url = flow.authorization_url().to_string();
 
     Ok((flow, auth_url))
+}
+
+pub(crate) async fn create_wiki_post(session: &PubkySession, content: &str) -> Result<String> {
+    let path = format!("/pub/wiki.app/{}", Uuid::new_v4());
+
+    // Create the post with the provided content
+    session.storage().put(&path, content.to_string()).await?;
+
+    println!("Created post at path: {}", path);
+
+    Ok(path)
 }

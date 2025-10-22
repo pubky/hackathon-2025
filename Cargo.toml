@@ -11,3 +11,4 @@ image = "0.25"
 qrcode = "0.14"
 pubky = "0.6.0-rc.6"
 tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
