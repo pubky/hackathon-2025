@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use eframe::egui;
-use pubky::{Capabilities, Pubky, PubkyAuthFlow};
+use pubky::{Capabilities, Pubky, PubkyAuthFlow, PubkySession};
 
 use crate::utils::generate_qr_image;
 
@@ -23,11 +23,17 @@ fn main() -> Result<(), eframe::Error> {
     )
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum AuthState {
     Initializing,
-    ShowingQR { auth_url: String },
-    Authenticated { public_key: String },
+    ShowingQR {
+        auth_url: String,
+    },
+    Authenticated {
+        public_key: String,
+        session: PubkySession,
+        files: Vec<String>,
+    },
     Error(String),
 }
 
@@ -55,8 +61,28 @@ impl PubkyApp {
                         match flow.await_approval().await {
                             Ok(session) => {
                                 let pk = session.info().public_key().to_string();
-                                *state_clone.lock().unwrap() =
-                                    AuthState::Authenticated { public_key: pk };
+
+                                // List files from the homeserver
+                                let mut files = Vec::new();
+                                match session.storage().list("/pub/").unwrap().send().await {
+                                    Ok(entries) => {
+                                        println!("Files on homeserver:");
+                                        for entry in &entries {
+                                            let path = entry.to_pubky_url();
+                                            println!("  {}", path);
+                                            files.push(path);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        println!("Failed to list files: {}", e);
+                                    }
+                                }
+
+                                *state_clone.lock().unwrap() = AuthState::Authenticated {
+                                    public_key: pk,
+                                    session,
+                                    files,
+                                };
                             }
                             Err(e) => {
                                 *state_clone.lock().unwrap() =
@@ -137,7 +163,11 @@ impl eframe::App for PubkyApp {
                         ui.label("Waiting for authentication...");
                         ui.spinner();
                     }
-                    AuthState::Authenticated { ref public_key } => {
+                    AuthState::Authenticated {
+                        ref public_key,
+                        ref session,
+                        files: _,
+                    } => {
                         ui.label("✓ Authentication Successful!");
                         ui.add_space(20.0);
                         ui.label("Your Public Key:");
@@ -154,6 +184,26 @@ impl eframe::App for PubkyApp {
                                         .font(egui::TextStyle::Monospace),
                                 );
                             });
+
+                        ui.add_space(20.0);
+
+                        // Create new wiki page button
+                        if ui.button("Create new wiki page").clicked() {
+                            let session_clone = session.clone();
+                            std::thread::spawn(move || {
+                                let rt = tokio::runtime::Runtime::new().unwrap();
+                                rt.block_on(async {
+                                    match create_wiki_post(&session_clone).await {
+                                        Ok(path) => {
+                                            println!("Created wiki post at: {}", path);
+                                        }
+                                        Err(e) => {
+                                            println!("Failed to create wiki post: {}", e);
+                                        }
+                                    }
+                                });
+                            });
+                        }
                     }
                     AuthState::Error(ref error) => {
                         ui.colored_label(egui::Color32::RED, "Error");
@@ -173,4 +223,21 @@ async fn initialize_auth() -> Result<(PubkyAuthFlow, String)> {
     let auth_url = flow.authorization_url().to_string();
 
     Ok((flow, auth_url))
+}
+
+async fn create_wiki_post(session: &PubkySession) -> Result<String> {
+    // Generate a unique ID using timestamp
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    let path = format!("/pub/wiki/posts/{}", timestamp);
+
+    // Create the post with "test" content
+    session.storage().put(&path, "test").await?;
+
+    println!("Created post at path: {}", path);
+
+    Ok(path)
 }
