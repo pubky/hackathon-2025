@@ -127,7 +127,40 @@ export class BookmarkSync {
       if (url) {
         const timestamp = Date.now();
 
-        // Mark as deleted
+        // Check if this bookmark was in a synced folder and get its path
+        const pubkey = await this.keyManager.getPublicKey();
+        if (pubkey) {
+          const folderId = this.folderCache.get(pubkey);
+          if (folderId && removeInfo.parentId) {
+            // Check if the parent was in our synced folder
+            const isParentSyncedFolder = removeInfo.parentId === folderId;
+            const wasInSyncedFolder = isParentSyncedFolder || await this.isInFolder(removeInfo.parentId, folderId);
+
+            if (wasInSyncedFolder) {
+              // Get the path for this bookmark
+              const path = isParentSyncedFolder ? '' : await this.getPathInFolder(removeInfo.parentId, folderId);
+              if (path !== null) {
+                logger.log('Bookmark removed from synced folder:', url, 'path:', path);
+
+                // Mark as deleted with path
+                await this.storage.markDeleted(url, timestamp, path);
+                await this.storage.removeBookmarkMeta(url);
+
+                // Delete from homeserver immediately
+                await this.deleteBookmarkWithPath(url, path);
+
+                // Remove from cache
+                this.urlCache.delete(id);
+
+                logger.log('Bookmark removed, triggering sync:', url);
+                this.triggerSyncAfterDelay();
+                return;
+              }
+            }
+          }
+        }
+
+        // Fallback: not in synced folder or couldn't determine path
         await this.storage.markDeleted(url, timestamp);
         await this.storage.removeBookmarkMeta(url);
 
@@ -137,10 +170,40 @@ export class BookmarkSync {
         logger.log('Bookmark removed, triggering sync:', url);
         this.triggerSyncAfterDelay();
       } else if (removeInfo.node && !removeInfo.node.url) {
-        // It's a folder that was removed - check if parent was a synced folder
-        // We need to delete all bookmarks that were in this folder from homeserver
-        logger.log('Folder removed, triggering sync:', removeInfo.node.title);
-        this.triggerSyncAfterDelay();
+        // It's a folder that was removed - check if it was in a synced folder
+        const pubkey = await this.keyManager.getPublicKey();
+        if (pubkey) {
+          const folderId = this.folderCache.get(pubkey);
+          if (folderId && removeInfo.parentId) {
+            // Check if the parent is the synced folder or inside it
+            const isParentSyncedFolder = removeInfo.parentId === folderId;
+            const wasInSyncedFolder = isParentSyncedFolder || await this.isInFolder(removeInfo.parentId, folderId);
+
+            if (wasInSyncedFolder) {
+              // Get the path for the removed folder
+              const parentPath = isParentSyncedFolder ? '' : await this.getPathInFolder(removeInfo.parentId, folderId);
+              if (parentPath !== null) {
+                const folderPath = parentPath ? `${parentPath}${removeInfo.node.title}/` : `${removeInfo.node.title}/`;
+                logger.log('Folder removed from synced folder, deleting from homeserver:', removeInfo.node.title, 'path:', folderPath);
+
+                const timestamp = Date.now();
+
+                // Mark all bookmarks in this folder tree as deleted
+                if (removeInfo.node.children) {
+                  await this.markFolderContentsDeleted(removeInfo.node.children, timestamp, folderPath);
+                }
+
+                // Delete the folder (and its contents) from homeserver - await this!
+                await this.deleteFolderFromHomeserver(folderPath);
+
+                logger.log('Folder removed, triggering sync:', removeInfo.node.title);
+                this.triggerSyncAfterDelay();
+                return;
+              }
+            }
+          }
+        }
+        logger.log('Folder removed (not in synced folder):', removeInfo.node.title);
       }
     });
 
@@ -1002,6 +1065,102 @@ export class BookmarkSync {
       .join('');
 
     return hex;
+  }
+
+  /**
+   * Mark all bookmarks in a folder tree as deleted (recursively)
+   * @param {Array} children - Array of bookmark nodes
+   * @param {number} timestamp - Timestamp for deletion
+   * @param {string} basePath - Base path for this folder
+   */
+  async markFolderContentsDeleted(children, timestamp, basePath) {
+    for (const child of children) {
+      if (child.url) {
+        // It's a bookmark - mark as deleted
+        await this.storage.markDeleted(child.url, timestamp, basePath);
+        await this.storage.removeBookmarkMeta(child.url);
+        logger.log('Marked bookmark as deleted:', child.url, 'path:', basePath);
+      } else if (child.children) {
+        // It's a subfolder - recurse
+        const childPath = `${basePath}${child.title}/`;
+        await this.markFolderContentsDeleted(child.children, timestamp, childPath);
+      }
+    }
+  }
+
+  /**
+   * Create a folder on homeserver
+   * @param {string} path - Relative path like "tag1/" or "tag1/tag2/"
+   */
+  async createFolderOnHomeserver(path) {
+    try {
+      // Homeserver directories are created implicitly when you PUT a file
+      // So we create a temporary marker file to ensure the directory exists
+      const fullPath = `/pub/booky/${path}.keep`;
+
+      // Put an empty marker file
+      await this.homeserverClient.put(fullPath, {
+        _marker: true,
+        created: Date.now()
+      });
+
+      logger.log('Created folder on homeserver:', path);
+    } catch (error) {
+      logger.warn('Failed to create folder on homeserver:', path, error);
+      // Don't throw - this is not critical
+    }
+  }
+
+  /**
+   * Delete a folder from homeserver (recursively deletes all contents)
+   * @param {string} path - Relative path like "tag1/" or "tag1/tag2/"
+   */
+  async deleteFolderFromHomeserver(path) {
+    try {
+      const basePath = '/pub/booky/';
+      const fullPath = `${basePath}${path}`;
+
+      // List all entries in this folder
+      const entries = await this.homeserverClient.list(fullPath);
+
+      // Delete all entries recursively
+      for (const entry of entries) {
+        try {
+          if (entry.endsWith('/')) {
+            // It's a subdirectory - recurse
+            const entryName = entry.split('/').filter(s => s).pop();
+            await this.deleteFolderFromHomeserver(`${path}${entryName}/`);
+          } else {
+            // It's a file - delete it
+            // Extract the path relative to the base
+            let entryPath = entry;
+            if (entry.startsWith('pubky://')) {
+              const parts = entry.split('/');
+              const pubkeyIndex = parts.findIndex(p => p && p.length > 20);
+              if (pubkeyIndex >= 0) {
+                entryPath = '/' + parts.slice(pubkeyIndex + 1).join('/');
+              }
+            }
+            await this.homeserverClient.delete(entryPath);
+            logger.log('Deleted file from homeserver:', entryPath);
+          }
+        } catch (error) {
+          logger.warn('Failed to delete entry:', entry, error);
+        }
+      }
+
+      // Delete the .keep marker file if it exists
+      try {
+        await this.homeserverClient.delete(`${fullPath}.keep`);
+      } catch (error) {
+        // Ignore - .keep might not exist
+      }
+
+      logger.log('Deleted folder from homeserver:', path);
+    } catch (error) {
+      logger.warn('Failed to delete folder from homeserver:', path, error);
+      // Don't throw - this is not critical
+    }
   }
 }
 
