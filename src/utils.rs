@@ -27,3 +27,10 @@ pub fn generate_qr_image(url: &str) -> Option<egui::ColorImage> {
 
     Some(egui::ColorImage::new([scaled_width, scaled_height], pixels))
 }
+
+/// In this context, the title is the readable text on the 1st line
+pub fn extract_title(input: &str) -> &str {
+    // Get the first line by splitting on newlines and taking the first element
+    let first_line = input.lines().next().unwrap_or("");
+    first_line.trim_start_matches("# ")
+}

@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use anyhow::{anyhow, Result};
 use eframe::egui;
@@ -7,7 +10,7 @@ use pubky::{Capabilities, Pubky, PubkyAuthFlow, PubkySession, PublicStorage};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
 
-use crate::utils::generate_qr_image;
+use crate::utils::{extract_title, generate_qr_image};
 
 mod create_wiki;
 mod edit_wiki;
@@ -42,7 +45,8 @@ pub(crate) enum AuthState {
     Authenticated {
         session: PubkySession,
         pub_storage: PublicStorage,
-        file_urls: Vec<String>,
+        /// Map file URL to file title
+        file_cache: HashMap<String, String>,
     },
     Error(String),
 }
@@ -91,27 +95,12 @@ impl PubkyApp {
                     let await_approval_fut = flow.await_approval();
                     match rt_arc_clone.block_on(await_approval_fut) {
                         Ok(session) => {
-                            let session_storage = session.storage();
-                            let mut file_urls = Vec::new();
-
-                            // List files from the homeserver
-                            let session_storage_list_fut =
-                                session_storage.list("/pub/wiki.app/").unwrap().send();
-                            match rt_arc_clone.block_on(session_storage_list_fut) {
-                                Ok(entries) => {
-                                    for entry in &entries {
-                                        let file_url = entry.to_pubky_url();
-                                        file_urls.push(file_url);
-                                    }
-                                }
-                                Err(e) => log::error!("Failed to list files: {e}",),
-                            }
-
-                            *state_clone.lock().unwrap() = AuthState::Authenticated {
-                                session,
-                                pub_storage: pubky.public_storage(),
-                                file_urls,
-                            };
+                            Self::fetch_files_and_update(
+                                &session,
+                                &pubky.public_storage(),
+                                rt_arc_clone,
+                                state_clone,
+                            );
                         }
                         Err(e) => {
                             *state_clone.lock().unwrap() =
@@ -139,6 +128,55 @@ impl PubkyApp {
             rt: rt_arc,
             show_copy_tooltip: false,
         }
+    }
+
+    /// Fetch the list of files and their titles, then update the state with the file cache
+    fn fetch_files_and_update(
+        session: &PubkySession,
+        pub_storage: &PublicStorage,
+        rt_arc_clone: Arc<Runtime>,
+        state_clone: Arc<Mutex<AuthState>>,
+    ) {
+        let session_storage = session.storage();
+        let mut file_cache = HashMap::new();
+
+        // List files from the homeserver
+        let session_storage_list_fut = session_storage.list("/pub/wiki.app/").unwrap().send();
+        match rt_arc_clone.block_on(session_storage_list_fut) {
+            Ok(entries) => {
+                for entry in &entries {
+                    let file_url = entry.to_pubky_url();
+
+                    // Synchronously fetch the content
+                    let get_path_fut = pub_storage.get(&file_url);
+                    match rt_arc_clone.block_on(get_path_fut) {
+                        Ok(response) => {
+                            let response_text_fut = response.text();
+                            match rt_arc_clone.block_on(response_text_fut) {
+                                Ok(content) => {
+                                    let file_title = extract_title(&content);
+
+                                    file_cache.insert(file_url, file_title.into());
+                                }
+                                Err(e) => {
+                                    log::error!("Error reading content: {e}")
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            log::error!("Error fetching path {file_url}: {e}")
+                        }
+                    }
+                }
+            }
+            Err(e) => log::error!("Failed to list files: {e}"),
+        }
+
+        *state_clone.lock().unwrap() = AuthState::Authenticated {
+            session: session.clone(),
+            pub_storage: pub_storage.clone(),
+            file_cache,
+        };
     }
 
     fn navigate_to_view_wiki_page(&mut self, user_pk: &str, page_id: &str) {
@@ -199,37 +237,20 @@ impl eframe::App for PubkyApp {
                         ui.spinner();
                     }
                     AuthState::Authenticated {
-                        ref session,
+                        session,
                         ref pub_storage,
-                        ref file_urls,
+                        ref file_cache,
                     } => {
-                        // Check if we need to refresh the files list
+                        // Check if we need to refresh the files cache
                         if self.needs_refresh {
-                            let session_storage = session.storage();
                             let state_clone = self.state.clone();
-                            let mut new_file_urls = Vec::new();
 
-                            let session_list_fut =
-                                session_storage.list("/pub/wiki.app/").unwrap().send();
-                            match self.rt.block_on(session_list_fut) {
-                                Ok(entries) => {
-                                    for entry in &entries {
-                                        let path = entry.to_pubky_url();
-                                        new_file_urls.push(path);
-                                    }
-                                }
-                                Err(e) => log::error!("Failed to refresh files: {e}"),
-                            }
-
-                            // Update the state with new files
-                            if let Ok(mut state) = state_clone.lock() {
-                                if let AuthState::Authenticated {
-                                    ref mut file_urls, ..
-                                } = *state
-                                {
-                                    *file_urls = new_file_urls;
-                                }
-                            }
+                            Self::fetch_files_and_update(
+                                &session,
+                                pub_storage,
+                                self.rt.clone(),
+                                state_clone,
+                            );
 
                             self.needs_refresh = false;
                         }
@@ -251,15 +272,18 @@ impl eframe::App for PubkyApp {
 
                                 // List all wiki posts as buttons
                                 egui::ScrollArea::vertical().show(ui, |ui| {
-                                    if file_urls.is_empty() {
+                                    if file_cache.is_empty() {
                                         ui.label("No wiki posts yet. Create your first one!");
                                     } else {
-                                        for file_url in file_urls {
+                                        for (file_url, file_title) in file_cache {
                                             // Extract just the filename from the URL
                                             let file_name =
                                                 file_url.split('/').last().unwrap_or(file_url);
 
-                                            if ui.button(file_name).clicked() {
+                                            if ui
+                                                .button(format!("{file_name} ({file_title}...)"))
+                                                .clicked()
+                                            {
                                                 self.navigate_to_view_wiki_page(
                                                     own_pk.to_string().as_str(),
                                                     file_name,
@@ -269,10 +293,10 @@ impl eframe::App for PubkyApp {
                                     }
                                 });
                             }
-                            ViewState::CreateWiki => create_wiki::update(self, session, ctx, ui),
-                            ViewState::EditWiki => edit_wiki::update(self, session, ctx, ui),
+                            ViewState::CreateWiki => create_wiki::update(self, &session, ctx, ui),
+                            ViewState::EditWiki => edit_wiki::update(self, &session, ctx, ui),
                             ViewState::ViewWiki => {
-                                view_wiki::update(self, own_pk, pub_storage, ctx, ui)
+                                view_wiki::update(self, own_pk, &pub_storage, ctx, ui)
                             }
                         }
                     }
