@@ -1,10 +1,10 @@
 .project-list {
-  gap: 1.25rem;
+  gap: 1.35rem;
 }
 
 .project-list__grid {
   display: grid;
-  gap: 1.5rem;
+  gap: clamp(1.2rem, 3vw, 1.75rem);
 }
 
 @media (min-width: 900px) {

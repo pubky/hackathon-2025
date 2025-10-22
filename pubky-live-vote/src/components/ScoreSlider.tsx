@@ -9,7 +9,7 @@ interface Props {
 
 const buildGradient = (value: number) => {
   const percentage = Math.round((value / 10) * 100);
-  return `linear-gradient(90deg, rgba(56, 189, 248, 0.85) ${percentage}%, rgba(71, 85, 105, 0.35) ${percentage}%)`;
+  return `linear-gradient(90deg, rgba(155, 168, 255, 0.92) ${percentage}%, rgba(47, 52, 80, 0.35) ${percentage}%)`;
 };
 
 export const ScoreSlider = ({ label, value, onChange }: Props) => {

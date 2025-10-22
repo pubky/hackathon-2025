@@ -1,4 +1,5 @@
 import { FormEvent, KeyboardEvent, useMemo, useState } from 'react';
+import { getTagTone } from '../utils/tagTone';
 import './TagInput.css';
 
 interface Props {
@@ -60,8 +61,11 @@ export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
       </div>
       <div className="tag-input__chips">
         {value.map((tag) => (
-          <span key={tag} className="chip">
-            #{tag}
+          <span key={tag} className={`chip ${getTagTone(tag)}`}>
+            <span aria-hidden="true" className="chip__hash">
+              #
+            </span>
+            <span className="chip__label">{tag}</span>
             <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove ${tag}`}>
               ×
             </button>
@@ -85,8 +89,9 @@ export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
         <ul className="tag-input__suggestions">
           {suggestions.map((suggestion) => (
             <li key={suggestion}>
-              <button type="button" onClick={() => addTag(suggestion)}>
-                #{suggestion}
+              <button type="button" className={getTagTone(suggestion)} onClick={() => addTag(suggestion)}>
+                <span aria-hidden="true">#</span>
+                {suggestion}
               </button>
             </li>
           ))}

@@ -1,5 +1,6 @@
 import { ChangeEvent } from 'react';
 import type { Project, ScoreComponent } from '../types/project';
+import { getTagTone } from '../utils/tagTone';
 import { ScoreSlider } from './ScoreSlider';
 import { TagInput } from './TagInput';
 import './ProjectCard.css';
@@ -45,7 +46,7 @@ export const ProjectCard = ({ project, onScoreChange, onReadinessToggle, onComme
         </div>
         <div className="project-card__tags">
           {project.tags.map((tag) => (
-            <span key={tag} className="tag">
+            <span key={tag} className={`tag ${getTagTone(tag)}`}>
               #{tag}
             </span>
           ))}
