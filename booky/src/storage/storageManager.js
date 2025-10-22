@@ -16,7 +16,7 @@ export class StorageManager {
    */
   async getEncryptedKey() {
     const result = await this.storage.get('encryptedKey');
-    return result.encryptedKey || null;
+    return result?.encryptedKey || null;
   }
 
   /**
@@ -32,7 +32,7 @@ export class StorageManager {
    */
   async getPubkey() {
     const result = await this.storage.get('pubkey');
-    return result.pubkey || null;
+    return result?.pubkey || null;
   }
 
   /**
@@ -48,7 +48,7 @@ export class StorageManager {
    */
   async getMonitoredPubkeys() {
     const result = await this.storage.get('monitoredPubkeys');
-    return result.monitoredPubkeys || [];
+    return result?.monitoredPubkeys || [];
   }
 
   /**
