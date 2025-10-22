@@ -515,7 +515,7 @@ export class BookmarkSync {
       };
 
       // Create a safe filename from URL (URL is the unique identifier)
-      const filename = this.createFilename(bookmark.url);
+      const filename = await this.createFilename(bookmark.url);
 
       // Use session storage with absolute path
       await this.homeserverClient.put(`/pub/booky/${filename}`, data);
@@ -532,7 +532,7 @@ export class BookmarkSync {
    */
   async deleteBookmark(bookmark, timestamp = Date.now()) {
     try {
-      const filename = this.createFilename(bookmark.url);
+      const filename = await this.createFilename(bookmark.url);
       const path = `/pub/booky/${filename}`;
       
       // Delete from homeserver (use DELETE method via session.storage)
@@ -550,7 +550,7 @@ export class BookmarkSync {
    */
   async deleteBookmarkByUrl(url) {
     try {
-      const filename = this.createFilename(url);
+      const filename = await this.createFilename(url);
       const path = `/pub/booky/${filename}`;
       
       await this.homeserverClient.delete(path);
@@ -637,13 +637,21 @@ export class BookmarkSync {
   }
 
   /**
-   * Create a safe filename from URL
+   * Create a safe filename from URL using hash
    */
-  createFilename(url) {
-    // Use a hash or encoded version of the URL
-    const encoded = encodeURIComponent(url);
-    // Limit length and make it filesystem-safe
-    return encoded.substring(0, 100).replace(/[^a-zA-Z0-9_-]/g, '_');
+  async createFilename(url) {
+    // Hash the URL to create a fixed-length filename
+    const encoder = new TextEncoder();
+    const data = encoder.encode(url);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = new Uint8Array(hashBuffer);
+
+    // Take first 16 bytes and convert to hex
+    const hex = Array.from(hashArray.slice(0, 16))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    return hex;
   }
 }
 
