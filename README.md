@@ -88,7 +88,7 @@ Two kind of development environments:
 You can embed an ephimeral testnet using the `pubky-testnet` crate for full local development.
 
 ```sh
-cargo add pubky-testnet@=0.6.0-rc.1
+cargo add pubky-testnet@=0.6.0-rc.6
 ```
 
 Check out [examples/testnet](https://github.com/pubky/pubky-core/tree/main/examples/rust/1-testnet) to learn how to create from a tiny app performing signup/put/get against an ephemeral local testnet.
@@ -96,7 +96,7 @@ Check out [examples/testnet](https://github.com/pubky/pubky-core/tree/main/examp
 You can also run it as a separate process by:
 
 ```sh
-cargo install pubky-testnet
+cargo install pubky-testnet --version 0.6.0-rc.6
 pubky-testnet
 
 # then instantiate the sdk facade with Pubky::testnet()
