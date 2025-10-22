@@ -10,8 +10,7 @@ scripts/
 # Git
 .git/
 .gitignore
-data/pubky-core/.git/
-data/pubky-app-specs/.git/
+**/.git/
 
 # Test files
 *.test.js
