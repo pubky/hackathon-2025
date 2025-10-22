@@ -7,7 +7,9 @@ use uuid::Uuid;
 
 use crate::utils::generate_qr_image;
 
+mod edit_wiki;
 mod utils;
+mod view_wiki;
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -218,10 +220,8 @@ impl eframe::App for PubkyApp {
 
                                     // Update the state with new files
                                     if let Ok(mut state) = state_clone.lock() {
-                                        if let AuthState::Authenticated {
-                                            ref mut files,
-                                            ..
-                                        } = *state
+                                        if let AuthState::Authenticated { ref mut files, .. } =
+                                            *state
                                         {
                                             *files = new_files;
                                         }
@@ -251,10 +251,8 @@ impl eframe::App for PubkyApp {
                                     } else {
                                         for file_url in files {
                                             // Extract just the filename from the URL
-                                            let file_name = file_url
-                                                .split('/')
-                                                .last()
-                                                .unwrap_or(file_url);
+                                            let file_name =
+                                                file_url.split('/').last().unwrap_or(file_url);
 
                                             if ui.button(file_name).clicked() {
                                                 // Extract the path from the pubky URL
@@ -270,121 +268,8 @@ impl eframe::App for PubkyApp {
                                     }
                                 });
                             }
-                            ViewState::CreateWiki => {
-                                ui.label("Create New Wiki Page");
-                                ui.add_space(20.0);
-
-                                // Textarea for wiki content
-                                ui.label("Content:");
-                                ui.add_space(10.0);
-
-                                egui::ScrollArea::vertical()
-                                    .max_height(400.0)
-                                    .show(ui, |ui| {
-                                        ui.add(
-                                            egui::TextEdit::multiline(&mut self.wiki_content)
-                                                .desired_width(f32::INFINITY)
-                                                .desired_rows(15),
-                                        );
-                                    });
-
-                                ui.add_space(20.0);
-
-                                // Save and Cancel buttons
-                                ui.horizontal(|ui| {
-                                    if ui.button("Save wiki").clicked() {
-                                        let session_clone = session.clone();
-                                        let content = self.wiki_content.clone();
-                                        std::thread::spawn(move || {
-                                            let rt = tokio::runtime::Runtime::new().unwrap();
-                                            rt.block_on(async {
-                                                match create_wiki_post(&session_clone, &content)
-                                                    .await
-                                                {
-                                                    Ok(path) => {
-                                                        println!("Created wiki post at: {}", path);
-                                                    }
-                                                    Err(e) => {
-                                                        println!(
-                                                            "Failed to create wiki post: {}",
-                                                            e
-                                                        );
-                                                    }
-                                                }
-                                            });
-                                        });
-                                        self.wiki_content.clear();
-                                        self.needs_refresh = true;
-                                        self.view_state = ViewState::WikiList;
-                                    }
-
-                                    if ui.button("Cancel").clicked() {
-                                        self.wiki_content.clear();
-                                        self.view_state = ViewState::WikiList;
-                                    }
-                                });
-                            }
-                            ViewState::ViewWiki => {
-                                ui.label("View Wiki Post");
-                                ui.add_space(20.0);
-
-                                // Display filename
-                                let file_name = self.selected_wiki_path
-                                    .split('/')
-                                    .last()
-                                    .unwrap_or(&self.selected_wiki_path);
-                                ui.label(format!("File: {}", file_name));
-                                ui.add_space(10.0);
-
-                                // Display content in a scrollable area
-                                egui::ScrollArea::vertical()
-                                    .max_height(400.0)
-                                    .show(ui, |ui| {
-                                        // Try to fetch content if empty
-                                        if self.selected_wiki_content.is_empty() && !self.selected_wiki_path.is_empty() {
-                                            let session_clone = session.clone();
-                                            let path_clone = self.selected_wiki_path.clone();
-
-                                            // Synchronously fetch the content
-                                            let rt = tokio::runtime::Runtime::new().unwrap();
-                                            match rt.block_on(async {
-                                                session_clone.storage().get(&path_clone).await
-                                            }) {
-                                                Ok(response) => {
-                                                    let rt2 = tokio::runtime::Runtime::new().unwrap();
-                                                    match rt2.block_on(async {
-                                                        response.text().await
-                                                    }) {
-                                                        Ok(text) => {
-                                                            self.selected_wiki_content = text;
-                                                        }
-                                                        Err(e) => {
-                                                            self.selected_wiki_content = format!("Error reading content: {}", e);
-                                                        }
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    self.selected_wiki_content = format!("Error fetching file: {}", e);
-                                                }
-                                            }
-                                        }
-
-                                        ui.add(
-                                            egui::TextEdit::multiline(&mut self.selected_wiki_content.as_str())
-                                                .desired_width(f32::INFINITY)
-                                                .interactive(false),
-                                        );
-                                    });
-
-                                ui.add_space(20.0);
-
-                                // Go back button
-                                if ui.button("Go back").clicked() {
-                                    self.selected_wiki_path.clear();
-                                    self.selected_wiki_content.clear();
-                                    self.view_state = ViewState::WikiList;
-                                }
-                            }
+                            ViewState::CreateWiki => edit_wiki::update(self, session, ctx, ui),
+                            ViewState::ViewWiki => view_wiki::update(self, session, ctx, ui),
                         }
                     }
                     AuthState::Error(ref error) => {
