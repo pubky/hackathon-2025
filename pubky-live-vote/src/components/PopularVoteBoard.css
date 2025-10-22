@@ -1,0 +1,86 @@
+.popular {
+  gap: 1.5rem;
+}
+
+.popular__body {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.popular__self-select {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.popular__self-select select {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.55);
+  color: inherit;
+  padding: 0.5rem 0.75rem;
+}
+
+.popular h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.popular__pool {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.popular__pool button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.popular__ranking ol {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.popular__ranking li {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 40px;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.55);
+  cursor: grab;
+}
+
+.popular__ranking li:active {
+  cursor: grabbing;
+}
+
+.popular__position {
+  font-weight: 700;
+  color: #bae6fd;
+}
+
+.popular__ranking button {
+  background: transparent;
+  border: none;
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.popular__ranking button:hover {
+  color: var(--danger);
+}
+
+.popular__empty {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.6);
+}

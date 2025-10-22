@@ -1,0 +1,27 @@
+.submission-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+  padding: 0.75rem 1rem;
+}
+
+.submission-banner p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+@media (max-width: 600px) {
+  .submission-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .submission-banner .button {
+    width: 100%;
+  }
+}

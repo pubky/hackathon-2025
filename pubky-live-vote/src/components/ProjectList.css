@@ -1,0 +1,14 @@
+.project-list {
+  gap: 1.25rem;
+}
+
+.project-list__grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .project-list__grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}

@@ -1,0 +1,105 @@
+.panel {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(16px);
+}
+
+.panel__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel__header h2 {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+}
+
+.panel__subtitle {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.button {
+  align-self: flex-start;
+  border-radius: 12px;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  background: var(--accent);
+  color: #0b1120;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.25);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.button--ghost:hover {
+  background: rgba(148, 163, 184, 0.08);
+  box-shadow: none;
+}
+
+.qr-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 220px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.qr-container svg {
+  width: min(220px, 60vw);
+  height: auto;
+}
+
+.qr-placeholder {
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.identity-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.identity-list dt {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.identity-list dd {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+}

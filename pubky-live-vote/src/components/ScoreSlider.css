@@ -1,0 +1,47 @@
+.slider {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.slider__label {
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.slider__input {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.slider__input input[type='range'] {
+  width: 100%;
+  appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(71, 85, 105, 0.35);
+}
+
+.slider__input input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+.slider__input input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+}
+
+.slider__value {
+  font-weight: 700;
+  min-width: 2ch;
+  text-align: right;
+}
