@@ -4,16 +4,18 @@
  */
 
 export const browser = (() => {
-  // Firefox uses 'browser' namespace, Chrome uses 'chrome'
-  if (typeof chrome !== 'undefined' && chrome.runtime) {
+  // Check for Firefox first (has native Promise support)
+  if (typeof globalThis.browser !== 'undefined' && globalThis.browser.runtime) {
+    return globalThis.browser;
+  }
+  // Chrome uses 'chrome' namespace
+  else if (typeof chrome !== 'undefined' && chrome.runtime) {
     return {
       storage: chrome.storage,
       bookmarks: chrome.bookmarks,
       alarms: chrome.alarms,
       runtime: chrome.runtime
     };
-  } else if (typeof browser !== 'undefined' && browser.runtime) {
-    return browser;
   }
   throw new Error('No browser API available');
 })();
