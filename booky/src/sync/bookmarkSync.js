@@ -49,7 +49,7 @@ export class BookmarkSync {
    */
   setupBookmarkListeners() {
     // Listen for bookmark creation - trigger sync
-    browser.bookmarks.onCreated.addListener((id, bookmark) => {
+    browser.bookmarks.onCreated.addListener(async (id, bookmark) => {
       if (this.ignoreEvents) {
         return;
       }
@@ -57,15 +57,21 @@ export class BookmarkSync {
       // Cache the URL for this browser ID
       if (bookmark.url) {
         this.urlCache.set(id, bookmark.url);
-        
+
         const timestamp = Date.now();
-        this.storage.setBookmarkMeta(bookmark.url, {
+        await this.storage.setBookmarkMeta(bookmark.url, {
           url: bookmark.url,
           timestamp: timestamp
-        }).then(() => {
-          logger.log('Bookmark created, triggering sync:', bookmark.url);
-          this.triggerSyncAfterDelay();
         });
+        logger.log('Bookmark created, triggering sync:', bookmark.url);
+        this.triggerSyncAfterDelay();
+      } else {
+        // It's a folder - check if it's inside a synced folder
+        const isInSyncedFolder = await this.isInAnySyncedFolder(id);
+        if (isInSyncedFolder) {
+          logger.log('Folder created in synced folder, triggering sync:', bookmark.title);
+          this.triggerSyncAfterDelay();
+        }
       }
     });
 
@@ -130,6 +136,11 @@ export class BookmarkSync {
 
         logger.log('Bookmark removed, triggering sync:', url);
         this.triggerSyncAfterDelay();
+      } else if (removeInfo.node && !removeInfo.node.url) {
+        // It's a folder that was removed - check if parent was a synced folder
+        // We need to delete all bookmarks that were in this folder from homeserver
+        logger.log('Folder removed, triggering sync:', removeInfo.node.title);
+        this.triggerSyncAfterDelay();
       }
     });
 
@@ -152,25 +163,44 @@ export class BookmarkSync {
         const monitored = await this.storage.getMonitoredPubkeys();
         const allPubkeys = pubkey ? [pubkey, ...monitored] : monitored;
 
-        // Check if the new parent is one of our synced folders
-        let isInSyncedFolder = false;
+        // Find which synced folder this bookmark is in (if any)
+        let syncedFolderId = null;
         for (const pk of allPubkeys) {
           const folderId = this.folderCache.get(pk);
           if (folderId && await this.isInFolder(id, folderId)) {
-            isInSyncedFolder = true;
+            syncedFolderId = folderId;
             break;
           }
         }
 
-        if (isInSyncedFolder) {
-          // Moved into a synced folder - treat as new bookmark
+        if (syncedFolderId) {
+          // Bookmark is in a synced folder
+          // Get the old and new paths within the synced folder
+          const oldPath = await this.getPathInFolder(moveInfo.oldParentId, syncedFolderId);
+          const newPath = await this.getPathInFolder(moveInfo.parentId, syncedFolderId);
+
           const timestamp = Date.now();
+
+          if (oldPath !== newPath) {
+            // Path changed - need to delete from old location and add to new
+            logger.log('Bookmark moved within synced folder:', url, 'from path "' + oldPath + '" to "' + newPath + '"');
+
+            // Mark old path as deleted (tombstone) so sync knows to ignore it
+            if (oldPath !== null) {
+              await this.storage.markDeleted(url, timestamp, oldPath);
+
+              // Also delete from homeserver immediately (don't wait for sync)
+              await this.deleteBookmarkWithPath(url, oldPath);
+            }
+          }
+
+          // Update metadata with new timestamp
           await this.storage.setBookmarkMeta(url, {
             url: url,
             timestamp: timestamp
           });
 
-          logger.log('Bookmark moved into synced folder, triggering sync:', url);
+          logger.log('Bookmark moved, triggering sync:', url);
           this.triggerSyncAfterDelay();
         } else {
           // Moved out of synced folder - treat as deletion
@@ -222,6 +252,73 @@ export class BookmarkSync {
       return false;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * Check if bookmark/folder is in any synced folder
+   */
+  async isInAnySyncedFolder(bookmarkId) {
+    try {
+      const pubkey = await this.keyManager.getPublicKey();
+      const monitored = await this.storage.getMonitoredPubkeys();
+      const allPubkeys = pubkey ? [pubkey, ...monitored] : monitored;
+
+      for (const pk of allPubkeys) {
+        const folderId = this.folderCache.get(pk);
+        if (folderId && await this.isInFolder(bookmarkId, folderId)) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get the relative path from a folder ID to the synced root folder
+   * @param {string} folderId - The folder ID to get path for
+   * @param {string} rootFolderId - The synced root folder ID
+   * @returns {string|null} - Relative path like "tag1/tag2/" or "" for root, null if not in root
+   */
+  async getPathInFolder(folderId, rootFolderId) {
+    try {
+      // If the folder is the root itself, return empty string
+      if (folderId === rootFolderId) {
+        return '';
+      }
+
+      // Build path by walking up the tree
+      const pathSegments = [];
+      let currentId = folderId;
+
+      while (currentId && currentId !== rootFolderId) {
+        const nodes = await browser.bookmarks.get(currentId);
+        if (nodes.length === 0) {
+          return null; // Folder doesn't exist
+        }
+
+        const node = nodes[0];
+        if (!node.parentId) {
+          return null; // Reached root without finding synced folder
+        }
+
+        // Add this folder's title to path
+        pathSegments.unshift(node.title);
+        currentId = node.parentId;
+      }
+
+      // Check if we found the root folder
+      if (currentId === rootFolderId) {
+        return pathSegments.length > 0 ? pathSegments.join('/') + '/' : '';
+      }
+
+      return null; // Not in this synced folder
+    } catch (error) {
+      logger.warn('Error getting path in folder:', error);
+      return null;
     }
   }
 
@@ -353,11 +450,11 @@ export class BookmarkSync {
     const bookmarks = [];
     const bookmarkMeta = await this.storage.getAllBookmarkMeta();
 
-    const traverse = (node) => {
+    const traverse = (node, path = '') => {
       if (node.url) {
         // Cache the browser ID -> URL mapping
         this.urlCache.set(node.id, node.url);
-        
+
         // Use our stored timestamp if available (keyed by URL)
         const meta = bookmarkMeta[node.url];
         const timestamp = meta ? meta.timestamp : (node.dateAdded || Date.now());
@@ -366,16 +463,22 @@ export class BookmarkSync {
           id: node.id, // Browser ID (only used for browser API calls)
           url: node.url, // Unique identifier for syncing
           title: node.title || '',
-          timestamp: timestamp
+          timestamp: timestamp,
+          path: path // Relative path from synced folder root (empty for root, or "tag/" for subfolder)
         });
       }
       if (node.children) {
-        node.children.forEach(traverse);
+        // Process children, passing down the path
+        node.children.forEach(child => {
+          // If child is a folder, append its title to the path
+          const childPath = child.url ? path : (path ? `${path}${child.title}/` : `${child.title}/`);
+          traverse(child, childPath);
+        });
       }
     };
 
     if (folder.length > 0) {
-      traverse(folder[0]);
+      traverse(folder[0], '');
     }
 
     return bookmarks;
@@ -386,54 +489,24 @@ export class BookmarkSync {
    */
   async fetchRemoteBookmarks(pubkey, isOwnData) {
     try {
-      let entries;
-
       if (isOwnData) {
         // Use session storage for own data (absolute path)
-        const path = '/pub/booky/';
-        logger.log('Fetching own bookmarks from:', path);
-        entries = await this.homeserverClient.list(path);
+        const basePath = '/pub/booky/';
+        logger.log('Fetching own bookmarks from:', basePath);
 
         const bookmarks = [];
-        for (const entry of entries) {
-          try {
-            // Extract filename from pubky:// URL
-            const filename = entry.split('/').pop();
-            const data = await this.homeserverClient.get(`${path}${filename}`);
-            bookmarks.push(data);
-          } catch (error) {
-            logger.warn('Failed to fetch bookmark:', entry, error);
-          }
-        }
+        await this.fetchBookmarksRecursive(basePath, '', bookmarks, false, null);
+
         logger.log('Successfully fetched', bookmarks.length, 'bookmarks for own data');
         return bookmarks;
       } else {
         // Use public storage for other users (addressed path)
-        // Format: pubky://<pubkey>/<path>
-        const address = `pubky://${pubkey}/pub/booky/`;
+        const baseAddress = `pubky://${pubkey}/pub/booky/`;
         logger.log('Fetching public bookmarks for:', pubkey);
 
-        try {
-          entries = await this.homeserverClient.listPublic(address);
-          logger.log('Found', entries.length, 'bookmark entries for', pubkey);
-        } catch (listError) {
-          logger.error('Failed to list public bookmarks for', pubkey, ':', listError);
-          logger.error('Address used:', address);
-          throw listError;
-        }
-
         const bookmarks = [];
-        for (const entry of entries) {
-          try {
-            // Extract filename from pubky:// URL
-            const filename = entry.split('/').pop();
-            const fullAddress = `pubky://${pubkey}/pub/booky/${filename}`;
-            const data = await this.homeserverClient.getPublic(fullAddress);
-            bookmarks.push(data);
-          } catch (error) {
-            logger.warn('Failed to fetch bookmark:', entry, error);
-          }
-        }
+        await this.fetchBookmarksRecursive(baseAddress, '', bookmarks, true, pubkey);
+
         logger.log('Successfully fetched', bookmarks.length, 'bookmarks for', pubkey);
         return bookmarks;
       }
@@ -446,53 +519,143 @@ export class BookmarkSync {
   }
 
   /**
+   * Recursively fetch bookmarks from a path, including subdirectories
+   */
+  async fetchBookmarksRecursive(basePath, relativePath, bookmarks, isPublic, pubkey) {
+    try {
+      const currentPath = `${basePath}${relativePath}`;
+      let entries;
+
+      if (isPublic) {
+        entries = await this.homeserverClient.listPublic(currentPath);
+      } else {
+        entries = await this.homeserverClient.list(currentPath);
+      }
+
+      if (!entries) {
+        logger.warn('List returned null/undefined for path:', currentPath);
+        return;
+      }
+
+      for (const entry of entries) {
+        try {
+          // Entry format: pubky://<pubkey>/pub/booky/[path/]filename
+          // We need to extract the part after basePath
+
+          // Remove the protocol and pubkey to get just the path
+          let entryPath = entry;
+          if (entry.startsWith('pubky://')) {
+            // Extract path after the pubkey: pubky://<pubkey>/pub/booky/... -> /pub/booky/...
+            const parts = entry.split('/');
+            const pubkeyIndex = parts.findIndex(p => p && p.length > 20); // Find the pubkey part
+            if (pubkeyIndex >= 0) {
+              entryPath = '/' + parts.slice(pubkeyIndex + 1).join('/');
+            }
+          }
+
+          // Check if this is a directory (ends with /)
+          if (entry.endsWith('/')) {
+            // It's a directory - recurse into it
+            // Extract the relative path from basePath
+            const relPath = entryPath.substring(basePath.length);
+            await this.fetchBookmarksRecursive(basePath, relPath, bookmarks, isPublic, pubkey);
+          } else {
+            // It's a file - extract relative path from basePath
+            const fullRelativePath = entryPath.substring(basePath.length);
+            const pathParts = fullRelativePath.split('/');
+            const filename = pathParts.pop(); // Last part is filename
+            const filePath = pathParts.length > 0 ? pathParts.join('/') + '/' : ''; // Remaining is path
+
+            // Fetch the bookmark data using the entry directly
+            let data;
+            if (isPublic) {
+              data = await this.homeserverClient.getPublic(entry);
+            } else {
+              data = await this.homeserverClient.get(entryPath);
+            }
+
+            // Add path information to bookmark
+            data.path = filePath;
+            bookmarks.push(data);
+          }
+        } catch (error) {
+          // 404 errors are expected for recently deleted files (list might be stale)
+          if (error.message && error.message.includes('404')) {
+            logger.log('Bookmark entry not found (likely recently deleted):', entry);
+          } else {
+            logger.warn('Failed to fetch entry:', entry, error);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to list path:', basePath + relativePath, error);
+      // Don't throw - just skip this directory
+    }
+  }
+
+  /**
    * Two-way merge: sync changes in both directions based on timestamps
    */
   async mergeTwoWay(folderId, localBookmarks, remoteBookmarks, pubkey) {
-    const localMap = new Map(localBookmarks.map(b => [b.url, b]));
-    const remoteMap = new Map(remoteBookmarks.map(b => [b.url, b]));
+    // Use URL+path as composite key for matching
+    const makeKey = (b) => `${b.url}||${b.path || ''}`;
+    const localMap = new Map(localBookmarks.map(b => [makeKey(b), b]));
+    const remoteMap = new Map(remoteBookmarks.map(b => [makeKey(b), b]));
+
+    // Track folders we need to create
+    const folderCache = new Map(); // path -> browser folder ID
 
     // PHASE 1: Process deletions FIRST (tombstones take priority)
     for (const remote of remoteBookmarks) {
-      const local = localMap.get(remote.url);
-      const deletedInfo = await this.storage.isDeleted(remote.url);
+      const local = localMap.get(makeKey(remote));
+      // Check if this specific URL+path combo was deleted
+      const deletedInfo = await this.storage.isDeleted(remote.url, remote.path);
 
       if (!local && deletedInfo) {
-        // We deleted this URL locally - delete from remote
-        logger.log('Deleting from remote (tombstone):', remote.url);
-        await this.deleteBookmarkByUrl(remote.url);
+        // We deleted this URL at this path locally - delete from remote
+        logger.log('Deleting from remote (tombstone):', remote.url, 'path:', remote.path);
+        await this.deleteBookmarkWithPath(remote.url, remote.path);
+
+        // Clear the tombstone for this specific path since we've handled it
+        await this.storage.clearDeleted(remote.url, remote.path);
       }
     }
 
     // PHASE 2: Push local bookmarks (new or updated)
     for (const local of localBookmarks) {
-      const remote = remoteMap.get(local.url);
+      const remote = remoteMap.get(makeKey(local));
       if (!remote) {
         // Exists locally but not remotely - push to remote
-        logger.log('Pushing to remote (new):', local.url);
+        logger.log('Pushing to remote (new):', local.url, 'path:', local.path);
         await this.pushBookmark(local);
       } else if (local.timestamp > remote.timestamp) {
         // Local is newer - update remote
-        logger.log('Pushing to remote (newer):', local.url);
+        logger.log('Pushing to remote (newer):', local.url, 'path:', local.path);
         await this.pushBookmark(local);
       }
     }
 
     // PHASE 3: Pull remote bookmarks (new or updated)
     for (const remote of remoteBookmarks) {
-      const local = localMap.get(remote.url);
-      const deletedInfo = await this.storage.isDeleted(remote.url);
+      const local = localMap.get(makeKey(remote));
+      // Check if this specific URL+path was deleted
+      const deletedInfo = await this.storage.isDeleted(remote.url, remote.path);
 
-      // Skip if we already deleted it in phase 1
+      // Skip if we deleted this specific URL+path combination
       if (deletedInfo) {
+        logger.log('Skipping remote bookmark (locally deleted):', remote.url, 'path:', remote.path);
         continue;
       }
 
       if (!local) {
         // Doesn't exist locally and not deleted - pull from remote
-        logger.log('Pulling from remote (new):', remote.url);
+        logger.log('Pulling from remote (new):', remote.url, 'path:', remote.path);
+
+        // Get or create parent folder for this path
+        const parentId = await this.getOrCreateSubfolder(folderId, remote.path, folderCache);
+
         await browser.bookmarks.create({
-          parentId: folderId,
+          parentId: parentId,
           title: remote.title,
           url: remote.url
         });
@@ -504,7 +667,7 @@ export class BookmarkSync {
         });
       } else if (remote.timestamp > local.timestamp) {
         // Remote is newer - update local
-        logger.log('Updating from remote (newer):', remote.url);
+        logger.log('Updating from remote (newer):', remote.url, 'path:', remote.path);
         await browser.bookmarks.update(local.id, {
           title: remote.title,
           url: remote.url
@@ -523,15 +686,21 @@ export class BookmarkSync {
    * Read-only merge: only update local from remote
    */
   async mergeReadOnly(folderId, localBookmarks, remoteBookmarks) {
-    const localMap = new Map(localBookmarks.map(b => [b.url, b]));
+    // Use URL+path as composite key
+    const makeKey = (b) => `${b.url}||${b.path || ''}`;
+    const localMap = new Map(localBookmarks.map(b => [makeKey(b), b]));
+
+    // Track folders we need to create
+    const folderCache = new Map(); // path -> browser folder ID
 
     // Add or update bookmarks from remote
     for (const remote of remoteBookmarks) {
-      const local = localMap.get(remote.url);
+      const local = localMap.get(makeKey(remote));
       if (!local) {
-        // Create new bookmark
+        // Create new bookmark in correct folder
+        const parentId = await this.getOrCreateSubfolder(folderId, remote.path, folderCache);
         await browser.bookmarks.create({
-          parentId: folderId,
+          parentId: parentId,
           title: remote.title,
           url: remote.url
         });
@@ -545,9 +714,9 @@ export class BookmarkSync {
     }
 
     // Remove local bookmarks that don't exist remotely
-    const remoteUrls = new Set(remoteBookmarks.map(b => b.url));
+    const remoteKeys = new Set(remoteBookmarks.map(b => makeKey(b)));
     for (const local of localBookmarks) {
-      if (!remoteUrls.has(local.url)) {
+      if (!remoteKeys.has(makeKey(local))) {
         await browser.bookmarks.remove(local.id);
       }
     }
@@ -568,10 +737,15 @@ export class BookmarkSync {
       // Create a safe filename from URL (URL is the unique identifier)
       const filename = await this.createFilename(bookmark.url);
 
-      // Use session storage with absolute path
-      await this.homeserverClient.put(`/pub/booky/${filename}`, data);
+      // Build path with folder structure: /pub/booky/[{path}]{filename}
+      // path will be empty string for root, or "tag/" for subfolder
+      const path = bookmark.path || '';
+      const fullPath = `/pub/booky/${path}${filename}`;
 
-      logger.log('Pushed bookmark:', bookmark.url);
+      // Use session storage with absolute path
+      await this.homeserverClient.put(fullPath, data);
+
+      logger.log('Pushed bookmark:', bookmark.url, 'to path:', fullPath);
     } catch (error) {
       logger.error('Failed to push bookmark:', error);
       throw error;
@@ -584,12 +758,13 @@ export class BookmarkSync {
   async deleteBookmark(bookmark, timestamp = Date.now()) {
     try {
       const filename = await this.createFilename(bookmark.url);
-      const path = `/pub/booky/${filename}`;
-      
+      const relativePath = bookmark.path || '';
+      const fullPath = `/pub/booky/${relativePath}${filename}`;
+
       // Delete from homeserver (use DELETE method via session.storage)
-      await this.homeserverClient.delete(path);
-      
-      logger.log('Deleted bookmark from homeserver:', bookmark.url);
+      await this.homeserverClient.delete(fullPath);
+
+      logger.log('Deleted bookmark from homeserver:', bookmark.url, 'at path:', fullPath);
     } catch (error) {
       logger.warn('Failed to delete bookmark from homeserver:', error);
       // Don't throw - deletion might fail if it doesn't exist
@@ -597,45 +772,91 @@ export class BookmarkSync {
   }
 
   /**
-   * Delete a bookmark by URL
+   * Delete a bookmark by URL - searches all paths
    */
-  async deleteBookmarkByUrl(url) {
+  async deleteBookmarkByUrl(url, path = null) {
     try {
-      const filename = await this.createFilename(url);
-      const path = `/pub/booky/${filename}`;
-      
-      await this.homeserverClient.delete(path);
-      
-      logger.log('Deleted bookmark by URL:', url);
+      if (path !== null) {
+        // If path is provided, use it directly
+        await this.deleteBookmarkWithPath(url, path);
+      } else {
+        // Search for the bookmark in all possible locations
+        // Try root first
+        const filename = await this.createFilename(url);
+
+        // List all entries recursively and find matching filename
+        const basePath = '/pub/booky/';
+        const deleted = await this.deleteBookmarkRecursive(basePath, '', filename, url);
+
+        if (deleted) {
+          logger.log('Deleted bookmark by URL:', url);
+        } else {
+          logger.warn('Bookmark not found for deletion:', url);
+        }
+      }
     } catch (error) {
       logger.warn('Failed to delete bookmark by URL:', error);
     }
   }
 
   /**
-   * Remove duplicate bookmarks (same URL) from a folder
+   * Recursively search and delete a bookmark file
+   */
+  async deleteBookmarkRecursive(basePath, relativePath, filename, url) {
+    try {
+      const currentPath = `${basePath}${relativePath}`;
+      const entries = await this.homeserverClient.list(currentPath);
+
+      for (const entry of entries) {
+        const entryName = entry.split('/').filter(s => s).pop();
+
+        if (entry.endsWith('/')) {
+          // Directory - recurse
+          const newRelativePath = relativePath ? `${relativePath}${entryName}/` : `${entryName}/`;
+          const found = await this.deleteBookmarkRecursive(basePath, newRelativePath, filename, url);
+          if (found) return true;
+        } else if (entryName === filename) {
+          // Found it - delete
+          const fullPath = `${currentPath}${filename}`;
+          await this.homeserverClient.delete(fullPath);
+          logger.log('Deleted bookmark at:', fullPath);
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      logger.warn('Error during recursive delete at path:', basePath + relativePath, error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove duplicate bookmarks (same URL + path) from a folder
    */
   async removeDuplicates(folderId) {
     try {
       const bookmarks = await this.getBookmarksInFolder(folderId);
-      const urlMap = new Map();
+      const makeKey = (b) => `${b.url}||${b.path || ''}`;
+      const bookmarkMap = new Map();
       const duplicates = [];
 
-      // Find duplicates
+      // Find duplicates - same URL AND path
       for (const bookmark of bookmarks) {
-        if (urlMap.has(bookmark.url)) {
-          // Duplicate found
-          const existing = urlMap.get(bookmark.url);
-          
+        const key = makeKey(bookmark);
+        if (bookmarkMap.has(key)) {
+          // Duplicate found (same URL at same path)
+          const existing = bookmarkMap.get(key);
+
           // Keep the one with newer timestamp, remove the other
           if (bookmark.timestamp > existing.timestamp) {
             duplicates.push(existing.id);
-            urlMap.set(bookmark.url, bookmark);
+            bookmarkMap.set(key, bookmark);
           } else {
             duplicates.push(bookmark.id);
           }
         } else {
-          urlMap.set(bookmark.url, bookmark);
+          bookmarkMap.set(key, bookmark);
         }
       }
 
@@ -684,6 +905,84 @@ export class BookmarkSync {
     } catch (error) {
       logger.warn('Failed to delete folder for pubkey:', pubkey, error);
       // Don't throw - folder might not exist or already be deleted
+    }
+  }
+
+  /**
+   * Get or create a subfolder within a parent folder based on path
+   * @param {string} parentId - Browser bookmark folder ID of parent
+   * @param {string} path - Relative path like "tag1/" or "tag1/tag2/" or ""
+   * @param {Map} folderCache - Cache of path -> folder ID
+   * @returns {string} - Browser bookmark folder ID to use as parent
+   */
+  async getOrCreateSubfolder(parentId, path, folderCache) {
+    if (!path || path === '') {
+      return parentId;
+    }
+
+    // Check cache first
+    if (folderCache.has(path)) {
+      return folderCache.get(path);
+    }
+
+    // Split path into segments (e.g., "tag1/tag2/" -> ["tag1", "tag2"])
+    const segments = path.split('/').filter(s => s);
+    let currentParent = parentId;
+    let currentPath = '';
+
+    for (const segment of segments) {
+      currentPath += segment + '/';
+
+      // Check if we have this path cached
+      if (folderCache.has(currentPath)) {
+        currentParent = folderCache.get(currentPath);
+        continue;
+      }
+
+      // Search for existing folder with this name under current parent
+      const children = await browser.bookmarks.getChildren(currentParent);
+      let found = null;
+
+      for (const child of children) {
+        if (!child.url && child.title === segment) {
+          found = child.id;
+          break;
+        }
+      }
+
+      if (found) {
+        currentParent = found;
+      } else {
+        // Create the folder
+        const newFolder = await browser.bookmarks.create({
+          parentId: currentParent,
+          title: segment
+        });
+        currentParent = newFolder.id;
+        logger.log('Created subfolder:', segment, 'at path:', currentPath);
+      }
+
+      // Cache this path
+      folderCache.set(currentPath, currentParent);
+    }
+
+    return currentParent;
+  }
+
+  /**
+   * Delete a bookmark from homeserver with specific path
+   */
+  async deleteBookmarkWithPath(url, path) {
+    try {
+      const filename = await this.createFilename(url);
+      const relativePath = path || '';
+      const fullPath = `/pub/booky/${relativePath}${filename}`;
+
+      await this.homeserverClient.delete(fullPath);
+      logger.log('Deleted bookmark from homeserver:', fullPath);
+    } catch (error) {
+      logger.warn('Failed to delete bookmark:', fullPath, '-', error.message);
+      // Don't throw - deletion might fail if file doesn't exist, which is okay
     }
   }
 

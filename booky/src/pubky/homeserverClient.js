@@ -119,7 +119,12 @@ export class HomeserverClient {
         return data;
       }
     } catch (error) {
-      logger.error('Failed to get data:', error);
+      // 404 errors are common for deleted files, don't log as error
+      if (error.message && error.message.includes('404')) {
+        logger.log('File not found:', path);
+      } else {
+        logger.error('Failed to get data:', error);
+      }
       throw error;
     }
   }
@@ -141,7 +146,12 @@ export class HomeserverClient {
         return data;
       }
     } catch (error) {
-      logger.error('Failed to get public data:', error);
+      // 404 errors are common for deleted files, don't log as error
+      if (error.message && error.message.includes('404')) {
+        logger.log('Public file not found:', address);
+      } else {
+        logger.error('Failed to get public data:', error);
+      }
       throw error;
     }
   }

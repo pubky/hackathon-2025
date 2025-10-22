@@ -176,26 +176,46 @@ export class StorageManager {
   /**
    * Mark a bookmark URL as deleted (tombstone)
    */
-  async markDeleted(url, timestamp) {
+  async markDeleted(url, timestamp, path = null) {
     const key = `deleted_${url}`;
-    await this.storage.set({ [key]: { timestamp } });
+    await this.storage.set({ [key]: { timestamp, path } });
   }
 
   /**
    * Check if a URL was deleted locally
+   * @param {string} url - The URL to check
+   * @param {string} path - Optional path to check for specific path deletion
    */
-  async isDeleted(url) {
+  async isDeleted(url, path = null) {
     const key = `deleted_${url}`;
     const result = await this.storage.get(key);
-    return result[key] || null;
+    const deletedInfo = result[key] || null;
+
+    if (!deletedInfo) return null;
+
+    // If path is specified, check if this specific path was deleted
+    if (path !== null && deletedInfo.path !== undefined) {
+      return deletedInfo.path === path ? deletedInfo : null;
+    }
+
+    return deletedInfo;
   }
 
   /**
    * Remove deletion marker (when we re-create from remote)
    */
-  async clearDeleted(url) {
+  async clearDeleted(url, path = null) {
     const key = `deleted_${url}`;
-    await this.storage.remove([key]);
+
+    if (path !== null) {
+      // Check if the deleted marker is for this specific path
+      const deletedInfo = await this.isDeleted(url);
+      if (deletedInfo && deletedInfo.path === path) {
+        await this.storage.remove([key]);
+      }
+    } else {
+      await this.storage.remove([key]);
+    }
   }
 
   /**
