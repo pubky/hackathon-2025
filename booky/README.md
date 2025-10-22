@@ -1,4 +1,8 @@
-# Booky - Pubky Bookmark Sync Extension
+<div align="center">
+  <img src="icons/logo.gif" alt="Booky Logo" width="150" height="150">
+</div>
+
+# Booky
 
 Booky is a browser extension that syncs your bookmarks using the Pubky protocol. It provides decentralized bookmark storage and synchronization across devices using Pubky homeservers.
 
@@ -7,7 +11,8 @@ Booky is a browser extension that syncs your bookmarks using the Pubky protocol.
 - **Automatic Key Generation**: Generates a Pubky keypair on first use
 - **Two-Way Sync**: Syncs bookmarks bidirectionally between browser and homeserver
 - **Read-Only Monitoring**: Monitor and sync bookmarks from other Pubky users (read-only)
-- **Real-Time Updates**: Automatically syncs changes every 20 seconds during development
+- **Real-Time Updates**: Automatically syncs changes for every event
+- **Manual Sync**: User can sync any time at the click of a button
 - **Cross-Device Sync**: Sync bookmarks across multiple devices using the same key
 - **Conflict Resolution**: Timestamp-based conflict resolution (newest wins)
 
@@ -21,7 +26,7 @@ Booky is a browser extension that syncs your bookmarks using the Pubky protocol.
 4. **Offscreen Client**: Proxy that communicates between service worker and offscreen document
 5. **Homeserver Client**: Handles communication with Pubky homeservers via offscreen client
 6. **Bookmark Sync Engine**: Monitors bookmark changes and syncs with homeserver
-7. **Background Service**: Coordinates periodic sync and handles messages from UI
+7. **Background Service**: Coordinates sync and handles messages from UI
 8. **Popup UI**: Simple interface for setup and managing monitored pubkeys
 
 ### Chrome Manifest V3 Architecture
@@ -46,8 +51,7 @@ Bookmarks are stored on the homeserver at path `<pubky>/public/booky/` with the 
   "url": "https://example.com",
   "title": "Example Site",
   "tags": [],
-  "timestamp": 1234567890,
-  "id": "bookmark_id"
+  "timestamp": 1234567890
 }
 ```
 
@@ -152,45 +156,6 @@ For development with auto-rebuild:
 npm run watch:chrome
 # or
 npm run watch:firefox
-```
-
-### Project Structure
-
-```
-booky/
-├── package.json
-├── webpack.config.js
-├── README.md
-├── LICENSE
-├── src/
-│   ├── background/
-│   │   └── background.js          # Background service worker
-│   ├── crypto/
-│   │   └── keyManager.js          # Key generation and management
-│   ├── offscreen/                 # Chrome only - for CSP workaround
-│   │   ├── offscreen.html         # Offscreen document HTML
-│   │   └── offscreen.js           # Runs Pubky SDK operations
-│   ├── pubky/
-│   │   ├── homeserverClient.js    # Homeserver client wrapper
-│   │   └── offscreenClient.js     # Proxy for offscreen communication
-│   ├── sync/
-│   │   └── bookmarkSync.js        # Bookmark sync logic
-│   ├── storage/
-│   │   └── storageManager.js      # Browser storage wrapper
-│   ├── ui/
-│   │   ├── popup.html             # Popup UI
-│   │   ├── popup.js               # Popup logic
-│   │   └── popup.css              # Popup styles
-│   └── utils/
-│       ├── browserCompat.js       # Cross-browser compatibility
-│       └── logger.js              # Logging utility
-├── icons/
-│   └── icon.svg                   # Extension icon
-├── manifest.v3.json               # Chrome manifest (with offscreen permission)
-├── manifest.v2.json               # Firefox manifest
-└── dist/                          # Build output
-    ├── chrome/                    # Includes offscreen.html/js
-    └── firefox/
 ```
 
 ## Technical Details
