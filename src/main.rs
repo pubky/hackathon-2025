@@ -40,8 +40,9 @@ enum AuthState {
 
 #[derive(Clone, PartialEq)]
 enum ViewState {
-    Main,
+    WikiList,
     CreateWiki,
+    ViewWiki,
 }
 
 struct PubkyApp {
@@ -49,6 +50,9 @@ struct PubkyApp {
     qr_texture: Option<egui::TextureHandle>,
     view_state: ViewState,
     wiki_content: String,
+    selected_wiki_path: String,
+    selected_wiki_content: String,
+    needs_refresh: bool,
 }
 
 impl PubkyApp {
@@ -73,12 +77,16 @@ impl PubkyApp {
 
                                 // List files from the homeserver
                                 let mut files = Vec::new();
-                                match session.storage().list("/pub/").unwrap().send().await {
+                                match session
+                                    .storage()
+                                    .list("/pub/wiki.app/")
+                                    .unwrap()
+                                    .send()
+                                    .await
+                                {
                                     Ok(entries) => {
-                                        println!("Files on homeserver:");
                                         for entry in &entries {
                                             let path = entry.to_pubky_url();
-                                            println!("  {}", path);
                                             files.push(path);
                                         }
                                     }
@@ -110,8 +118,11 @@ impl PubkyApp {
         Self {
             state,
             qr_texture: None,
-            view_state: ViewState::Main,
+            view_state: ViewState::WikiList,
             wiki_content: String::new(),
+            selected_wiki_path: String::new(),
+            selected_wiki_content: String::new(),
+            needs_refresh: false,
         }
     }
 }
@@ -175,36 +186,89 @@ impl eframe::App for PubkyApp {
                         ui.spinner();
                     }
                     AuthState::Authenticated {
-                        ref public_key,
+                        public_key: _,
                         ref session,
-                        files: _,
+                        ref files,
                     } => {
+                        // Check if we need to refresh the files list
+                        if self.needs_refresh {
+                            let session_clone = session.clone();
+                            let state_clone = self.state.clone();
+                            std::thread::spawn(move || {
+                                let rt = tokio::runtime::Runtime::new().unwrap();
+                                rt.block_on(async {
+                                    let mut new_files = Vec::new();
+                                    match session_clone
+                                        .storage()
+                                        .list("/pub/wiki.app/")
+                                        .unwrap()
+                                        .send()
+                                        .await
+                                    {
+                                        Ok(entries) => {
+                                            for entry in &entries {
+                                                let path = entry.to_pubky_url();
+                                                new_files.push(path);
+                                            }
+                                        }
+                                        Err(e) => {
+                                            println!("Failed to refresh files: {}", e);
+                                        }
+                                    }
+
+                                    // Update the state with new files
+                                    if let Ok(mut state) = state_clone.lock() {
+                                        if let AuthState::Authenticated {
+                                            ref mut files,
+                                            ..
+                                        } = *state
+                                        {
+                                            *files = new_files;
+                                        }
+                                    }
+                                });
+                            });
+                            self.needs_refresh = false;
+                        }
+
                         // Show different views based on view_state
                         match self.view_state {
-                            ViewState::Main => {
-                                ui.label("✓ Authentication Successful!");
-                                ui.add_space(20.0);
-                                ui.label("Your Public Key:");
-                                ui.add_space(10.0);
-
-                                // Display public key in a scrollable text area
-                                egui::Frame::new()
-                                    .fill(egui::Color32::from_gray(240))
-                                    .inner_margin(10.0)
-                                    .show(ui, |ui| {
-                                        ui.add(
-                                            egui::TextEdit::multiline(&mut public_key.as_str())
-                                                .desired_width(f32::INFINITY)
-                                                .font(egui::TextStyle::Monospace),
-                                        );
-                                    });
-
+                            ViewState::WikiList => {
+                                ui.label("My Wiki Posts");
                                 ui.add_space(20.0);
 
                                 // Create new wiki page button
                                 if ui.button("Create new wiki page").clicked() {
                                     self.view_state = ViewState::CreateWiki;
                                 }
+
+                                ui.add_space(20.0);
+
+                                // List all wiki posts as buttons
+                                egui::ScrollArea::vertical().show(ui, |ui| {
+                                    if files.is_empty() {
+                                        ui.label("No wiki posts yet. Create your first one!");
+                                    } else {
+                                        for file_url in files {
+                                            // Extract just the filename from the URL
+                                            let file_name = file_url
+                                                .split('/')
+                                                .last()
+                                                .unwrap_or(file_url);
+
+                                            if ui.button(file_name).clicked() {
+                                                // Extract the path from the pubky URL
+                                                let path_start = file_url.find("/pub/");
+                                                if let Some(start_idx) = path_start {
+                                                    let file_path = &file_url[start_idx..];
+                                                    self.selected_wiki_path = file_path.to_string();
+                                                    self.selected_wiki_content = String::new();
+                                                    self.view_state = ViewState::ViewWiki;
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
                             }
                             ViewState::CreateWiki => {
                                 ui.label("Create New Wiki Page");
@@ -250,14 +314,76 @@ impl eframe::App for PubkyApp {
                                             });
                                         });
                                         self.wiki_content.clear();
-                                        self.view_state = ViewState::Main;
+                                        self.needs_refresh = true;
+                                        self.view_state = ViewState::WikiList;
                                     }
 
                                     if ui.button("Cancel").clicked() {
                                         self.wiki_content.clear();
-                                        self.view_state = ViewState::Main;
+                                        self.view_state = ViewState::WikiList;
                                     }
                                 });
+                            }
+                            ViewState::ViewWiki => {
+                                ui.label("View Wiki Post");
+                                ui.add_space(20.0);
+
+                                // Display filename
+                                let file_name = self.selected_wiki_path
+                                    .split('/')
+                                    .last()
+                                    .unwrap_or(&self.selected_wiki_path);
+                                ui.label(format!("File: {}", file_name));
+                                ui.add_space(10.0);
+
+                                // Display content in a scrollable area
+                                egui::ScrollArea::vertical()
+                                    .max_height(400.0)
+                                    .show(ui, |ui| {
+                                        // Try to fetch content if empty
+                                        if self.selected_wiki_content.is_empty() && !self.selected_wiki_path.is_empty() {
+                                            let session_clone = session.clone();
+                                            let path_clone = self.selected_wiki_path.clone();
+
+                                            // Synchronously fetch the content
+                                            let rt = tokio::runtime::Runtime::new().unwrap();
+                                            match rt.block_on(async {
+                                                session_clone.storage().get(&path_clone).await
+                                            }) {
+                                                Ok(response) => {
+                                                    let rt2 = tokio::runtime::Runtime::new().unwrap();
+                                                    match rt2.block_on(async {
+                                                        response.text().await
+                                                    }) {
+                                                        Ok(text) => {
+                                                            self.selected_wiki_content = text;
+                                                        }
+                                                        Err(e) => {
+                                                            self.selected_wiki_content = format!("Error reading content: {}", e);
+                                                        }
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    self.selected_wiki_content = format!("Error fetching file: {}", e);
+                                                }
+                                            }
+                                        }
+
+                                        ui.add(
+                                            egui::TextEdit::multiline(&mut self.selected_wiki_content.as_str())
+                                                .desired_width(f32::INFINITY)
+                                                .interactive(false),
+                                        );
+                                    });
+
+                                ui.add_space(20.0);
+
+                                // Go back button
+                                if ui.button("Go back").clicked() {
+                                    self.selected_wiki_path.clear();
+                                    self.selected_wiki_content.clear();
+                                    self.view_state = ViewState::WikiList;
+                                }
                             }
                         }
                     }
