@@ -51,6 +51,20 @@ npm run build
 
 The build command compiles the Vite project and performs type checking.
 
+### Homeserver signup & authenticator helpers
+
+Two convenience scripts wrap the Pubky SDK for command-line flows that require a recovery file:
+
+```bash
+# Create or update a user on the target homeserver using a recovery file
+npm run signup -- <homeserver_pubky> </path/to/recovery_file> [invitation_code] [--testnet]
+
+# Approve a pubkyauth:// login request with a recovery file
+npm run authenticator -- </path/to/recovery_file> "<AUTH_URL>" [--testnet] [--homeserver <pk>]
+```
+
+Both commands prompt for the recovery passphrase. The `--testnet` flag switches to the SDK testnet instance and skips the invitation requirement.
+
 ### Configuring the homeserver
 
 By default the client tries to create a Pubky SDK instance against the staging homeserver and falls back to the local mock client. To explicitly point at a local testnet you can expose `window.__PUBKY_CONFIG__` before the bundle loads:

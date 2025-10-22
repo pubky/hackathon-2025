@@ -8,6 +8,8 @@
     "dev": "npm run dev --workspace=pubky-live-vote",
     "build": "npm run build --workspace=pubky-live-vote",
     "preview": "npm run preview --workspace=pubky-live-vote",
-    "install:app": "npm install --prefix pubky-live-vote"
+    "install:app": "npm install --prefix pubky-live-vote",
+    "signup": "node scripts/signup.mjs",
+    "authenticator": "node scripts/authenticator.mjs"
   }
 }

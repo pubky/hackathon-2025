@@ -19,13 +19,47 @@ type AuthContextValue = {
   qrCodeSvg: string | null;
   isAuthenticating: boolean;
   connect: () => Promise<void>;
-  disconnect: () => void;
+  disconnect: () => Promise<void>;
   client: PubkyClient | null;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'pubky-live-vote:session';
+
+const SIGNOUT_METHOD_NAMES = ['signOut', 'logout', 'disconnect', 'endSession', 'close', 'clearSession'];
+const SIGNOUT_NESTED_KEYS = ['auth', 'authentication', 'session', 'sessions'];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const resolveSignoutMethod = (source: unknown, visited = new Set<unknown>()): (() => Promise<void> | void) | null => {
+  if (!isRecord(source) || visited.has(source)) return null;
+  visited.add(source);
+  for (const name of SIGNOUT_METHOD_NAMES) {
+    const candidate = source[name];
+    if (typeof candidate === 'function') {
+      return candidate.bind(source);
+    }
+  }
+  for (const key of SIGNOUT_NESTED_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+    const nested = source[key];
+    if (!isRecord(nested)) continue;
+    const candidate = resolveSignoutMethod(nested, visited);
+    if (candidate) {
+      return candidate;
+    }
+  }
+  for (const value of Object.values(source)) {
+    if (!isRecord(value)) continue;
+    const candidate = resolveSignoutMethod(value, visited);
+    if (candidate) {
+      return candidate;
+    }
+  }
+  return null;
+};
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [client, setClient] = useState<PubkyClient | null>(null);
@@ -69,11 +103,21 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [client]);
 
-  const disconnect = useCallback(() => {
-    setUser(null);
-    setQrCodeSvg(null);
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
+  const disconnect = useCallback(async () => {
+    try {
+      const target = client ?? (await ensurePubkyClient());
+      const signoutCandidate = resolveSignoutMethod(target);
+      if (signoutCandidate) {
+        await signoutCandidate();
+      }
+    } catch (error) {
+      console.warn('Pubky logout failed', error);
+    } finally {
+      setUser(null);
+      setQrCodeSvg(null);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [client]);
 
   const value = useMemo(
     () => ({ user, qrCodeSvg, isAuthenticating, connect, disconnect, client }),

@@ -21,7 +21,7 @@ export const LoginCard = () => {
           </p>
         </div>
         {user && (
-          <button className="button button--ghost" onClick={disconnect}>
+          <button className="button button--ghost" onClick={() => void disconnect()}>
             Sign out
           </button>
         )}
