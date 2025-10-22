@@ -35,17 +35,17 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
                 Ok(wiki_page_path) => {
                     log::info!("Created wiki post at: {}", wiki_page_path);
 
-                    // Convert path to pubky URL format for the files list
+                    // Convert path to pubky URL format for the file_urls list
                     if let Ok(mut state) = state_clone.lock() {
                         if let AuthState::Authenticated {
                             ref session,
-                            ref mut files,
+                            ref mut file_urls,
                             ..
                         } = *state
                         {
                             let own_user_pk = session.info().public_key().to_string();
                             let file_url = format!("pubky://{own_user_pk}{wiki_page_path}");
-                            files.push(file_url);
+                            file_urls.push(file_url);
                         }
                     }
                 }

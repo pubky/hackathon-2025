@@ -42,7 +42,7 @@ pub(crate) enum AuthState {
     Authenticated {
         session: PubkySession,
         pub_storage: PublicStorage,
-        files: Vec<String>,
+        file_urls: Vec<String>,
     },
     Error(String),
 }
@@ -92,7 +92,7 @@ impl PubkyApp {
                     match rt_arc_clone.block_on(await_approval_fut) {
                         Ok(session) => {
                             let session_storage = session.storage();
-                            let mut files = Vec::new();
+                            let mut file_urls = Vec::new();
 
                             // List files from the homeserver
                             let session_storage_list_fut =
@@ -100,8 +100,8 @@ impl PubkyApp {
                             match rt_arc_clone.block_on(session_storage_list_fut) {
                                 Ok(entries) => {
                                     for entry in &entries {
-                                        let path = entry.to_pubky_url();
-                                        files.push(path);
+                                        let file_url = entry.to_pubky_url();
+                                        file_urls.push(file_url);
                                     }
                                 }
                                 Err(e) => log::error!("Failed to list files: {e}",),
@@ -110,7 +110,7 @@ impl PubkyApp {
                             *state_clone.lock().unwrap() = AuthState::Authenticated {
                                 session,
                                 pub_storage: pubky.public_storage(),
-                                files,
+                                file_urls,
                             };
                         }
                         Err(e) => {
@@ -201,13 +201,13 @@ impl eframe::App for PubkyApp {
                     AuthState::Authenticated {
                         ref session,
                         ref pub_storage,
-                        ref files,
+                        ref file_urls,
                     } => {
                         // Check if we need to refresh the files list
                         if self.needs_refresh {
                             let session_storage = session.storage();
                             let state_clone = self.state.clone();
-                            let mut new_files = Vec::new();
+                            let mut new_file_urls = Vec::new();
 
                             let session_list_fut =
                                 session_storage.list("/pub/wiki.app/").unwrap().send();
@@ -215,7 +215,7 @@ impl eframe::App for PubkyApp {
                                 Ok(entries) => {
                                     for entry in &entries {
                                         let path = entry.to_pubky_url();
-                                        new_files.push(path);
+                                        new_file_urls.push(path);
                                     }
                                 }
                                 Err(e) => log::error!("Failed to refresh files: {e}"),
@@ -223,8 +223,11 @@ impl eframe::App for PubkyApp {
 
                             // Update the state with new files
                             if let Ok(mut state) = state_clone.lock() {
-                                if let AuthState::Authenticated { ref mut files, .. } = *state {
-                                    *files = new_files;
+                                if let AuthState::Authenticated {
+                                    ref mut file_urls, ..
+                                } = *state
+                                {
+                                    *file_urls = new_file_urls;
                                 }
                             }
 
@@ -248,10 +251,10 @@ impl eframe::App for PubkyApp {
 
                                 // List all wiki posts as buttons
                                 egui::ScrollArea::vertical().show(ui, |ui| {
-                                    if files.is_empty() {
+                                    if file_urls.is_empty() {
                                         ui.label("No wiki posts yet. Create your first one!");
                                     } else {
-                                        for file_url in files {
+                                        for file_url in file_urls {
                                             // Extract just the filename from the URL
                                             let file_name =
                                                 file_url.split('/').last().unwrap_or(file_url);
