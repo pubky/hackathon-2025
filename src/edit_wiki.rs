@@ -33,8 +33,8 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async {
                     match create_wiki_post(&session_clone, &content).await {
-                        Ok(path) => {
-                            println!("Created wiki post at: {}", path);
+                        Ok(wiki_page_path) => {
+                            log::info!("Created wiki post at: {}", wiki_page_path);
 
                             // Convert path to pubky URL format for the files list
                             if let Ok(mut state) = state_clone.lock() {
@@ -44,14 +44,14 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
                                     ..
                                 } = *state
                                 {
-                                    let public_key = session.info().public_key().to_string();
-                                    let file_url = format!("pubky://{}{}", public_key, path);
+                                    let own_user_pk = session.info().public_key().to_string();
+                                    let file_url = format!("pubky://{own_user_pk}{wiki_page_path}");
                                     files.push(file_url);
                                 }
                             }
                         }
                         Err(e) => {
-                            println!("Failed to create wiki post: {}", e);
+                            log::error!("Failed to create wiki post: {}", e);
                         }
                     }
                 });

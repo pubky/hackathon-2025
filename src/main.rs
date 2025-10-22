@@ -13,6 +13,8 @@ mod utils;
 mod view_wiki;
 
 fn main() -> Result<(), eframe::Error> {
+    tracing_subscriber::fmt::init();
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([600.0, 700.0])
@@ -96,7 +98,7 @@ impl PubkyApp {
                                         }
                                     }
                                     Err(e) => {
-                                        println!("Failed to list files: {}", e);
+                                        log::error!("Failed to list files: {}", e);
                                     }
                                 }
 
@@ -226,7 +228,7 @@ impl eframe::App for PubkyApp {
                                             }
                                         }
                                         Err(e) => {
-                                            println!("Failed to refresh files: {}", e);
+                                            log::error!("Failed to refresh files: {}", e);
                                         }
                                     }
 
@@ -305,7 +307,7 @@ pub(crate) async fn create_wiki_post(session: &PubkySession, content: &str) -> R
     // Create the post with the provided content
     session.storage().put(&path, content.to_string()).await?;
 
-    println!("Created post at path: {}", path);
+    log::info!("Created post at path: {}", path);
 
     Ok(path)
 }

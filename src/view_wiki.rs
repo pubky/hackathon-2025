@@ -67,8 +67,7 @@ pub(crate) fn update(
                 // Drain commands to prevent external opening and capture URLs
                 o.commands.retain(|cmd| {
                     if let egui::output::OutputCommand::OpenUrl(open_url) = cmd {
-                        // log::info!("🔗 Intercepted link click: {}", open_url.url);
-                        println!("🔗 Intercepted link click: {}", open_url.url);
+                        log::info!("🔗 Intercepted link click: {}", open_url.url);
                         urls.push(open_url.url.to_string());
                         false // Remove this command to prevent external opening
                     } else {
