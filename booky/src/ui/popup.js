@@ -8,6 +8,7 @@ const mainScreen = document.getElementById('main-screen');
 const loading = document.getElementById('loading');
 
 const setupButton = document.getElementById('setup-button');
+const homeserverInput = document.getElementById('homeserver');
 const inviteCodeInput = document.getElementById('invite-code');
 const setupResult = document.getElementById('setup-result');
 const generatedPubkey = document.getElementById('generated-pubkey');
@@ -232,7 +233,14 @@ function copyToClipboard(text, successMessage) {
  * Handle setup
  */
 async function handleSetup() {
+  const homeserver = homeserverInput.value.trim();
   const inviteCode = inviteCodeInput.value.trim() || null;
+
+  // Validate homeserver
+  if (!homeserver) {
+    showError('Please enter a homeserver public key');
+    return;
+  }
 
   setupButton.disabled = true;
   setupButton.textContent = 'Setting up...';
@@ -240,6 +248,7 @@ async function handleSetup() {
   try {
     const response = await sendMessage({
       action: 'setup',
+      homeserver: homeserver,
       inviteCode: inviteCode
     });
 
@@ -257,13 +266,18 @@ async function handleSetup() {
         }, 2000);
       }
     } else {
-      showError(response.error || 'Setup failed');
+      // Show detailed error message
+      const errorMsg = response.error || 'Setup failed';
+      showError(errorMsg);
       setupButton.disabled = false;
       setupButton.textContent = 'Setup Booky';
+      
+      // Log for debugging
+      console.error('Setup failed:', errorMsg);
     }
   } catch (error) {
     console.error('Setup error:', error);
-    showError(error.message);
+    showError(error.message || 'Setup failed');
     setupButton.disabled = false;
     setupButton.textContent = 'Setup Booky';
   }

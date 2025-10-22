@@ -6,8 +6,6 @@
 import { Pubky, PublicKey } from '@synonymdev/pubky';
 import { logger } from '../utils/logger.js';
 
-const STAGING_HOMESERVER = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
-
 export class HomeserverClient {
   constructor() {
     this.pubky = null;
@@ -29,9 +27,9 @@ export class HomeserverClient {
   }
 
   /**
-   * Sign up a new user with the staging homeserver
+   * Sign up a new user with a homeserver
    */
-  async signup(keypair, inviteCode = null) {
+  async signup(keypair, homeserverPubkey, inviteCode = null) {
     try {
       if (!this.pubky) {
         await this.initialize();
@@ -41,12 +39,12 @@ export class HomeserverClient {
       this.signer = this.pubky.signer(keypair);
 
       // Convert homeserver string to PublicKey
-      const homeserverPk = PublicKey.from(STAGING_HOMESERVER);
+      const homeserverPk = PublicKey.from(homeserverPubkey);
 
       // Sign up
       this.session = await this.signer.signup(homeserverPk, inviteCode);
 
-      logger.log('Signed up successfully');
+      logger.log('Signed up successfully to homeserver:', homeserverPubkey);
     } catch (error) {
       logger.error('Signup failed:', error);
       throw error;

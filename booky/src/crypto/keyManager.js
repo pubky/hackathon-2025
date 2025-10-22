@@ -49,6 +49,27 @@ export class KeyManager {
   }
 
   /**
+   * Store a generated key (used after successful signup)
+   */
+  async storeGeneratedKey(publicKeyStr, secretKey) {
+    try {
+      // Store the private key (encrypted)
+      await this.encryptAndStorePrivateKey(secretKey);
+
+      // Store the public key
+      await this.storage.setPubkey(publicKeyStr);
+
+      // Recreate keypair and cache it
+      this.cachedKeypair = Keypair.fromSecretKey(secretKey);
+
+      logger.log('Stored keypair, pubkey:', publicKeyStr);
+    } catch (error) {
+      logger.error('Failed to store key:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Encrypt private key using Web Crypto API
    */
   async encryptAndStorePrivateKey(privateKey) {

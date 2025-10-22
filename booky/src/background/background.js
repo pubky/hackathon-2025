@@ -67,7 +67,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function handleMessage(message) {
   switch (message.action) {
     case 'setup':
-      await handleSetup(message.inviteCode);
+      await handleSetup(message.homeserver, message.inviteCode);
       return { success: true };
 
     case 'addMonitoredPubkey':
@@ -94,23 +94,48 @@ async function handleMessage(message) {
 /**
  * Handle initial setup
  */
-async function handleSetup(inviteCode) {
-  logger.log('Starting setup with invite code:', inviteCode ? 'provided' : 'none');
+async function handleSetup(homeserver, inviteCode) {
+  logger.log('Starting setup with homeserver:', homeserver);
+  logger.log('Invite code:', inviteCode ? 'provided' : 'none');
 
-  // Generate key
-  const result = await keyManager.generateKey();
+  let keypair = null;
+  let publicKeyStr = null;
+  let secretKey = null;
 
-  // Sign up with homeserver
-  await homeserverClient.initialize();
-  await homeserverClient.signup(result.keypair, inviteCode);
+  try {
+    // Generate key (don't store yet)
+    const Keypair = (await import('@synonymdev/pubky')).Keypair;
+    keypair = Keypair.random();
+    publicKeyStr = keypair.publicKey.z32();
+    secretKey = keypair.secretKey();
 
-  // Initialize sync engine
-  await bookmarkSync.initialize();
+    logger.log('Generated keypair (not stored yet)');
 
-  // Do initial sync
-  await bookmarkSync.syncAll();
+    // Try to sign up with homeserver
+    await homeserverClient.initialize();
+    await homeserverClient.signup(keypair, homeserver, inviteCode);
 
-  logger.log('Setup completed');
+    logger.log('Signup successful, now storing key');
+
+    // Only store the key AFTER successful signup
+    await keyManager.storeGeneratedKey(publicKeyStr, secretKey);
+
+    // Initialize sync engine
+    await bookmarkSync.initialize();
+
+    // Do initial sync
+    await bookmarkSync.syncAll();
+
+    logger.log('Setup completed');
+  } catch (error) {
+    logger.error('Setup failed:', error);
+    
+    // Don't store the key if signup failed
+    logger.log('Key not stored due to signup failure');
+    
+    // Re-throw to send error to popup
+    throw new Error(`Signup failed: ${error.message || 'Unknown error'}`);
+  }
 }
 
 /**
