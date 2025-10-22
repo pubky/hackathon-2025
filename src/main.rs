@@ -260,14 +260,12 @@ impl eframe::App for PubkyApp {
                         // Show different views based on view_state
                         match self.view_state {
                             ViewState::WikiList => {
-                                ui.label("My Wiki Posts");
-                                ui.add_space(20.0);
-
-                                // Create new wiki page button
                                 if ui.button("Create new wiki page").clicked() {
                                     self.view_state = ViewState::CreateWiki;
                                 }
+                                ui.add_space(20.0);
 
+                                ui.label("My Wiki Posts");
                                 ui.add_space(20.0);
 
                                 // List all wiki posts as buttons
