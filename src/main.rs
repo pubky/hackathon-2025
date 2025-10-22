@@ -12,18 +12,20 @@ mod edit_wiki;
 mod utils;
 mod view_wiki;
 
+const APP_NAME: &str = "Pubky Wiki";
+
 fn main() -> Result<(), eframe::Error> {
     tracing_subscriber::fmt::init();
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([600.0, 700.0])
-            .with_title("Pubky Desktop Login"),
+            .with_title(APP_NAME),
         ..Default::default()
     };
 
     eframe::run_native(
-        "Pubky Desktop Login",
+        APP_NAME,
         options,
         Box::new(|_cc| Ok(Box::new(PubkyApp::new()))),
     )
@@ -151,7 +153,7 @@ impl eframe::App for PubkyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
-                ui.heading("Pubky Desktop Login");
+                ui.heading(APP_NAME);
                 ui.add_space(20.0);
 
                 let state = self.state.lock().unwrap().clone();
