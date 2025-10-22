@@ -9,7 +9,6 @@ declare global {
   }
 }
 
-const DEFAULT_TESTNET_HOST = 'localhost';
 const DEFAULT_HOMESERVER_URL = 'http://localhost:8787';
 const HOMESERVER_PUBLIC_KEY = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
 const KEYPAIR_STORAGE_KEY = 'pubky-live-vote:keypair-secret';
@@ -25,6 +24,26 @@ const resolveDefaultHomeserverUrl = () => {
     return window.location.origin;
   }
   return DEFAULT_HOMESERVER_URL;
+};
+
+const parseHostname = (url: string): string | null => {
+  try {
+    return new URL(url).hostname;
+  } catch (error) {
+    console.warn('Unable to parse homeserver URL hostname', error);
+    return null;
+  }
+};
+
+const isLocalHostname = (hostname: string | null | undefined): boolean => {
+  if (!hostname) return true;
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === 'localhost' ||
+    normalized === '127.0.0.1' ||
+    normalized === '::1' ||
+    normalized.endsWith('.local')
+  );
 };
 
 export type AuthMethod = 'signin' | 'signup';
@@ -122,7 +141,9 @@ const createPubkyClient = (): PubkyClient => {
     homeserverPublicKey
   };
 
-  const pubky = Pubky.testnet(DEFAULT_TESTNET_HOST);
+  const homeserverHostname = parseHostname(homeserverUrl);
+  const useLocalTestnet = isLocalHostname(homeserverHostname);
+  const pubky = useLocalTestnet ? Pubky.testnet(homeserverHostname ?? undefined) : new Pubky();
   const publicStorage = pubky.publicStorage;
   const homeserverKey = PublicKey.from(homeserverPublicKey);
 
