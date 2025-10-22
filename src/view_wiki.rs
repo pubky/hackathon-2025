@@ -1,6 +1,7 @@
 use crate::{PubkyApp, ViewState};
 
 use eframe::egui::{Context, Ui};
+use egui_commonmark::CommonMarkViewer;
 use pubky::PubkySession;
 
 pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context, ui: &mut Ui) {
@@ -45,11 +46,13 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
                 }
             }
 
-            ui.add(
-                egui::TextEdit::multiline(&mut app.selected_wiki_content.as_str())
-                    .desired_width(f32::INFINITY)
-                    .interactive(false),
-            );
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                CommonMarkViewer::new().max_image_width(Some(512)).show(
+                    ui,
+                    &mut app.cache,
+                    &app.selected_wiki_content.as_str(),
+                );
+            });
         });
 
     ui.add_space(20.0);

@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use eframe::egui;
+use egui_commonmark::*;
 use pubky::{Capabilities, Pubky, PubkyAuthFlow, PubkySession};
 use uuid::Uuid;
 
@@ -54,6 +55,7 @@ pub(crate) struct PubkyApp {
     pub(crate) selected_wiki_path: String,
     pub(crate) selected_wiki_content: String,
     pub(crate) needs_refresh: bool,
+    cache: CommonMarkCache,
 }
 
 impl PubkyApp {
@@ -119,6 +121,7 @@ impl PubkyApp {
             selected_wiki_path: String::new(),
             selected_wiki_content: String::new(),
             needs_refresh: false,
+            cache: CommonMarkCache::default(),
         }
     }
 }
