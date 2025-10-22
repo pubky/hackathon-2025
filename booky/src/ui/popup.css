@@ -8,7 +8,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   width: 400px;
   min-height: 300px;
-  background: #f5f5f5;
+  background: #242424;
 }
 
 #app {
@@ -16,10 +16,10 @@ body {
 }
 
 .screen {
-  background: white;
+  background: #242424;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .header {
@@ -42,13 +42,13 @@ body {
 
 .header h1 {
   font-size: 24px;
-  color: #333;
+  color: #f5f5f5;
   margin-bottom: 8px;
 }
 
 .header p {
   font-size: 14px;
-  color: #666;
+  color: #aaa;
 }
 
 .setup-form {
@@ -58,7 +58,7 @@ body {
 .setup-form label {
   display: block;
   font-size: 14px;
-  color: #333;
+  color: #f5f5f5;
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -66,16 +66,22 @@ body {
 .setup-form input {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #444;
   border-radius: 4px;
   font-size: 14px;
   margin-bottom: 16px;
+  background: #2d2d2d;
+  color: #f5f5f5;
+}
+
+.setup-form input::placeholder {
+  color: #888;
 }
 
 .primary-button {
   width: 100%;
   padding: 12px;
-  background: #007bff;
+  background: #1a1a1a;
   color: white;
   border: none;
   border-radius: 4px;
@@ -86,11 +92,11 @@ body {
 }
 
 .primary-button:hover {
-  background: #0056b3;
+  background: #2a2a2a;
 }
 
 .primary-button:disabled {
-  background: #ccc;
+  background: #555;
   cursor: not-allowed;
 }
 
@@ -113,10 +119,10 @@ body {
 .success-message {
   margin-top: 20px;
   padding: 16px;
-  background: #d4edda;
-  border: 1px solid #c3e6cb;
+  background: #1e3a1e;
+  border: 1px solid #2e5a2e;
   border-radius: 4px;
-  color: #155724;
+  color: #a8d5a8;
 }
 
 .success-message p {
@@ -126,6 +132,7 @@ body {
 
 .success-message strong {
   font-weight: 600;
+  color: #c8f5c8;
 }
 
 .success-message span {
@@ -135,12 +142,13 @@ body {
   display: block;
   margin-top: 4px;
   user-select: all;
+  color: #e0e0e0;
 }
 
 .info-section {
   margin-bottom: 20px;
   padding: 12px;
-  background: #f8f9fa;
+  background: #2d2d2d;
   border-radius: 4px;
 }
 
@@ -156,12 +164,12 @@ body {
 }
 
 .info-row .label {
-  color: #666;
+  color: #aaa;
   font-weight: 500;
 }
 
 .info-row .value {
-  color: #333;
+  color: #f5f5f5;
   font-family: monospace;
   font-size: 11px;
   word-break: break-all;
@@ -169,7 +177,7 @@ body {
 }
 
 .info-row .value:hover {
-  background: #e9ecef;
+  background: #3d3d3d;
   border-radius: 2px;
 }
 
@@ -179,7 +187,7 @@ body {
 
 .add-pubkey-section h3 {
   font-size: 16px;
-  color: #333;
+  color: #f5f5f5;
   margin-bottom: 12px;
 }
 
@@ -191,9 +199,15 @@ body {
 .input-group input {
   flex: 1;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid #444;
   border-radius: 4px;
   font-size: 14px;
+  background: #2d2d2d;
+  color: #f5f5f5;
+}
+
+.input-group input::placeholder {
+  color: #888;
 }
 
 .folders-section {
@@ -202,7 +216,7 @@ body {
 
 .folders-section h3 {
   font-size: 16px;
-  color: #333;
+  color: #f5f5f5;
   margin-bottom: 12px;
 }
 
@@ -211,7 +225,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: #f8f9fa;
+  background: #2d2d2d;
   border-radius: 4px;
   margin-bottom: 8px;
 }
@@ -223,13 +237,13 @@ body {
 .folder-name {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: #f5f5f5;
   margin-bottom: 4px;
 }
 
 .folder-pubkey {
   font-size: 12px;
-  color: #666;
+  color: #aaa;
   font-family: monospace;
 }
 
@@ -295,7 +309,7 @@ body {
   width: 40px;
   height: 40px;
   margin: 0 auto 16px;
-  border: 4px solid #f3f3f3;
+  border: 4px solid #444;
   border-top: 4px solid #007bff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -303,15 +317,15 @@ body {
 
 #loading p {
   font-size: 14px;
-  color: #666;
+  color: #aaa;
 }
 
 .error-message {
   padding: 12px;
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
+  background: #3a1e1e;
+  border: 1px solid #5a2e2e;
   border-radius: 4px;
-  color: #721c24;
+  color: #f5a8a8;
   font-size: 14px;
   margin-top: 12px;
 }

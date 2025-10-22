@@ -34,7 +34,10 @@ module.exports = (env) => {
           },
           {
             from: 'icons',
-            to: 'icons'
+            to: 'icons',
+            globOptions: {
+              ignore: ['**/logo.png'] // Don't copy logo.png, we use logo.gif
+            }
           }
         ]
       })
