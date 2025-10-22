@@ -34,11 +34,11 @@ pub(crate) fn update(
                 let path = format!("pubky{user_id}/pub/wiki.app/{path_clone}");
 
                 // Synchronously fetch the content
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                match rt.block_on(async { public_storage_clone.get(&path).await }) {
+                let get_path_fut = public_storage_clone.get(&path);
+                match app.rt.block_on(get_path_fut) {
                     Ok(response) => {
-                        let rt2 = tokio::runtime::Runtime::new().unwrap();
-                        match rt2.block_on(async { response.text().await }) {
+                        let response_text_fut = response.text();
+                        match app.rt.block_on(response_text_fut) {
                             Ok(text) => {
                                 app.selected_wiki_content = text;
                             }
@@ -67,7 +67,7 @@ pub(crate) fn update(
                 // Drain commands to prevent external opening and capture URLs
                 o.commands.retain(|cmd| {
                     if let egui::output::OutputCommand::OpenUrl(open_url) = cmd {
-                        log::info!("🔗 Intercepted link click: {}", open_url.url);
+                        log::info!("Intercepted link click: {}", open_url.url);
                         urls.push(open_url.url.to_string());
                         false // Remove this command to prevent external opening
                     } else {
@@ -83,7 +83,7 @@ pub(crate) fn update(
                 if let (Some(user_pk), Some(page_id)) = (parts.next(), parts.next()) {
                     app.navigate_to_wiki_page(user_pk, page_id);
                 } else {
-                    // None // Return None if the split doesn't yield two parts
+                    log::warn!("Invalid Pubky Wiki link: {url}");
                 };
             }
         });

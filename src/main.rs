@@ -1,9 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use eframe::egui;
 use egui_commonmark::*;
 use pubky::{Capabilities, Pubky, PubkyAuthFlow, PubkySession, PublicStorage};
+use tokio::runtime::Runtime;
 use uuid::Uuid;
 
 use crate::utils::generate_qr_image;
@@ -12,21 +13,23 @@ mod edit_wiki;
 mod utils;
 mod view_wiki;
 
-fn main() -> Result<(), eframe::Error> {
+const APP_NAME: &str = "Pubky Wiki";
+
+fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
+
+    let rt = Runtime::new()?;
+    let app = PubkyApp::new(rt);
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([600.0, 700.0])
-            .with_title("Pubky Desktop Login"),
+            .with_title(APP_NAME),
         ..Default::default()
     };
 
-    eframe::run_native(
-        "Pubky Desktop Login",
-        options,
-        Box::new(|_cc| Ok(Box::new(PubkyApp::new()))),
-    )
+    eframe::run_native(APP_NAME, options, Box::new(|_cc| Ok(Box::new(app))))
+        .map_err(|e| anyhow!("{e}"))
 }
 
 #[derive(Clone)]
@@ -60,66 +63,63 @@ pub(crate) struct PubkyApp {
     pub(crate) selected_wiki_user_id: String,
     pub(crate) needs_refresh: bool,
     cache: CommonMarkCache,
+    rt: Arc<Runtime>,
 }
 
 impl PubkyApp {
-    fn new() -> Self {
+    fn new(rt: Runtime) -> Self {
         let state = Arc::new(Mutex::new(AuthState::Initializing));
 
         // Start the auth flow in a background task
         let state_clone = state.clone();
+
+        let rt_arc = Arc::new(rt);
+        let rt_arc_clone = rt_arc.clone();
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                match initialize_auth().await {
-                    Ok((pubky, flow, auth_url)) => {
-                        *state_clone.lock().unwrap() = AuthState::ShowingQR {
-                            auth_url: auth_url.clone(),
-                        };
+            let initialize_auth_fut = initialize_auth();
+            match rt_arc_clone.block_on(initialize_auth_fut) {
+                Ok((pubky, flow, auth_url)) => {
+                    *state_clone.lock().unwrap() = AuthState::ShowingQR {
+                        auth_url: auth_url.clone(),
+                    };
 
-                        // Poll for authentication
-                        match flow.await_approval().await {
-                            Ok(session) => {
-                                let public_storage = pubky.public_storage();
+                    // Poll for authentication
+                    let await_approval_fut = flow.await_approval();
+                    match rt_arc_clone.block_on(await_approval_fut) {
+                        Ok(session) => {
+                            let session_storage = session.storage();
+                            let mut files = Vec::new();
 
-                                // List files from the homeserver
-                                let mut files = Vec::new();
-                                match session
-                                    .storage()
-                                    .list("/pub/wiki.app/")
-                                    .unwrap()
-                                    .send()
-                                    .await
-                                {
-                                    Ok(entries) => {
-                                        for entry in &entries {
-                                            let path = entry.to_pubky_url();
-                                            files.push(path);
-                                        }
-                                    }
-                                    Err(e) => {
-                                        log::error!("Failed to list files: {}", e);
+                            // List files from the homeserver
+                            let session_storage_list_fut =
+                                session_storage.list("/pub/wiki.app/").unwrap().send();
+                            match rt_arc_clone.block_on(session_storage_list_fut) {
+                                Ok(entries) => {
+                                    for entry in &entries {
+                                        let path = entry.to_pubky_url();
+                                        files.push(path);
                                     }
                                 }
+                                Err(e) => log::error!("Failed to list files: {e}",),
+                            }
 
-                                *state_clone.lock().unwrap() = AuthState::Authenticated {
-                                    session,
-                                    public_storage,
-                                    files,
-                                };
-                            }
-                            Err(e) => {
-                                *state_clone.lock().unwrap() =
-                                    AuthState::Error(format!("Authentication failed: {}", e));
-                            }
+                            *state_clone.lock().unwrap() = AuthState::Authenticated {
+                                session,
+                                public_storage: pubky.public_storage(),
+                                files,
+                            };
+                        }
+                        Err(e) => {
+                            *state_clone.lock().unwrap() =
+                                AuthState::Error(format!("Authentication failed: {e}"));
                         }
                     }
-                    Err(e) => {
-                        *state_clone.lock().unwrap() =
-                            AuthState::Error(format!("Failed to initialize: {}", e));
-                    }
                 }
-            });
+                Err(e) => {
+                    *state_clone.lock().unwrap() =
+                        AuthState::Error(format!("Failed to initialize: {e}"));
+                }
+            }
         });
 
         Self {
@@ -132,6 +132,7 @@ impl PubkyApp {
             selected_wiki_user_id: String::new(),
             needs_refresh: false,
             cache: CommonMarkCache::default(),
+            rt: rt_arc,
         }
     }
 
@@ -151,7 +152,7 @@ impl eframe::App for PubkyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
-                ui.heading("Pubky Desktop Login");
+                ui.heading(APP_NAME);
                 ui.add_space(20.0);
 
                 let state = self.state.lock().unwrap().clone();
@@ -182,21 +183,6 @@ impl eframe::App for PubkyApp {
                             ui.add(egui::Image::from_texture(texture).max_size(max_size));
                         }
 
-                        ui.add_space(20.0);
-                        ui.label("Or use this URL:");
-                        ui.add_space(5.0);
-
-                        // Display URL in a scrollable area
-                        egui::ScrollArea::vertical()
-                            .max_height(100.0)
-                            .show(ui, |ui| {
-                                ui.add(
-                                    egui::TextEdit::multiline(&mut auth_url.as_str())
-                                        .desired_width(f32::INFINITY)
-                                        .interactive(true),
-                                );
-                            });
-
                         ui.add_space(10.0);
                         ui.label("Waiting for authentication...");
                         ui.spinner();
@@ -208,40 +194,29 @@ impl eframe::App for PubkyApp {
                     } => {
                         // Check if we need to refresh the files list
                         if self.needs_refresh {
-                            let session_clone = session.clone();
+                            let session_storage = session.storage();
                             let state_clone = self.state.clone();
-                            std::thread::spawn(move || {
-                                let rt = tokio::runtime::Runtime::new().unwrap();
-                                rt.block_on(async {
-                                    let mut new_files = Vec::new();
-                                    match session_clone
-                                        .storage()
-                                        .list("/pub/wiki.app/")
-                                        .unwrap()
-                                        .send()
-                                        .await
-                                    {
-                                        Ok(entries) => {
-                                            for entry in &entries {
-                                                let path = entry.to_pubky_url();
-                                                new_files.push(path);
-                                            }
-                                        }
-                                        Err(e) => {
-                                            log::error!("Failed to refresh files: {}", e);
-                                        }
-                                    }
+                            let mut new_files = Vec::new();
 
-                                    // Update the state with new files
-                                    if let Ok(mut state) = state_clone.lock() {
-                                        if let AuthState::Authenticated { ref mut files, .. } =
-                                            *state
-                                        {
-                                            *files = new_files;
-                                        }
+                            let session_list_fut =
+                                session_storage.list("/pub/wiki.app/").unwrap().send();
+                            match self.rt.block_on(session_list_fut) {
+                                Ok(entries) => {
+                                    for entry in &entries {
+                                        let path = entry.to_pubky_url();
+                                        new_files.push(path);
                                     }
-                                });
-                            });
+                                }
+                                Err(e) => log::error!("Failed to refresh files: {e}"),
+                            }
+
+                            // Update the state with new files
+                            if let Ok(mut state) = state_clone.lock() {
+                                if let AuthState::Authenticated { ref mut files, .. } = *state {
+                                    *files = new_files;
+                                }
+                            }
+
                             self.needs_refresh = false;
                         }
 

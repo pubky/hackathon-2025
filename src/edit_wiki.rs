@@ -29,33 +29,29 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             let session_clone = session.clone();
             let content = app.wiki_content.clone();
             let state_clone = app.state.clone();
-            std::thread::spawn(move || {
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async {
-                    match create_wiki_post(&session_clone, &content).await {
-                        Ok(wiki_page_path) => {
-                            log::info!("Created wiki post at: {}", wiki_page_path);
 
-                            // Convert path to pubky URL format for the files list
-                            if let Ok(mut state) = state_clone.lock() {
-                                if let AuthState::Authenticated {
-                                    ref session,
-                                    ref mut files,
-                                    ..
-                                } = *state
-                                {
-                                    let own_user_pk = session.info().public_key().to_string();
-                                    let file_url = format!("pubky://{own_user_pk}{wiki_page_path}");
-                                    files.push(file_url);
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            log::error!("Failed to create wiki post: {}", e);
+            let create_wiki_post_fut = create_wiki_post(&session_clone, &content);
+            match app.rt.block_on(create_wiki_post_fut) {
+                Ok(wiki_page_path) => {
+                    log::info!("Created wiki post at: {}", wiki_page_path);
+
+                    // Convert path to pubky URL format for the files list
+                    if let Ok(mut state) = state_clone.lock() {
+                        if let AuthState::Authenticated {
+                            ref session,
+                            ref mut files,
+                            ..
+                        } = *state
+                        {
+                            let own_user_pk = session.info().public_key().to_string();
+                            let file_url = format!("pubky://{own_user_pk}{wiki_page_path}");
+                            files.push(file_url);
                         }
                     }
-                });
-            });
+                }
+                Err(e) => log::error!("Failed to create wiki post: {e}"),
+            }
+
             app.wiki_content.clear();
             app.view_state = ViewState::WikiList;
         }
