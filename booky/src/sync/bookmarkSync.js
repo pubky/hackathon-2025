@@ -124,12 +124,63 @@ export class BookmarkSync {
         // Mark as deleted
         await this.storage.markDeleted(url, timestamp);
         await this.storage.removeBookmarkMeta(url);
-        
+
         // Remove from cache
         this.urlCache.delete(id);
 
         logger.log('Bookmark removed, triggering sync:', url);
         this.triggerSyncAfterDelay();
+      }
+    });
+
+    // Listen for bookmark moves - trigger sync
+    browser.bookmarks.onMoved.addListener(async (id, moveInfo) => {
+      if (this.ignoreEvents) {
+        return;
+      }
+
+      // Get the bookmark to check if it has a URL (is not a folder)
+      const bookmarks = await browser.bookmarks.get(id);
+      if (bookmarks.length > 0 && bookmarks[0].url) {
+        const url = bookmarks[0].url;
+
+        // Update URL cache
+        this.urlCache.set(id, url);
+
+        // Check if moved into or out of our synced folders
+        const pubkey = await this.keyManager.getPublicKey();
+        const monitored = await this.storage.getMonitoredPubkeys();
+        const allPubkeys = pubkey ? [pubkey, ...monitored] : monitored;
+
+        // Check if the new parent is one of our synced folders
+        let isInSyncedFolder = false;
+        for (const pk of allPubkeys) {
+          const folderId = this.folderCache.get(pk);
+          if (folderId && await this.isInFolder(id, folderId)) {
+            isInSyncedFolder = true;
+            break;
+          }
+        }
+
+        if (isInSyncedFolder) {
+          // Moved into a synced folder - treat as new bookmark
+          const timestamp = Date.now();
+          await this.storage.setBookmarkMeta(url, {
+            url: url,
+            timestamp: timestamp
+          });
+
+          logger.log('Bookmark moved into synced folder, triggering sync:', url);
+          this.triggerSyncAfterDelay();
+        } else {
+          // Moved out of synced folder - treat as deletion
+          const timestamp = Date.now();
+          await this.storage.markDeleted(url, timestamp);
+          await this.storage.removeBookmarkMeta(url);
+
+          logger.log('Bookmark moved out of synced folder, triggering sync:', url);
+          this.triggerSyncAfterDelay();
+        }
       }
     });
   }
