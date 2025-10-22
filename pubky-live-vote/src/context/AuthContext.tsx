@@ -18,6 +18,7 @@ type User = {
 type AuthContextValue = {
   user: User | null;
   session: Session | null;
+  sessionStorage: Session['storage'] | null;
   authMethod: AuthMethod | null;
   isAuthenticating: boolean;
   connect: () => Promise<void>;
@@ -116,9 +117,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [client]);
 
+  const sessionStorage = session?.storage ?? null;
+
   const value = useMemo(
-    () => ({ user, session, authMethod, isAuthenticating, connect, disconnect, client }),
-    [user, session, authMethod, isAuthenticating, connect, disconnect, client]
+    () => ({ user, session, sessionStorage, authMethod, isAuthenticating, connect, disconnect, client }),
+    [user, session, sessionStorage, authMethod, isAuthenticating, connect, disconnect, client]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

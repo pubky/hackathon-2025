@@ -37,7 +37,6 @@ export interface SessionResult {
 
 export interface PubkyClient {
   ensureSession: () => Promise<SessionResult>;
-  storeBallot: (path: string, payload: unknown) => Promise<void>;
   signout: () => Promise<void>;
   session: Session | null;
   sessionPublicKey: string | null;
@@ -168,12 +167,6 @@ const createPubkyClient = (): PubkyClient => {
     return { session, method, publicKey: sessionPublicKey };
   };
 
-  const storeBallot = async (path: string, payload: unknown) => {
-    const { session: activeSession } = await ensureSession();
-    const normalizedPath = normalizeSessionPath(path);
-    await activeSession.storage.putJson(normalizedPath, payload as any);
-  };
-
   const signout = async () => {
     if (!session) return;
     try {
@@ -193,7 +186,6 @@ const createPubkyClient = (): PubkyClient => {
 
   const client: PubkyClient = {
     ensureSession,
-    storeBallot,
     signout,
     session: null,
     sessionPublicKey: null,
@@ -202,16 +194,6 @@ const createPubkyClient = (): PubkyClient => {
   };
 
   return client;
-};
-
-type SessionPath = `/pub/${string}`;
-
-const normalizeSessionPath = (path: string): SessionPath => {
-  const trimmed = path.replace(/^\/+/, '');
-  if (trimmed.startsWith('pub/')) {
-    return `/${trimmed}` as SessionPath;
-  }
-  return `/pub/${trimmed}` as SessionPath;
 };
 
 const createMockClient = (): PubkyClient => {
@@ -236,13 +218,6 @@ const createMockClient = (): PubkyClient => {
     return { session: mockSession, method: lastAuthMethod, publicKey: sessionPublicKey };
   };
 
-  const storeBallot = async (path: string, payload: unknown) => {
-    await ensureSession();
-    if (!hasBrowserStorage()) return;
-    const normalized = normalizeSessionPath(path).replace(/^\/pub\//, '');
-    window.localStorage.setItem(`${MOCK_STORAGE_PREFIX}${normalized}`, JSON.stringify(payload));
-  };
-
   const signout = async () => {
     sessionPublicKey = null;
     lastAuthMethod = null;
@@ -254,7 +229,6 @@ const createMockClient = (): PubkyClient => {
 
   const client: PubkyClient = {
     ensureSession,
-    storeBallot,
     signout,
     session: mockSession,
     sessionPublicKey,

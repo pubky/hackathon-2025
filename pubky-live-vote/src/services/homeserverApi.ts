@@ -1,15 +1,24 @@
+import type { Session } from '@synonymdev/pubky';
 import type { BallotPayload, LeaderboardSummaryResponse } from '../types/project';
-import { ensurePubkyClient, getHomeserverConfig } from './pubkyClient';
+import { getHomeserverConfig } from './pubkyClient';
+
+export type SessionPath = `/pub/${string}`;
 
 const DATA_ROOT = 'pubky-live-vote/ballots';
 const SUMMARY_PATH = 'pubky-live-vote/summary.json';
 const BALLOT_INDEX_PATH = `${DATA_ROOT}/index.json`;
 const MOCK_STORAGE_PREFIX = 'pubky-live-vote:mock-storage:';
+const CANONICAL_STORAGE_ROOT = `/pub/${DATA_ROOT}`;
 
-export const sendBallotToHomeserver = async (payload: BallotPayload) => {
-  const client = await ensurePubkyClient();
-  const path = `${DATA_ROOT}/${payload.voterId}.json`;
-  await client.storeBallot(path, payload);
+export const buildBallotStoragePath = (payload: Pick<BallotPayload, 'voterId'>): SessionPath => {
+  return `${CANONICAL_STORAGE_ROOT}/${payload.voterId}.json` as SessionPath;
+};
+
+export const createBallotStorageSender = (storage: Session['storage']) => {
+  return async (payload: BallotPayload, explicitPath?: SessionPath) => {
+    const path = explicitPath ?? buildBallotStoragePath(payload);
+    await storage.putJson(path, payload);
+  };
 };
 
 const buildHomeserverUrl = (path: string) => {

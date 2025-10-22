@@ -2,7 +2,7 @@ import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useSt
 import { useAuth } from './AuthContext';
 import type { BallotPayload, Project, ScoreComponent } from '../types/project';
 import { enqueueBallot, flushQueue, registerQueueSender } from '../services/cacheQueue';
-import { sendBallotToHomeserver } from '../services/homeserverApi';
+import { createBallotStorageSender } from '../services/homeserverApi';
 import { demoProjects } from '../services/sampleProjects';
 
 interface ProjectContextValue {
@@ -28,7 +28,7 @@ const SUBMISSION_KEY = 'pubky-live-vote:last-submission';
 const OWN_PROJECT_KEY = 'pubky-live-vote:own-project';
 
 export const ProjectProvider = ({ children }: PropsWithChildren) => {
-  const { user } = useAuth();
+  const { user, sessionStorage } = useAuth();
   const [projects, setProjects] = useState<Project[]>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -48,8 +48,17 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
   const [userProjectId, setUserProjectId] = useState<string | null>(() => localStorage.getItem(OWN_PROJECT_KEY));
 
   useEffect(() => {
-    registerQueueSender(sendBallotToHomeserver);
-  }, []);
+    if (!sessionStorage) {
+      registerQueueSender(null);
+      return;
+    }
+    const sender = createBallotStorageSender(sessionStorage);
+    registerQueueSender(sender);
+    void flushQueue(sender);
+    return () => {
+      registerQueueSender(null);
+    };
+  }, [sessionStorage]);
 
   const persistState = (updatedProjects: Project[], updatedRanking: string[]) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedProjects));
@@ -101,7 +110,7 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
     enqueueBallot(payload);
     persistState(projects, popularRanking);
     try {
-      await flushQueue(sendBallotToHomeserver);
+      await flushQueue();
       setPending(false);
       setLastSubmittedAt(payload.submittedAt);
       localStorage.setItem(SUBMISSION_KEY, payload.submittedAt);
