@@ -85,7 +85,7 @@ function showMainScreen(data) {
   userPubkey.style.cursor = 'pointer';
   
   // Make pubkey copyable
-  userPubkey.onclick = () => copyToClipboard(data.pubkey, 'Pubkey copied!');
+  userPubkey.onclick = () => copyToClipboard(data.pubkey, 'Public key copied!');
   
   userFolder.textContent = data.folderName;
 
@@ -327,7 +327,7 @@ async function handleAddPubkey() {
         displayFolders(statusResponse.data);
       }
     } else {
-      showError(response.error || 'Failed to add pubkey');
+      showError(response.error || 'Failed to add public key');
     }
   } catch (error) {
     console.error('Add pubkey error:', error);
@@ -359,7 +359,7 @@ async function removePubkey(pubkey) {
         displayFolders(statusResponse.data);
       }
     } else {
-      showError(response.error || 'Failed to remove pubkey');
+      showError(response.error || 'Failed to remove public key');
     }
   } catch (error) {
     console.error('Remove pubkey error:', error);
