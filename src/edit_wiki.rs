@@ -1,4 +1,4 @@
-use crate::{create_wiki_post, PubkyApp, ViewState};
+use crate::{create_wiki_post, AuthState, PubkyApp, ViewState};
 
 use eframe::egui::{Context, Ui};
 use pubky::PubkySession;
@@ -28,12 +28,27 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
         if ui.button("Save wiki").clicked() {
             let session_clone = session.clone();
             let content = app.wiki_content.clone();
+            let state_clone = app.state.clone();
             std::thread::spawn(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async {
                     match create_wiki_post(&session_clone, &content).await {
                         Ok(path) => {
                             println!("Created wiki post at: {}", path);
+
+                            // Convert path to pubky URL format for the files list
+                            if let Ok(mut state) = state_clone.lock() {
+                                if let AuthState::Authenticated {
+                                    ref session,
+                                    ref mut files,
+                                    ..
+                                } = *state
+                                {
+                                    let public_key = session.info().public_key().to_string();
+                                    let file_url = format!("pubky://{}{}", public_key, path);
+                                    files.push(file_url);
+                                }
+                            }
                         }
                         Err(e) => {
                             println!("Failed to create wiki post: {}", e);

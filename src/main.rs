@@ -27,7 +27,7 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 #[derive(Clone)]
-enum AuthState {
+pub(crate) enum AuthState {
     Initializing,
     ShowingQR {
         auth_url: String,
@@ -41,20 +41,20 @@ enum AuthState {
 }
 
 #[derive(Clone, PartialEq)]
-enum ViewState {
+pub(crate) enum ViewState {
     WikiList,
     CreateWiki,
     ViewWiki,
 }
 
-struct PubkyApp {
-    state: Arc<Mutex<AuthState>>,
+pub(crate) struct PubkyApp {
+    pub(crate) state: Arc<Mutex<AuthState>>,
     qr_texture: Option<egui::TextureHandle>,
-    view_state: ViewState,
-    wiki_content: String,
-    selected_wiki_path: String,
-    selected_wiki_content: String,
-    needs_refresh: bool,
+    pub(crate) view_state: ViewState,
+    pub(crate) wiki_content: String,
+    pub(crate) selected_wiki_path: String,
+    pub(crate) selected_wiki_content: String,
+    pub(crate) needs_refresh: bool,
 }
 
 impl PubkyApp {
@@ -292,7 +292,7 @@ async fn initialize_auth() -> Result<(PubkyAuthFlow, String)> {
     Ok((flow, auth_url))
 }
 
-async fn create_wiki_post(session: &PubkySession, content: &str) -> Result<String> {
+pub(crate) async fn create_wiki_post(session: &PubkySession, content: &str) -> Result<String> {
     let path = format!("/pub/wiki.app/{}", Uuid::new_v4());
 
     // Create the post with the provided content
