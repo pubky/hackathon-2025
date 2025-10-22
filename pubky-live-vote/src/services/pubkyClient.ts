@@ -114,15 +114,11 @@ const persistSecret = (keypair: Keypair) => {
   }
 };
 
-const isPkarrMissingHttpsError = (error: unknown) =>
-  typeof error === 'object' &&
-  error !== null &&
-  'name' in error &&
-  (error as { name?: string }).name === 'PkarrError' &&
-  'message' in error &&
-  typeof (error as { message?: unknown }).message === 'string' &&
-  ((error as { message: string }).message.includes('No HTTPS endpoints found') ||
-    (error as { message: string }).message.includes('Pkarr record is malformed'));
+const isPkarrMissingHttpsError = (error: unknown): error is Error =>
+  error instanceof Error &&
+  error.name === 'PkarrError' &&
+  (error.message.includes('No HTTPS endpoints found') ||
+    error.message.includes('Pkarr record is malformed'));
 
 const fallbackToMockClient = async (clientToReplace: PubkyClient, cause: unknown): Promise<SessionResult> => {
   console.warn('Falling back to mock Pubky client after homeserver bootstrap failure', cause);
