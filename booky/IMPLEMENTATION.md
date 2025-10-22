@@ -127,7 +127,7 @@ booky/
 
 ### 1. Automatic Key Generation
 - Generates keypair on first use
-- No import/export needed for initial version
+- With option to import and export via encrypted recovery file
 - Secure storage with encryption
 
 ### 2. Two-Way Bookmark Sync

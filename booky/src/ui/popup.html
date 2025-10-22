@@ -24,7 +24,12 @@
         <label for="invite-code">Invite Code (optional)</label>
         <input type="text" id="invite-code" placeholder="Enter invite code">
 
-        <button id="setup-button" class="primary-button">Setup Booky</button>
+        <div class="setup-options">
+          <button id="setup-button" class="primary-button">Setup Booky</button>
+          <button id="import-button" class="secondary-button">Import Recovery File</button>
+        </div>
+        
+        <input type="file" id="recovery-file-input" accept=".pkarr" style="display: none;">
       </div>
 
       <div id="setup-result" style="display: none;">
@@ -43,6 +48,7 @@
         <div class="header-text">
           <h1>Booky</h1>
         </div>
+        <button id="export-button" class="header-export-button">Download Recovery File</button>
       </div>
 
       <div class="info-section">

@@ -51,6 +51,23 @@ body {
   color: #aaa;
 }
 
+.header-export-button {
+  padding: 6px 12px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.header-export-button:hover {
+  background: #2a2a2a;
+}
+
 .setup-form {
   margin-top: 20px;
 }
@@ -76,6 +93,16 @@ body {
 
 .setup-form input::placeholder {
   color: #888;
+}
+
+.setup-options {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.setup-options button {
+  flex: 1;
 }
 
 .primary-button {

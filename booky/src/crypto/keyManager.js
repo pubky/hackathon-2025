@@ -146,6 +146,52 @@ export class KeyManager {
     return `pub_${this.getPubkeyPrefix(pubkey)}`;
   }
 
+  /**
+   * Export keypair as recovery file using Pubky SDK
+   */
+  async exportRecoveryFile() {
+    try {
+      const keypair = await this.getKeypair();
+      if (!keypair) {
+        throw new Error('No keypair found');
+      }
+
+      // Use Pubky SDK's createRecoveryFile method
+      const recoveryFile = await keypair.createRecoveryFile('booky');
+      
+      logger.log('Created recovery file');
+      return recoveryFile;
+    } catch (error) {
+      logger.error('Failed to export recovery file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Import keypair from recovery file using Pubky SDK
+   */
+  async importRecoveryFile(recoveryFileContent) {
+    try {
+      // Use Pubky SDK's fromRecoveryFile method
+      const keypair = Keypair.fromRecoveryFile(recoveryFileContent, 'booky');
+
+      // Get the public key string
+      const publicKeyStr = keypair.publicKey.z32();
+      const secretKey = keypair.secretKey();
+
+      logger.log('Imported keypair from recovery file, pubkey:', publicKeyStr);
+
+      return {
+        keypair,
+        publicKey: publicKeyStr,
+        secretKey: secretKey
+      };
+    } catch (error) {
+      logger.error('Failed to import recovery file:', error);
+      throw error;
+    }
+  }
+
   // Helper methods for base64 encoding/decoding
   arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);

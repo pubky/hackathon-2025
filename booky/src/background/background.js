@@ -86,6 +86,16 @@ async function handleMessage(message) {
       const status = await getStatus();
       return { success: true, data: status };
 
+    case 'exportRecoveryFile':
+      const recoveryFile = await keyManager.exportRecoveryFile();
+      // Convert Uint8Array to regular array for message passing
+      const recoveryFileArray = Array.from(recoveryFile);
+      return { success: true, data: recoveryFileArray };
+
+    case 'importRecoveryFile':
+      await handleImportRecoveryFile(message.recoveryFileContent, message.homeserver, message.inviteCode);
+      return { success: true };
+
     default:
       return { success: false, error: 'Unknown action' };
   }
@@ -135,6 +145,55 @@ async function handleSetup(homeserver, inviteCode) {
     
     // Re-throw to send error to popup
     throw new Error(`Signup failed: ${error.message || 'Unknown error'}`);
+  }
+}
+
+/**
+ * Handle importing recovery file
+ */
+async function handleImportRecoveryFile(recoveryFileContent, homeserver, inviteCode) {
+  logger.log('Starting import recovery file with homeserver:', homeserver);
+
+  let keypair = null;
+  let publicKeyStr = null;
+  let secretKey = null;
+
+  try {
+    // Convert array back to Uint8Array for the key manager
+    const recoveryFileUint8 = new Uint8Array(recoveryFileContent);
+    
+    // Import key from recovery file (don't store yet)
+    const keyData = await keyManager.importRecoveryFile(recoveryFileUint8);
+    keypair = keyData.keypair;
+    publicKeyStr = keyData.publicKey;
+    secretKey = keyData.secretKey;
+
+    logger.log('Imported keypair from recovery file (not stored yet)');
+
+    // Try to sign in with homeserver
+    await homeserverClient.initialize();
+    await homeserverClient.signin(keypair);
+
+    logger.log('Signin successful, now storing key');
+
+    // Only store the key AFTER successful signin
+    await keyManager.storeGeneratedKey(publicKeyStr, secretKey);
+
+    // Initialize sync engine
+    await bookmarkSync.initialize();
+
+    // Do initial sync
+    await bookmarkSync.syncAll();
+
+    logger.log('Import and setup completed');
+  } catch (error) {
+    logger.error('Import failed:', error);
+    
+    // Don't store the key if signin failed
+    logger.log('Key not stored due to signin failure');
+    
+    // Re-throw to send error to popup
+    throw new Error(`Signin failed: ${error.message || 'Unknown error'}`);
   }
 }
 

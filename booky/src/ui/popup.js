@@ -8,6 +8,8 @@ const mainScreen = document.getElementById('main-screen');
 const loading = document.getElementById('loading');
 
 const setupButton = document.getElementById('setup-button');
+const importButton = document.getElementById('import-button');
+const recoveryFileInput = document.getElementById('recovery-file-input');
 const homeserverInput = document.getElementById('homeserver');
 const inviteCodeInput = document.getElementById('invite-code');
 const setupResult = document.getElementById('setup-result');
@@ -20,6 +22,7 @@ const monitorPubkeyInput = document.getElementById('monitor-pubkey');
 const addPubkeyButton = document.getElementById('add-pubkey-button');
 const foldersList = document.getElementById('folders-list');
 const manualSyncButton = document.getElementById('manual-sync-button');
+const exportButton = document.getElementById('export-button');
 
 // Browser API compatibility
 const browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
@@ -186,6 +189,21 @@ function createStatusIcon(status) {
 }
 
 /**
+ * Show toast message
+ */
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast-message';
+  toast.textContent = message;
+
+  const app = document.getElementById('app');
+  app.appendChild(toast);
+
+  // Remove toast after 3 seconds
+  setTimeout(() => toast.remove(), 3000);
+}
+
+/**
  * Show error message
  */
 function showError(message) {
@@ -213,16 +231,7 @@ function sendMessage(message) {
  */
 function copyToClipboard(text, successMessage) {
   navigator.clipboard.writeText(text).then(() => {
-    // Show success message
-    const toast = document.createElement('div');
-    toast.className = 'toast-message';
-    toast.textContent = successMessage;
-    document.body.appendChild(toast);
-    
-    // Remove after 2 seconds
-    setTimeout(() => {
-      toast.remove();
-    }, 2000);
+    showToast(successMessage);
   }).catch(err => {
     console.error('Failed to copy:', err);
     showError('Failed to copy to clipboard');
@@ -387,10 +396,105 @@ async function handleManualSync() {
   }
 }
 
+/**
+ * Handle export recovery file
+ */
+async function handleExportRecoveryFile() {
+  try {
+    const response = await sendMessage({ action: 'exportRecoveryFile' });
+    
+    if (response.success) {
+      // The recovery file data comes as a regular array from the message system
+      // Convert it back to Uint8Array for proper binary file creation
+      const binaryData = new Uint8Array(response.data);
+      const blob = new Blob([binaryData], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `booky-recovery-${Date.now()}.pkarr`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showToast('Recovery file downloaded');
+    } else {
+      showError(response.error || 'Export failed');
+    }
+  } catch (error) {
+    console.error('Error exporting recovery file:', error);
+    showError(error.message);
+  }
+}
+
+/**
+ * Handle import recovery file button click
+ */
+function handleImportRecoveryFile() {
+  recoveryFileInput.click();
+}
+
+/**
+ * Handle recovery file selection
+ */
+async function handleRecoveryFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    // Read the file as ArrayBuffer first
+    const arrayBuffer = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    });
+    
+    // Convert ArrayBuffer to Uint8Array as expected by Pubky SDK
+    const recoveryBytes = new Uint8Array(arrayBuffer);
+    
+    // Get homeserver and invite code from inputs
+    const homeserver = homeserverInput.value.trim();
+    const inviteCode = inviteCodeInput.value.trim() || null;
+    
+    if (!homeserver) {
+      showError('Please enter a homeserver public key');
+      return;
+    }
+
+    showLoading();
+
+    const response = await sendMessage({
+      action: 'importRecoveryFile',
+      recoveryFileContent: Array.from(recoveryBytes), // Convert Uint8Array to regular array for message passing
+      homeserver: homeserver,
+      inviteCode: inviteCode
+    });
+
+    if (response.success) {
+      showToast('Recovery file imported successfully');
+      // Reload the popup to show main screen
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showError(response.error || 'Import failed');
+      showSetupScreen();
+    }
+  } catch (error) {
+    console.error('Error importing recovery file:', error);
+    showError('Invalid recovery file format');
+    showSetupScreen();
+  }
+}
+
 // Event listeners
 setupButton.addEventListener('click', handleSetup);
+importButton.addEventListener('click', handleImportRecoveryFile);
+recoveryFileInput.addEventListener('change', handleRecoveryFileSelect);
 addPubkeyButton.addEventListener('click', handleAddPubkey);
 manualSyncButton.addEventListener('click', handleManualSync);
+exportButton.addEventListener('click', handleExportRecoveryFile);
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', init);
