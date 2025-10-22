@@ -275,20 +275,19 @@ impl eframe::App for PubkyApp {
                                     if file_cache.is_empty() {
                                         ui.label("No wiki posts yet. Create your first one!");
                                     } else {
+                                        let pk = own_pk.to_string();
                                         for (file_url, file_title) in file_cache {
                                             // Extract just the filename from the URL
                                             let file_name =
                                                 file_url.split('/').last().unwrap_or(file_url);
 
-                                            if ui
-                                                .button(format!("{file_name} ({file_title}...)"))
-                                                .clicked()
-                                            {
-                                                self.navigate_to_view_wiki_page(
-                                                    own_pk.to_string().as_str(),
-                                                    file_name,
-                                                );
-                                            }
+                                            ui.horizontal(|ui| {
+                                                if ui.button(file_name).clicked() {
+                                                    self.navigate_to_view_wiki_page(&pk, file_name);
+                                                }
+
+                                                ui.label(file_title);
+                                            });
                                         }
                                     }
                                 });
