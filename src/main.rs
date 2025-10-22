@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use anyhow::Result;
 use eframe::egui;
 use pubky::{Capabilities, Pubky, PubkyAuthFlow};
 
@@ -165,7 +166,7 @@ impl eframe::App for PubkyApp {
     }
 }
 
-async fn initialize_auth() -> Result<(PubkyAuthFlow, String), Box<dyn std::error::Error>> {
+async fn initialize_auth() -> Result<(PubkyAuthFlow, String)> {
     let pubky = Pubky::new()?;
     let caps = Capabilities::default();
     let flow = pubky.start_auth_flow(&caps)?;
