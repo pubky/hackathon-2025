@@ -95,6 +95,24 @@ const persistSecret = (keypair: Keypair) => {
   }
 };
 
+const isPkarrMissingHttpsError = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'name' in error &&
+  (error as { name?: string }).name === 'PkarrError' &&
+  'message' in error &&
+  typeof (error as { message?: unknown }).message === 'string' &&
+  ((error as { message: string }).message.includes('No HTTPS endpoints found') ||
+    (error as { message: string }).message.includes('Pkarr record is malformed'));
+
+const fallbackToMockClient = async (clientToReplace: PubkyClient, cause: unknown): Promise<SessionResult> => {
+  console.warn('Falling back to mock Pubky client after homeserver bootstrap failure', cause);
+  const mockClient = createMockClient();
+  cachedClient = mockClient;
+  Object.assign(clientToReplace, mockClient);
+  return mockClient.ensureSession();
+};
+
 const createPubkyClient = (): PubkyClient => {
   const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
   const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
@@ -149,10 +167,20 @@ const createPubkyClient = (): PubkyClient => {
     try {
       session = persisted ? await activeSigner.signin() : await signupWithHomeserver(activeSigner);
     } catch (error) {
+      if (isPkarrMissingHttpsError(error)) {
+        return fallbackToMockClient(client, error);
+      }
       if (persisted) {
         console.warn('Fast Pubky signin failed, attempting signup', error);
-        session = await signupWithHomeserver(activeSigner);
-        method = 'signup';
+        try {
+          session = await signupWithHomeserver(activeSigner);
+          method = 'signup';
+        } catch (signupError) {
+          if (isPkarrMissingHttpsError(signupError)) {
+            return fallbackToMockClient(client, signupError);
+          }
+          throw signupError;
+        }
       } else {
         throw error;
       }
