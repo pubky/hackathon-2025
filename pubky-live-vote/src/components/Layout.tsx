@@ -27,7 +27,7 @@ const TopNavAction = ({ ariaLabel, label, buttonClassName, children }: TopNavAct
 );
 
 export const Layout = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { submitBallot, hasPendingChanges, lastSubmittedAt } = useProjects();
 
   return (
@@ -85,14 +85,14 @@ export const Layout = () => {
           hasPendingChanges={hasPendingChanges}
           lastSubmittedAt={lastSubmittedAt}
           onSubmit={submitBallot}
-          isAuthenticated={Boolean(user)}
+          isAuthenticated={Boolean(session)}
         />
       </header>
 
       <main className="app-main">
         <section className="left-column">
           <LoginCard />
-          {user && <PopularVoteBoard />}
+          {session && <PopularVoteBoard />}
         </section>
         <section className="right-column">
           <ProjectList />

@@ -1,51 +1,74 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import './Panel.css';
 
 export const LoginCard = () => {
-  const { user, qrCodeSvg, isAuthenticating, connect, disconnect } = useAuth();
+  const { user, session, authMethod, isAuthenticating, connect, disconnect } = useAuth();
 
   useEffect(() => {
-    if (!user) {
+    if (!session && !isAuthenticating) {
       void connect();
     }
-  }, [user, connect]);
+  }, [session, isAuthenticating, connect]);
+
+  const statusMessage = useMemo(() => {
+    if (session) return '';
+    if (isAuthenticating) {
+      if (authMethod === 'signup') {
+        return 'Creating a new Pubky testnet identity…';
+      }
+      if (authMethod === 'signin') {
+        return 'Signing in with your Pubky identity…';
+      }
+      return 'Connecting to the Pubky testnet…';
+    }
+    return 'Unable to establish a Pubky session.';
+  }, [session, isAuthenticating, authMethod]);
+
+  const publicKey = useMemo(() => {
+    if (session) {
+      try {
+        return session.info.publicKey.z32();
+      } catch (error) {
+        console.warn('Unable to read session public key', error);
+      }
+    }
+    return user?.publicKey ?? null;
+  }, [session, user]);
 
   return (
     <div className="panel">
       <header className="panel__header">
         <div>
-          <h2>{user ? 'Connected to Pubky' : 'Connect with Pubky Ring'}</h2>
+          <h2>{session ? 'Connected to Pubky' : 'Connect to Pubky'}</h2>
           <p className="panel__subtitle">
-            {user ? 'Your identity is linked. You can vote, comment, and tag projects.' : 'Scan the QR code with Pubky Ring to authenticate.'}
+            {session
+              ? 'Your Pubky identity is active. You can vote, comment, and tag projects.'
+              : 'We’ll establish a direct session with the Pubky testnet—no QR code required.'}
           </p>
         </div>
-        {user && (
+        {session && (
           <button className="button button--ghost" onClick={() => void disconnect()}>
             Sign out
           </button>
         )}
       </header>
 
-      {!user && (
+      {!session && (
         <div className="qr-wrapper" aria-live="polite">
-          {qrCodeSvg ? (
-            <div className="qr-container" dangerouslySetInnerHTML={{ __html: qrCodeSvg }} />
-          ) : (
-            <div className="qr-placeholder">{isAuthenticating ? 'Waiting for QR code…' : 'Unable to load QR code'}</div>
-          )}
+          <div className="qr-placeholder">{statusMessage}</div>
         </div>
       )}
 
-      {user && (
+      {session && (
         <dl className="identity-list">
           <div>
-            <dt>Display Name</dt>
-            <dd>{user.displayName ?? 'Anonymous Builder'}</dd>
+            <dt>Authentication</dt>
+            <dd>{authMethod === 'signup' ? 'Signed up to the homeserver' : 'Signed in with existing keys'}</dd>
           </div>
           <div>
             <dt>Public Key</dt>
-            <dd className="mono">{user.publicKey}</dd>
+            <dd className="mono">{publicKey ?? 'Unknown'}</dd>
           </div>
         </dl>
       )}

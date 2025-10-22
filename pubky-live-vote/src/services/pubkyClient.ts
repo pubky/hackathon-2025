@@ -1,3 +1,5 @@
+import { Keypair, Pubky, PublicKey, type PublicStorage, type Session, type Signer } from '@synonymdev/pubky';
+
 declare global {
   interface Window {
     __PUBKY_CONFIG__?: {
@@ -7,181 +9,282 @@ declare global {
   }
 }
 
-const STAGING_SERVER = 'https://homeserver.staging.pubky.app';
-const STAGING_PUBLIC_KEY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
-
-const resolveDefaultHomeserverUrl = () => {
-  if (import.meta.env.DEV && typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
-  }
-  return STAGING_SERVER;
-};
+const DEFAULT_TESTNET_HOST = 'localhost';
+const DEFAULT_HOMESERVER_URL = 'http://localhost:8787';
+const HOMESERVER_PUBLIC_KEY = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+const KEYPAIR_STORAGE_KEY = 'pubky-live-vote:keypair-secret';
+const MOCK_STORAGE_PREFIX = 'pubky-live-vote:mock-storage:';
 
 type HomeserverConfig = {
   homeserverUrl: string;
   homeserverPublicKey: string;
 };
 
-let resolvedConfig: HomeserverConfig = {
-  homeserverUrl: resolveDefaultHomeserverUrl(),
-  homeserverPublicKey: STAGING_PUBLIC_KEY
+const resolveDefaultHomeserverUrl = () => {
+  if (import.meta.env.DEV && typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return DEFAULT_HOMESERVER_URL;
 };
 
-export interface PubkySession {
-  publicKey: string;
-  displayName?: string;
-}
+export type AuthMethod = 'signin' | 'signup';
 
-export interface RingLogin {
-  sessionToken: string;
-  qrCodeSvg: string;
+export interface SessionResult {
+  session: Session;
+  method: AuthMethod;
+  publicKey: string;
 }
 
 export interface PubkyClient {
-  beginRingLogin: () => Promise<RingLogin>;
-  waitForSession: (sessionToken: string) => Promise<PubkySession>;
+  ensureSession: () => Promise<SessionResult>;
   storeBallot: (path: string, payload: unknown) => Promise<void>;
+  signout: () => Promise<void>;
+  session: Session | null;
+  sessionPublicKey: string | null;
+  lastAuthMethod: AuthMethod | null;
+  publicStorage: PublicStorage | null;
 }
+
+let resolvedConfig: HomeserverConfig = {
+  homeserverUrl: resolveDefaultHomeserverUrl(),
+  homeserverPublicKey: HOMESERVER_PUBLIC_KEY
+};
 
 let cachedClient: PubkyClient | null = null;
 
 export const ensurePubkyClient = async (): Promise<PubkyClient> => {
   if (cachedClient) return cachedClient;
   try {
-    const mod: any = await import('@synonymdev/pubky');
-    const adapter = await createAdapter(mod);
-    if (adapter) {
-      cachedClient = adapter;
-      return adapter;
-    }
+    cachedClient = createPubkyClient();
   } catch (error) {
     console.warn('Falling back to mock Pubky client', error);
+    cachedClient = createMockClient();
   }
-  cachedClient = createMockClient();
   return cachedClient;
 };
 
 export const getHomeserverConfig = (): HomeserverConfig => resolvedConfig;
 
-const createAdapter = async (lib: any): Promise<PubkyClient | null> => {
-  if (!lib) return null;
-  const sdk = await resolveSdkInstance(lib);
-  if (!sdk) return null;
+const hasBrowserStorage = () => typeof window !== 'undefined' && !!window.localStorage;
 
-  const beginRingLogin =
-    typeof sdk.beginRingLogin === 'function'
-      ? sdk.beginRingLogin.bind(sdk)
-      : typeof sdk.createRingLogin === 'function'
-        ? sdk.createRingLogin.bind(sdk)
-        : null;
+const serializeSecretKey = (secret: Uint8Array): string => JSON.stringify(Array.from(secret));
 
-  const waitForSession =
-    typeof sdk.waitForSession === 'function'
-      ? sdk.waitForSession.bind(sdk)
-      : typeof sdk.pollRingLogin === 'function'
-        ? sdk.pollRingLogin.bind(sdk)
-        : null;
-
-  const storeBallot = async (path: string, payload: unknown) => {
-    if (typeof sdk.storeBallot === 'function') {
-      await sdk.storeBallot(path, payload);
-      return;
-    }
-    if (typeof sdk.put === 'function') {
-      await sdk.put(path, payload);
-      return;
-    }
-    if (typeof sdk.write === 'function') {
-      await sdk.write(path, payload);
-      return;
-    }
-    throw new Error('Pubky SDK does not expose a storage method');
-  };
-
-  if (!beginRingLogin || !waitForSession) {
-    return null;
-  }
-
-  return {
-    beginRingLogin,
-    waitForSession,
-    storeBallot
-  };
+const deserializeSecretKey = (payload: string): Uint8Array => {
+  const parsed = JSON.parse(payload) as number[];
+  return new Uint8Array(parsed);
 };
 
-const resolveSdkInstance = async (lib: any) => {
-  if (!lib) return null;
+const readPersistedSecret = (): Uint8Array | null => {
+  if (!hasBrowserStorage()) return null;
+  try {
+    const stored = window.localStorage.getItem(KEYPAIR_STORAGE_KEY);
+    if (!stored) return null;
+    return deserializeSecretKey(stored);
+  } catch (error) {
+    console.warn('Unable to read persisted Pubky secret', error);
+    return null;
+  }
+};
+
+const persistSecret = (keypair: Keypair) => {
+  if (!hasBrowserStorage()) return;
+  try {
+    const secret = keypair.secretKey();
+    window.localStorage.setItem(KEYPAIR_STORAGE_KEY, serializeSecretKey(secret));
+  } catch (error) {
+    console.warn('Unable to persist Pubky secret', error);
+  }
+};
+
+const createPubkyClient = (): PubkyClient => {
   const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
   const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
-  const homeserverPublicKey = config?.homeserverPublicKey ?? STAGING_PUBLIC_KEY;
-  resolvedConfig = { homeserverUrl, homeserverPublicKey };
-  if (typeof lib.testnet === 'function') {
-    return lib.testnet();
+  resolvedConfig = {
+    homeserverUrl,
+    homeserverPublicKey: HOMESERVER_PUBLIC_KEY
+  };
+
+  const pubky = Pubky.testnet(DEFAULT_TESTNET_HOST);
+  const publicStorage = pubky.publicStorage;
+  const homeserverKey = PublicKey.from(HOMESERVER_PUBLIC_KEY);
+
+  let signer: Signer | null = null;
+  let signerWasPersisted = false;
+  let session: Session | null = null;
+  let sessionPublicKey: string | null = null;
+  let lastAuthMethod: AuthMethod | null = null;
+
+  const ensureSigner = (): { signer: Signer; persisted: boolean } => {
+    if (signer) {
+      return { signer, persisted: signerWasPersisted };
+    }
+    const persistedSecret = readPersistedSecret();
+    if (persistedSecret) {
+      const existingKeypair = Keypair.fromSecretKey(persistedSecret);
+      signer = pubky.signer(existingKeypair);
+      signerWasPersisted = true;
+      return { signer, persisted: true };
+    }
+    const newKeypair = Keypair.random();
+    persistSecret(newKeypair);
+    signer = pubky.signer(newKeypair);
+    signerWasPersisted = false;
+    return { signer, persisted: false };
+  };
+
+  const signupWithHomeserver = async (activeSigner: Signer) => activeSigner.signup(homeserverKey, null);
+
+  const ensureSession = async (): Promise<SessionResult> => {
+    if (session) {
+      const publicKey = sessionPublicKey ?? session.info.publicKey.z32();
+      return {
+        session,
+        method: lastAuthMethod ?? 'signin',
+        publicKey
+      };
+    }
+
+    const { signer: activeSigner, persisted } = ensureSigner();
+    let method: AuthMethod = persisted ? 'signin' : 'signup';
+    try {
+      session = persisted ? await activeSigner.signin() : await signupWithHomeserver(activeSigner);
+    } catch (error) {
+      if (persisted) {
+        console.warn('Fast Pubky signin failed, attempting signup', error);
+        session = await signupWithHomeserver(activeSigner);
+        method = 'signup';
+      } else {
+        throw error;
+      }
+    }
+
+    sessionPublicKey = session.info.publicKey.z32();
+    lastAuthMethod = method;
+
+    client.session = session;
+    client.sessionPublicKey = sessionPublicKey;
+    client.lastAuthMethod = lastAuthMethod;
+
+    return { session, method, publicKey: sessionPublicKey };
+  };
+
+  const storeBallot = async (path: string, payload: unknown) => {
+    const { session: activeSession } = await ensureSession();
+    const normalizedPath = normalizeSessionPath(path);
+    await activeSession.storage.putJson(normalizedPath, payload as any);
+  };
+
+  const signout = async () => {
+    if (!session) return;
+    try {
+      await session.signout();
+    } catch (error) {
+      console.warn('Pubky signout failed', error);
+    } finally {
+      session = null;
+      signer = null;
+      sessionPublicKey = null;
+      lastAuthMethod = null;
+      client.session = null;
+      client.sessionPublicKey = null;
+      client.lastAuthMethod = null;
+    }
+  };
+
+  const client: PubkyClient = {
+    ensureSession,
+    storeBallot,
+    signout,
+    session: null,
+    sessionPublicKey: null,
+    lastAuthMethod: null,
+    publicStorage
+  };
+
+  return client;
+};
+
+type SessionPath = `/pub/${string}`;
+
+const normalizeSessionPath = (path: string): SessionPath => {
+  const trimmed = path.replace(/^\/+/, '');
+  if (trimmed.startsWith('pub/')) {
+    return `/${trimmed}` as SessionPath;
   }
-  if (lib?.Pubky?.testnet) {
-    return lib.Pubky.testnet();
-  }
-  if (lib?.Pubky?.fromHomeserver) {
-    return lib.Pubky.fromHomeserver({
-      homeserverUrl,
-      homeserverPublicKey
-    });
-  }
-  if (typeof lib.default === 'function') {
-    return lib.default({ homeserverUrl, homeserverPublicKey });
-  }
-  return lib;
+  return `/pub/${trimmed}` as SessionPath;
 };
 
 const createMockClient = (): PubkyClient => {
   resolvedConfig = {
     homeserverUrl: resolveDefaultHomeserverUrl(),
-    homeserverPublicKey: STAGING_PUBLIC_KEY
+    homeserverPublicKey: HOMESERVER_PUBLIC_KEY
   };
-  let pendingLogin: RingLogin | null = null;
-  return {
-    beginRingLogin: async () => {
-      const sessionToken = crypto.randomUUID();
-      const qrCodeSvg = createPlaceholderQr(sessionToken);
-      pendingLogin = { sessionToken, qrCodeSvg };
-      // Auto-complete mock session after short delay.
-      setTimeout(() => {
-        if (!pendingLogin) return;
-        localStorage.setItem(
-          `pubky-live-vote:mock-session:${pendingLogin.sessionToken}`,
-          JSON.stringify({
-            publicKey: 'mock-public-key',
-            displayName: 'Mock Voter'
-          })
-        );
-      }, 800);
-      return pendingLogin;
-    },
-    waitForSession: async (sessionToken: string) => {
-      const key = `pubky-live-vote:mock-session:${sessionToken}`;
-      for (let attempt = 0; attempt < 10; attempt += 1) {
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          localStorage.removeItem(key);
-          const session = JSON.parse(stored) as PubkySession;
-          return session;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-      return { publicKey: 'mock-public-key', displayName: 'Offline Voter' };
-    },
-    storeBallot: async (path: string, payload: unknown) => {
-      const key = `pubky-live-vote:mock-storage:${path}`;
-      localStorage.setItem(key, JSON.stringify(payload));
+  let sessionPublicKey: string | null = null;
+  let lastAuthMethod: AuthMethod | null = null;
+  let mockSession: Session | null = null;
+
+  const ensureSession = async (): Promise<SessionResult> => {
+    if (mockSession && sessionPublicKey) {
+      return { session: mockSession, method: lastAuthMethod ?? 'signin', publicKey: sessionPublicKey };
     }
+    sessionPublicKey = 'mock-public-key';
+    lastAuthMethod = 'signup';
+    mockSession = createMockSession(sessionPublicKey);
+    client.session = mockSession;
+    client.sessionPublicKey = sessionPublicKey;
+    client.lastAuthMethod = lastAuthMethod;
+    return { session: mockSession, method: lastAuthMethod, publicKey: sessionPublicKey };
   };
+
+  const storeBallot = async (path: string, payload: unknown) => {
+    await ensureSession();
+    if (!hasBrowserStorage()) return;
+    const normalized = normalizeSessionPath(path).replace(/^\/pub\//, '');
+    window.localStorage.setItem(`${MOCK_STORAGE_PREFIX}${normalized}`, JSON.stringify(payload));
+  };
+
+  const signout = async () => {
+    sessionPublicKey = null;
+    lastAuthMethod = null;
+    mockSession = null;
+    client.session = null;
+    client.sessionPublicKey = null;
+    client.lastAuthMethod = null;
+  };
+
+  const client: PubkyClient = {
+    ensureSession,
+    storeBallot,
+    signout,
+    session: mockSession,
+    sessionPublicKey,
+    lastAuthMethod,
+    publicStorage: null
+  };
+
+  return client;
 };
 
-const createPlaceholderQr = (seed: string) => {
-  const text = seed.slice(0, 8).toUpperCase();
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-    <rect width="120" height="120" rx="16" fill="#0ea5e9" />
-    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">${text}</text>
-    <text x="50%" y="72%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#082f49">Scan with Pubky</text>
-  </svg>`;
+const createMockSession = (publicKey: string): Session => {
+  const sessionInfo = {
+    publicKey: {
+      z32: () => publicKey
+    }
+  } as unknown as Session['info'];
+
+  const storage = {
+    async putJson(path: string, payload: unknown) {
+      if (!hasBrowserStorage()) return;
+      const normalized = path.replace(/^\/pub\//, '');
+      window.localStorage.setItem(`${MOCK_STORAGE_PREFIX}${normalized}`, JSON.stringify(payload));
+    }
+  } as unknown as Session['storage'];
+
+  return {
+    info: sessionInfo,
+    storage,
+    async signout() {
+      /* no-op */
+    }
+  } as Session;
 };

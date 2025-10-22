@@ -1,3 +1,4 @@
+import type { Session } from '@synonymdev/pubky';
 import {
   PropsWithChildren,
   createContext,
@@ -7,7 +8,7 @@ import {
   useMemo,
   useState
 } from 'react';
-import { PubkyClient, ensurePubkyClient } from '../services/pubkyClient';
+import { type AuthMethod, type PubkyClient, ensurePubkyClient } from '../services/pubkyClient';
 
 type User = {
   publicKey: string;
@@ -16,7 +17,8 @@ type User = {
 
 type AuthContextValue = {
   user: User | null;
-  qrCodeSvg: string | null;
+  session: Session | null;
+  authMethod: AuthMethod | null;
   isAuthenticating: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -27,77 +29,72 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'pubky-live-vote:session';
 
-const SIGNOUT_METHOD_NAMES = ['signOut', 'logout', 'disconnect', 'endSession', 'close', 'clearSession'];
-const SIGNOUT_NESTED_KEYS = ['auth', 'authentication', 'session', 'sessions'];
+const readStoredUser = (): User | null => {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as User;
+    if (!parsed?.publicKey) return null;
+    return parsed;
+  } catch (error) {
+    console.warn('Unable to parse stored Pubky session', error);
+    return null;
+  }
+};
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const resolveSignoutMethod = (source: unknown, visited = new Set<unknown>()): (() => Promise<void> | void) | null => {
-  if (!isRecord(source) || visited.has(source)) return null;
-  visited.add(source);
-  for (const name of SIGNOUT_METHOD_NAMES) {
-    const candidate = source[name];
-    if (typeof candidate === 'function') {
-      return candidate.bind(source);
-    }
-  }
-  for (const key of SIGNOUT_NESTED_KEYS) {
-    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
-    const nested = source[key];
-    if (!isRecord(nested)) continue;
-    const candidate = resolveSignoutMethod(nested, visited);
-    if (candidate) {
-      return candidate;
-    }
-  }
-  for (const value of Object.values(source)) {
-    if (!isRecord(value)) continue;
-    const candidate = resolveSignoutMethod(value, visited);
-    if (candidate) {
-      return candidate;
-    }
-  }
-  return null;
+const formatDisplayName = (publicKey: string): string => {
+  if (publicKey.length <= 12) return publicKey;
+  return `${publicKey.slice(0, 6)}…${publicKey.slice(-4)}`;
 };
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [client, setClient] = useState<PubkyClient | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authMethod, setAuthMethod] = useState<AuthMethod | null>(null);
   const [isAuthenticating, setAuthenticating] = useState(false);
 
   useEffect(() => {
-    void (async () => {
-      const sdk = await ensurePubkyClient();
+    const storedUser = readStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
+      setAuthMethod('signin');
+    }
+    void ensurePubkyClient().then((sdk) => {
       setClient(sdk);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as User;
-        setUser(parsed);
+      if (sdk.session) {
+        setSession(sdk.session);
+        if (sdk.sessionPublicKey) {
+          setUser({ publicKey: sdk.sessionPublicKey, displayName: formatDisplayName(sdk.sessionPublicKey) });
+          setAuthMethod(sdk.lastAuthMethod ?? 'signin');
+        }
       }
-    })();
+    });
   }, []);
 
   const connect = useCallback(async () => {
-    if (!client) {
-      const sdk = await ensurePubkyClient();
-      setClient(sdk);
-    }
     const sdk = client ?? (await ensurePubkyClient());
+    setClient(sdk);
     setAuthenticating(true);
     try {
-      const login = await sdk.beginRingLogin();
-      setQrCodeSvg(login.qrCodeSvg);
-      const session = await sdk.waitForSession(login.sessionToken);
+      const storedUser = readStoredUser();
+      setAuthMethod(storedUser ? 'signin' : 'signup');
+
+      const result = await sdk.ensureSession();
+      setSession(result.session);
+      setAuthMethod(result.method);
+
       const userPayload: User = {
-        publicKey: session.publicKey,
-        displayName: session.displayName
+        publicKey: result.publicKey,
+        displayName: formatDisplayName(result.publicKey)
       };
       setUser(userPayload);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userPayload));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(userPayload));
+      }
     } catch (error) {
-      console.warn('Pubky login failed', error);
+      console.warn('Pubky session establishment failed', error);
     } finally {
       setAuthenticating(false);
     }
@@ -105,23 +102,23 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   const disconnect = useCallback(async () => {
     try {
-      const target = client ?? (await ensurePubkyClient());
-      const signoutCandidate = resolveSignoutMethod(target);
-      if (signoutCandidate) {
-        await signoutCandidate();
-      }
+      const sdk = client ?? (await ensurePubkyClient());
+      await sdk.signout();
     } catch (error) {
-      console.warn('Pubky logout failed', error);
+      console.warn('Pubky signout failed', error);
     } finally {
+      setSession(null);
       setUser(null);
-      setQrCodeSvg(null);
-      localStorage.removeItem(STORAGE_KEY);
+      setAuthMethod(null);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
     }
   }, [client]);
 
   const value = useMemo(
-    () => ({ user, qrCodeSvg, isAuthenticating, connect, disconnect, client }),
-    [user, qrCodeSvg, isAuthenticating, connect, disconnect, client]
+    () => ({ user, session, authMethod, isAuthenticating, connect, disconnect, client }),
+    [user, session, authMethod, isAuthenticating, connect, disconnect, client]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
