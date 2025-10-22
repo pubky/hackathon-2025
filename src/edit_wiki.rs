@@ -56,13 +56,10 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
                     }
                 });
             });
-            app.wiki_content.clear();
-            app.view_state = ViewState::WikiList;
         }
 
-        if ui.button("Cancel").clicked() {
-            app.wiki_content.clear();
-            app.view_state = ViewState::WikiList;
-        }
+        // For both buttons, go back to the list
+        app.wiki_content.clear();
+        app.view_state = ViewState::WikiList;
     });
 }
