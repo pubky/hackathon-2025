@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pubky-core": {
+      "command": "node",
+      "args": ["/Users/vlada/Projects/pubky-hackathon/pubky-mcp-server/dist/index.js"],
+      "env": {
+        "PUBKY_CORE_PATH": "/Users/vlada/Projects/pubky-core",
+        "WORKSPACE_ROOT": "/Users/vlada/Projects/pubky-hackathon"
+      }
+    }
+  }
+}
