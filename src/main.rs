@@ -67,6 +67,7 @@ pub(crate) struct PubkyApp {
     pub(crate) needs_refresh: bool,
     cache: CommonMarkCache,
     rt: Arc<Runtime>,
+    pub(crate) show_copy_tooltip: bool,
 }
 
 impl PubkyApp {
@@ -136,6 +137,7 @@ impl PubkyApp {
             needs_refresh: false,
             cache: CommonMarkCache::default(),
             rt: rt_arc,
+            show_copy_tooltip: false,
         }
     }
 

@@ -8,7 +8,7 @@ pub(crate) fn update(
     app: &mut PubkyApp,
     pk: &PublicKey,
     public_storage: &PublicStorage,
-    _ctx: &Context,
+    ctx: &Context,
     ui: &mut Ui,
 ) {
     ui.label("View Wiki Post");
@@ -17,6 +17,25 @@ pub(crate) fn update(
     ui.label(format!("User ID: {}", &app.selected_wiki_user_id));
     ui.add_space(10.0);
     ui.label(format!("Page ID: {}", &app.selected_wiki_page_id));
+
+    // Add "Share Page Link" button with tooltip support
+    let share_button = ui.button("Share Page Link");
+
+    // Show tooltip when hovering after copy
+    if app.show_copy_tooltip {
+        share_button.show_tooltip_text("Copied");
+    }
+
+    if share_button.clicked() {
+        ctx.copy_text(app.selected_wiki_page_id.clone());
+        app.show_copy_tooltip = true;
+    }
+
+    // Reset tooltip if button is not being hovered
+    if !share_button.hovered() && app.show_copy_tooltip {
+        app.show_copy_tooltip = false;
+    }
+
     ui.add_space(10.0);
 
     // Display content in a scrollable area
