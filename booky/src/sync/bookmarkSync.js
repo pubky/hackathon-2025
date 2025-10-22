@@ -340,6 +340,7 @@ export class BookmarkSync {
       if (isOwnData) {
         // Use session storage for own data (absolute path)
         const path = '/pub/booky/';
+        logger.log('Fetching own bookmarks from:', path);
         entries = await this.homeserverClient.list(path);
 
         const bookmarks = [];
@@ -353,28 +354,42 @@ export class BookmarkSync {
             logger.warn('Failed to fetch bookmark:', entry, error);
           }
         }
+        logger.log('Successfully fetched', bookmarks.length, 'bookmarks for own data');
         return bookmarks;
       } else {
         // Use public storage for other users (addressed path)
-        const address = `${pubkey}/pub/booky/`;
-        entries = await this.homeserverClient.listPublic(address);
+        // Format: pubky://<pubkey>/<path>
+        const address = `pubky://${pubkey}/pub/booky/`;
+        logger.log('Fetching public bookmarks for:', pubkey);
+
+        try {
+          entries = await this.homeserverClient.listPublic(address);
+          logger.log('Found', entries.length, 'bookmark entries for', pubkey);
+        } catch (listError) {
+          logger.error('Failed to list public bookmarks for', pubkey, ':', listError);
+          logger.error('Address used:', address);
+          throw listError;
+        }
 
         const bookmarks = [];
         for (const entry of entries) {
           try {
             // Extract filename from pubky:// URL
             const filename = entry.split('/').pop();
-            const data = await this.homeserverClient.getPublic(`${address}${filename}`);
+            const fullAddress = `pubky://${pubkey}/pub/booky/${filename}`;
+            const data = await this.homeserverClient.getPublic(fullAddress);
             bookmarks.push(data);
           } catch (error) {
             logger.warn('Failed to fetch bookmark:', entry, error);
           }
         }
+        logger.log('Successfully fetched', bookmarks.length, 'bookmarks for', pubkey);
         return bookmarks;
       }
     } catch (error) {
-      // If list fails, assume no bookmarks exist yet
-      logger.warn('Failed to list remote bookmarks:', error);
+      // If list fails, log detailed error but return empty array
+      logger.error('Failed to fetch remote bookmarks for', pubkey, ':', error);
+      logger.error('Error details:', error.message, error.stack);
       return [];
     }
   }
@@ -584,6 +599,40 @@ export class BookmarkSync {
     } catch (error) {
       logger.warn('Failed to remove duplicates:', error);
       // Don't throw - this is a cleanup operation
+    }
+  }
+
+  /**
+   * Delete bookmark folder for a pubkey
+   */
+  async deleteFolderForPubkey(pubkey) {
+    try {
+      // Check if folder exists in cache
+      const folderId = this.folderCache.get(pubkey);
+
+      if (folderId) {
+        // Remove folder from browser bookmarks
+        await browser.bookmarks.removeTree(folderId);
+        logger.log('Deleted folder for pubkey:', pubkey);
+      } else {
+        // Try to find folder by name if not in cache
+        const folderName = this.keyManager.getFolderName(pubkey);
+        const results = await browser.bookmarks.search({ title: folderName });
+
+        for (const result of results) {
+          if (result.title === folderName && !result.url) {
+            await browser.bookmarks.removeTree(result.id);
+            logger.log('Deleted folder for pubkey:', pubkey);
+            break;
+          }
+        }
+      }
+
+      // Remove from cache
+      this.folderCache.delete(pubkey);
+    } catch (error) {
+      logger.warn('Failed to delete folder for pubkey:', pubkey, error);
+      // Don't throw - folder might not exist or already be deleted
     }
   }
 

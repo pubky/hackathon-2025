@@ -134,7 +134,6 @@ export class HomeserverClient {
       }
 
       const data = await this.pubky.publicStorage.getText(address);
-      logger.log('Got public data from:', address);
 
       try {
         return JSON.parse(data);

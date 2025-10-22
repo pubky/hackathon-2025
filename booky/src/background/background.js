@@ -223,11 +223,11 @@ async function handleAddMonitoredPubkey(pubkey) {
 async function handleRemoveMonitoredPubkey(pubkey) {
   logger.log('Removing monitored pubkey:', pubkey);
 
+  // Delete the bookmark folder for this pubkey
+  await bookmarkSync.deleteFolderForPubkey(pubkey);
+
   // Remove from storage
   await storageManager.removeMonitoredPubkey(pubkey);
-
-  // Optionally: remove the bookmark folder
-  // For now, we'll leave the folder in place
 
   logger.log('Monitored pubkey removed:', pubkey);
 }
