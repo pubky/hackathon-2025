@@ -1,6 +1,11 @@
+use std::sync::{Arc, Mutex};
+
 use eframe::egui;
 use pubky::{Capabilities, Pubky, PubkyAuthFlow};
-use std::sync::{Arc, Mutex};
+
+use crate::utils::generate_qr_image;
+
+mod utils;
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -71,36 +76,6 @@ impl PubkyApp {
             qr_texture: None,
         }
     }
-
-    fn generate_qr_image(&self, url: &str) -> Option<egui::ColorImage> {
-        use qrcode::QrCode;
-
-        let qr = QrCode::new(url.as_bytes()).ok()?;
-        let qr_image = qr.render::<image::Luma<u8>>().build();
-
-        let (width, height) = qr_image.dimensions();
-        let scale = 2; // Scale QR code to fit within window
-        let scaled_width = (width * scale) as usize;
-        let scaled_height = (height * scale) as usize;
-
-        let mut pixels = Vec::with_capacity(scaled_width * scaled_height);
-
-        for y in 0..scaled_height {
-            for x in 0..scaled_width {
-                let orig_x = x as u32 / scale;
-                let orig_y = y as u32 / scale;
-                let pixel = qr_image.get_pixel(orig_x, orig_y);
-                let color = if pixel[0] < 128 {
-                    egui::Color32::BLACK
-                } else {
-                    egui::Color32::WHITE
-                };
-                pixels.push(color);
-            }
-        }
-
-        Some(egui::ColorImage::new([scaled_width, scaled_height], pixels))
-    }
 }
 
 impl eframe::App for PubkyApp {
@@ -127,7 +102,7 @@ impl eframe::App for PubkyApp {
 
                         // Generate and display QR code
                         if self.qr_texture.is_none() {
-                            if let Some(qr_image) = self.generate_qr_image(auth_url) {
+                            if let Some(qr_image) = generate_qr_image(auth_url) {
                                 self.qr_texture = Some(ui.ctx().load_texture(
                                     "qr_code",
                                     qr_image,
