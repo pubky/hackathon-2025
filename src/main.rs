@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::Result;
 use eframe::egui;
 use pubky::{Capabilities, Pubky, PubkyAuthFlow, PubkySession};
+use uuid::Uuid;
 
 use crate::utils::generate_qr_image;
 
@@ -218,7 +219,7 @@ impl eframe::App for PubkyApp {
 
 async fn initialize_auth() -> Result<(PubkyAuthFlow, String)> {
     let pubky = Pubky::new()?;
-    let caps = Capabilities::default();
+    let caps = Capabilities::builder().write("/pub/wiki.app/").finish();
     let flow = pubky.start_auth_flow(&caps)?;
     let auth_url = flow.authorization_url().to_string();
 
@@ -226,13 +227,7 @@ async fn initialize_auth() -> Result<(PubkyAuthFlow, String)> {
 }
 
 async fn create_wiki_post(session: &PubkySession) -> Result<String> {
-    // Generate a unique ID using timestamp
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-
-    let path = format!("/pub/wiki/posts/{}", timestamp);
+    let path = format!("/pub/wiki.app/{}", Uuid::new_v4());
 
     // Create the post with "test" content
     session.storage().put(&path, "test").await?;
