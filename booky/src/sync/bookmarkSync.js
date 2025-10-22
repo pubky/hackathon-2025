@@ -388,7 +388,7 @@ export class BookmarkSync {
   /**
    * Get or create bookmark folder for a pubkey
    */
-  async getOrCreateFolder(pubkey) {
+  async getOrCreateFolder(pubkey, isOwnFolder = false) {
     const folderName = this.keyManager.getFolderName(pubkey);
 
     // Check cache first
@@ -402,6 +402,12 @@ export class BookmarkSync {
       for (const result of results) {
         if (result.title === folderName && !result.url) {
           this.folderCache.set(pubkey, result.id);
+
+          // If this is the user's own folder, ensure priv subfolder exists
+          if (isOwnFolder) {
+            await this.ensurePrivFolder(result.id);
+          }
+
           return result.id;
         }
       }
@@ -415,9 +421,43 @@ export class BookmarkSync {
 
       this.folderCache.set(pubkey, folder.id);
       logger.log('Created folder:', folderName);
+
+      // If this is the user's own folder, create priv subfolder
+      if (isOwnFolder) {
+        await this.ensurePrivFolder(folder.id);
+      }
+
       return folder.id;
     } catch (error) {
       logger.error('Failed to get/create folder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure priv subfolder exists for user's own folder
+   */
+  async ensurePrivFolder(parentFolderId) {
+    try {
+      // Check if priv folder already exists
+      const children = await browser.bookmarks.getChildren(parentFolderId);
+      for (const child of children) {
+        if (!child.url && child.title === 'priv') {
+          logger.log('Priv folder already exists');
+          return child.id;
+        }
+      }
+
+      // Create priv subfolder
+      const privFolder = await browser.bookmarks.create({
+        parentId: parentFolderId,
+        title: 'priv'
+      });
+
+      logger.log('Created priv subfolder:', privFolder.id);
+      return privFolder.id;
+    } catch (error) {
+      logger.error('Failed to ensure priv folder:', error);
       throw error;
     }
   }
@@ -475,7 +515,7 @@ export class BookmarkSync {
     try {
       await this.storage.setSyncStatus(pubkey, 'syncing');
 
-      const folderId = await this.getOrCreateFolder(pubkey);
+      const folderId = await this.getOrCreateFolder(pubkey, isTwoWay);
 
       // Get local bookmarks
       const localBookmarks = await this.getBookmarksInFolder(folderId);
@@ -554,16 +594,24 @@ export class BookmarkSync {
     try {
       if (isOwnData) {
         // Use session storage for own data (absolute path)
+        // Fetch from both public and private folders
         const basePath = '/pub/booky/';
         logger.log('Fetching own bookmarks from:', basePath);
 
         const bookmarks = [];
+
+        // Fetch public bookmarks (root and subfolders, excluding priv/)
         await this.fetchBookmarksRecursive(basePath, '', bookmarks, false, null);
 
-        logger.log('Successfully fetched', bookmarks.length, 'bookmarks for own data');
+        // Fetch private bookmarks from priv/ folder
+        logger.log('Fetching private bookmarks from:', basePath + 'priv/');
+        await this.fetchBookmarksRecursive(basePath, 'priv/', bookmarks, false, null);
+
+        logger.log('Successfully fetched', bookmarks.length, 'bookmarks for own data (public + private)');
         return bookmarks;
       } else {
         // Use public storage for other users (addressed path)
+        // Only fetch public bookmarks, skip priv/ folder
         const baseAddress = `pubky://${pubkey}/pub/booky/`;
         logger.log('Fetching public bookmarks for:', pubkey);
 
@@ -618,9 +666,17 @@ export class BookmarkSync {
 
           // Check if this is a directory (ends with /)
           if (entry.endsWith('/')) {
-            // It's a directory - recurse into it
+            // It's a directory
             // Extract the relative path from basePath
             const relPath = entryPath.substring(basePath.length);
+
+            // Skip priv/ folder when fetching public bookmarks for other users
+            if (isPublic && relPath === 'priv/') {
+              logger.log('Skipping priv/ folder for monitored user');
+              continue;
+            }
+
+            // Recurse into it
             await this.fetchBookmarksRecursive(basePath, relPath, bookmarks, isPublic, pubkey);
           } else {
             // It's a file - extract relative path from basePath
