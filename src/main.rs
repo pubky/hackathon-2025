@@ -33,7 +33,6 @@ pub(crate) enum AuthState {
         auth_url: String,
     },
     Authenticated {
-        public_key: String,
         session: PubkySession,
         files: Vec<String>,
     },
@@ -75,8 +74,6 @@ impl PubkyApp {
                         // Poll for authentication
                         match flow.await_approval().await {
                             Ok(session) => {
-                                let pk = session.info().public_key().to_string();
-
                                 // List files from the homeserver
                                 let mut files = Vec::new();
                                 match session
@@ -97,11 +94,8 @@ impl PubkyApp {
                                     }
                                 }
 
-                                *state_clone.lock().unwrap() = AuthState::Authenticated {
-                                    public_key: pk,
-                                    session,
-                                    files,
-                                };
+                                *state_clone.lock().unwrap() =
+                                    AuthState::Authenticated { session, files };
                             }
                             Err(e) => {
                                 *state_clone.lock().unwrap() =
@@ -188,7 +182,6 @@ impl eframe::App for PubkyApp {
                         ui.spinner();
                     }
                     AuthState::Authenticated {
-                        public_key: _,
                         ref session,
                         ref files,
                     } => {
