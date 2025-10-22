@@ -24,7 +24,20 @@ body {
 
 .header {
   margin-bottom: 20px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-logo {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+.header-text {
+  flex: 1;
 }
 
 .header h1 {
