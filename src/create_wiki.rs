@@ -4,12 +4,12 @@ use eframe::egui::{Context, Ui};
 use pubky::PubkySession;
 
 pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context, ui: &mut Ui) {
-    ui.label("Create New Wiki Page");
-    ui.add_space(20.0);
+    ui.label(egui::RichText::new("Create New Wiki Page").size(20.0).strong());
+    ui.add_space(25.0);
 
     // Textarea for wiki content
-    ui.label("Content:");
-    ui.add_space(10.0);
+    ui.label(egui::RichText::new("Content:").size(16.0));
+    ui.add_space(12.0);
 
     egui::ScrollArea::vertical()
         .max_height(400.0)
@@ -17,15 +17,20 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             ui.add(
                 egui::TextEdit::multiline(&mut app.edit_wiki_content)
                     .desired_width(f32::INFINITY)
-                    .desired_rows(15),
+                    .desired_rows(15)
+                    .font(egui::TextStyle::Monospace),
             );
         });
 
-    ui.add_space(20.0);
+    ui.add_space(25.0);
 
     ui.horizontal(|ui| {
         // Save button for creating new page
-        if ui.button("Save wiki").clicked() {
+        let save_button = ui.add_sized(
+            [120.0, 35.0],
+            egui::Button::new(egui::RichText::new("💾 Save").size(15.0))
+        );
+        if save_button.clicked() {
             let session_clone = session.clone();
             let content = app.edit_wiki_content.clone();
             let state_clone = app.state.clone();
@@ -59,7 +64,12 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             app.view_state = ViewState::WikiList;
         }
 
-        if ui.button("Cancel").clicked() {
+        ui.add_space(10.0);
+        let cancel_button = ui.add_sized(
+            [120.0, 35.0],
+            egui::Button::new(egui::RichText::new("Cancel").size(15.0))
+        );
+        if cancel_button.clicked() {
             app.edit_wiki_content.clear();
             app.forked_from_page_id = None;
             app.view_state = ViewState::WikiList;

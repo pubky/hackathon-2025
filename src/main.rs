@@ -274,7 +274,7 @@ impl eframe::App for PubkyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                ui.add_space(20.0);
+                ui.add_space(30.0);
 
                 // Display logo
                 if self.logo_texture.is_none() {
@@ -288,24 +288,26 @@ impl eframe::App for PubkyApp {
                 }
 
                 if let Some(texture) = &self.logo_texture {
-                    let logo_size = egui::vec2(64.0, 64.0);
+                    let logo_size = egui::vec2(80.0, 80.0);
                     ui.add(egui::Image::from_texture(texture).max_size(logo_size));
-                    ui.add_space(10.0);
+                    ui.add_space(15.0);
                 }
 
-                ui.heading(APP_NAME);
-                ui.add_space(20.0);
+                ui.heading(egui::RichText::new(APP_NAME).size(24.0).strong());
+                ui.add_space(30.0);
 
                 let state = self.state.lock().unwrap().clone();
 
                 match state {
                     AuthState::Initializing => {
+                        ui.add_space(20.0);
                         ui.spinner();
-                        ui.label("Initializing authentication...");
+                        ui.add_space(10.0);
+                        ui.label(egui::RichText::new("Initializing authentication...").size(16.0));
                     }
                     AuthState::ShowingQR { ref auth_url } => {
-                        ui.label("Scan this QR code with your Pubky app to login:");
-                        ui.add_space(20.0);
+                        ui.label(egui::RichText::new("Scan this QR code with your Pubky app to login:").size(16.0));
+                        ui.add_space(25.0);
 
                         // Generate and display QR code
                         if self.qr_texture.is_none() {
@@ -324,8 +326,9 @@ impl eframe::App for PubkyApp {
                             ui.add(egui::Image::from_texture(texture).max_size(max_size));
                         }
 
-                        ui.add_space(10.0);
-                        ui.label("Waiting for authentication...");
+                        ui.add_space(15.0);
+                        ui.label(egui::RichText::new("Waiting for authentication...").italics());
+                        ui.add_space(5.0);
                         ui.spinner();
                     }
                     AuthState::Authenticated {
@@ -352,18 +355,24 @@ impl eframe::App for PubkyApp {
                         // Show different views based on view_state
                         match self.view_state {
                             ViewState::WikiList => {
-                                if ui.button("Create new wiki page").clicked() {
+                                ui.add_space(10.0);
+                                let create_button = ui.add_sized(
+                                    [200.0, 40.0],
+                                    egui::Button::new(egui::RichText::new("✨ Create New Wiki Page").size(16.0))
+                                );
+                                if create_button.clicked() {
                                     self.view_state = ViewState::CreateWiki;
                                 }
-                                ui.add_space(20.0);
+                                ui.add_space(30.0);
 
-                                ui.label("My Wiki Posts");
-                                ui.add_space(20.0);
+                                ui.label(egui::RichText::new("My Wiki Posts").size(18.0).strong());
+                                ui.add_space(15.0);
 
                                 // List all wiki posts as buttons
                                 egui::ScrollArea::vertical().show(ui, |ui| {
                                     if file_cache.is_empty() {
-                                        ui.label("No wiki posts yet. Create your first one!");
+                                        ui.add_space(10.0);
+                                        ui.label(egui::RichText::new("No wiki posts yet. Create your first one!").italics().color(egui::Color32::GRAY));
                                     } else {
                                         let pk = own_pk.to_string();
                                         for (file_url, file_title) in file_cache {
@@ -372,7 +381,7 @@ impl eframe::App for PubkyApp {
                                                 file_url.split('/').last().unwrap_or(file_url);
 
                                             ui.horizontal(|ui| {
-                                                if ui.button(file_name).clicked() {
+                                                if ui.button(egui::RichText::new(file_name).monospace()).clicked() {
                                                     self.navigate_to_view_wiki_page(
                                                         &pk,
                                                         file_name,
@@ -381,8 +390,9 @@ impl eframe::App for PubkyApp {
                                                     );
                                                 }
 
-                                                ui.label(file_title);
+                                                ui.label(egui::RichText::new(file_title).strong());
                                             });
+                                            ui.add_space(5.0);
                                         }
                                     }
                                 });

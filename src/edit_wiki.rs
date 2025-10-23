@@ -4,12 +4,12 @@ use eframe::egui::{Context, Ui};
 use pubky::PubkySession;
 
 pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context, ui: &mut Ui) {
-    ui.label("Edit Wiki Page");
-    ui.add_space(20.0);
+    ui.label(egui::RichText::new("Edit Wiki Page").size(20.0).strong());
+    ui.add_space(25.0);
 
     // Textarea for wiki content
-    ui.label("Content:");
-    ui.add_space(10.0);
+    ui.label(egui::RichText::new("Content:").size(16.0));
+    ui.add_space(12.0);
 
     egui::ScrollArea::vertical()
         .max_height(400.0)
@@ -17,14 +17,19 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             ui.add(
                 egui::TextEdit::multiline(&mut app.edit_wiki_content)
                     .desired_width(f32::INFINITY)
-                    .desired_rows(15),
+                    .desired_rows(15)
+                    .font(egui::TextStyle::Monospace),
             );
         });
 
-    ui.add_space(20.0);
+    ui.add_space(25.0);
 
     ui.horizontal(|ui| {
-        if ui.button("Update wiki").clicked() {
+        let update_button = ui.add_sized(
+            [120.0, 35.0],
+            egui::Button::new(egui::RichText::new("✓ Update").size(15.0))
+        );
+        if update_button.clicked() {
             let session_clone = session.clone();
             let content = app.edit_wiki_content.clone();
             let page_id = app.selected_wiki_page_id.clone();
@@ -44,8 +49,13 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             app.needs_refresh = true;
         }
 
+        ui.add_space(10.0);
         // Delete button for editing existing page
-        if ui.button("Delete page").clicked() {
+        let delete_button = ui.add_sized(
+            [120.0, 35.0],
+            egui::Button::new(egui::RichText::new("🗑 Delete").size(15.0).color(egui::Color32::from_rgb(200, 80, 80)))
+        );
+        if delete_button.clicked() {
             let session_clone = session.clone();
             let page_id = app.selected_wiki_page_id.clone();
             let state_clone = app.state.clone();
@@ -80,7 +90,12 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             app.needs_refresh = true;
         }
 
-        if ui.button("Cancel").clicked() {
+        ui.add_space(10.0);
+        let cancel_button = ui.add_sized(
+            [120.0, 35.0],
+            egui::Button::new(egui::RichText::new("Cancel").size(15.0))
+        );
+        if cancel_button.clicked() {
             app.edit_wiki_content.clear();
             app.view_state = ViewState::WikiList;
         }

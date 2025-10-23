@@ -12,16 +12,19 @@ pub(crate) fn update(
     ctx: &Context,
     ui: &mut Ui,
 ) {
-    ui.label("View Wiki Post");
-    ui.add_space(20.0);
+    ui.label(egui::RichText::new("View Wiki Post").size(20.0).strong());
+    ui.add_space(25.0);
 
-    CollapsingHeader::new("Page details").show(ui, |ui| {
-        ui.label(format!("Page ID: {}", &app.selected_wiki_page_id));
-        ui.label(format!("User ID: {}", &app.selected_wiki_user_id));
+    CollapsingHeader::new(egui::RichText::new("📋 Page Details").size(15.0)).show(ui, |ui| {
+        ui.add_space(5.0);
+        ui.label(egui::RichText::new(format!("Page ID: {}", &app.selected_wiki_page_id)).monospace());
+        ui.label(egui::RichText::new(format!("User ID: {}", &app.selected_wiki_user_id)).monospace());
     });
 
+    ui.add_space(10.0);
     let fork_links = app.selected_wiki_fork_urls.clone();
-    CollapsingHeader::new(format!("Available {} forks", fork_links.len())).show(ui, |ui| {
+    CollapsingHeader::new(egui::RichText::new(format!("🔀 Available Forks ({})", fork_links.len())).size(15.0)).show(ui, |ui| {
+        ui.add_space(5.0);
         for fork_link in fork_links {
             if let Some((user_pk, page_id)) = extract_details_wiki_url(&fork_link) {
                 let mut btn_label = format!("Fork: {user_pk}");
@@ -37,8 +40,12 @@ pub(crate) fn update(
         }
     });
 
+    ui.add_space(15.0);
     // Add "Share Page Link" button with tooltip support
-    let share_button = ui.button("Share Page Link");
+    let share_button = ui.add_sized(
+        [180.0, 35.0],
+        egui::Button::new(egui::RichText::new("🔗 Share Page Link").size(15.0))
+    );
 
     // Show tooltip when hovering after copy
     if app.show_copy_tooltip {
@@ -57,9 +64,11 @@ pub(crate) fn update(
         app.show_copy_tooltip = false;
     }
 
-    ui.add_space(10.0);
+    ui.add_space(15.0);
 
     // Display content in a scrollable area
+    ui.separator();
+    ui.add_space(15.0);
     egui::ScrollArea::vertical()
         .max_height(400.0)
         .show(ui, |ui| {
@@ -118,7 +127,7 @@ pub(crate) fn update(
             }
         });
 
-    ui.add_space(20.0);
+    ui.add_space(25.0);
 
     // Check if this is the user's own page
     let pk = session.info().public_key();
@@ -126,19 +135,37 @@ pub(crate) fn update(
 
     ui.horizontal(|ui| {
         // Show Edit button only for own pages
-        if is_own_page && ui.button("Edit").clicked() {
-            app.navigate_to_edit_selected_wiki_page();
+        if is_own_page {
+            let edit_button = ui.add_sized(
+                [120.0, 35.0],
+                egui::Button::new(egui::RichText::new("✏ Edit").size(15.0))
+            );
+            if edit_button.clicked() {
+                app.navigate_to_edit_selected_wiki_page();
+            }
+            ui.add_space(10.0);
         }
 
         // Fork button - available for only when viewing other user's pages
-        if !is_own_page && ui.button("Fork page").clicked() {
-            app.edit_wiki_content = app.selected_wiki_content.clone();
-            app.forked_from_page_id = Some(app.selected_wiki_page_id.clone());
-            app.view_state = ViewState::CreateWiki;
+        if !is_own_page {
+            let fork_button = ui.add_sized(
+                [120.0, 35.0],
+                egui::Button::new(egui::RichText::new("🍴 Fork").size(15.0))
+            );
+            if fork_button.clicked() {
+                app.edit_wiki_content = app.selected_wiki_content.clone();
+                app.forked_from_page_id = Some(app.selected_wiki_page_id.clone());
+                app.view_state = ViewState::CreateWiki;
+            }
+            ui.add_space(10.0);
         }
 
         // Go back button
-        if ui.button("Go back").clicked() {
+        let back_button = ui.add_sized(
+            [120.0, 35.0],
+            egui::Button::new(egui::RichText::new("← Back").size(15.0))
+        );
+        if back_button.clicked() {
             app.selected_wiki_page_id.clear();
             app.selected_wiki_content.clear();
             app.selected_wiki_fork_urls.clear();
