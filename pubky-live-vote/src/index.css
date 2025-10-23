@@ -16,6 +16,7 @@
   --tag-blue: linear-gradient(135deg, rgba(101, 118, 255, 0.95), rgba(158, 135, 255, 0.85));
   --tag-green: linear-gradient(135deg, rgba(54, 215, 167, 0.95), rgba(130, 250, 199, 0.85));
   --tag-purple: linear-gradient(135deg, rgba(185, 130, 255, 0.95), rgba(255, 171, 242, 0.85));
+  --tag-team: linear-gradient(135deg, rgba(255, 205, 134, 0.95), rgba(255, 177, 98, 0.88));
   background-color: var(--bg);
   color: var(--text);
   text-rendering: optimizeLegibility;

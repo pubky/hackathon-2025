@@ -55,6 +55,12 @@
   gap: 0.45rem;
 }
 
+.project-card__team {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
 .tag {
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
@@ -76,6 +82,11 @@
 .tag.tone-purple {
   background: var(--tag-purple);
   box-shadow: 0 6px 14px rgba(215, 154, 255, 0.42);
+}
+
+.tag--team {
+  background: var(--tag-team);
+  box-shadow: 0 6px 14px rgba(255, 186, 121, 0.38);
 }
 
 .project-card__scores {

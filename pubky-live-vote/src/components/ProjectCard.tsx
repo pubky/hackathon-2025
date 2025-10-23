@@ -44,13 +44,22 @@ export const ProjectCard = ({ project, onScoreChange, onReadinessToggle, onComme
           <h3>{project.name}</h3>
           <p className="project-card__description">{project.description}</p>
         </div>
-        <div className="project-card__tags">
+        <div className="project-card__tags" aria-label="Project topics">
           {project.tags.map((tag) => (
             <span key={tag} className={`tag ${getTagTone(tag)}`}>
               #{tag}
             </span>
           ))}
         </div>
+        {project.teamMembers?.length ? (
+          <div className="project-card__team" aria-label="Project team">
+            {project.teamMembers.map((member) => (
+              <span key={member} className="tag tag--team">
+                {member.startsWith('@') ? member : `@${member}`}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </header>
 
       <section className="project-card__scores">

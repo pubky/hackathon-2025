@@ -15,7 +15,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['sdk', 'automation'],
-    teamMembers: ['Ivy Taylor', 'Marcus Chen'],
+    teamMembers: ['@Vlada'],
     aiScore: 86
   },
   {
@@ -31,13 +31,13 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['cli', 'ops'],
-    teamMembers: ['Priya Singh', 'Diego Marquez'],
+    teamMembers: ['@Vadimir', '@Piotr'],
     aiScore: 79
   },
   {
     id: 'pubky-tag-extension',
-    name: 'Browser extension to tag the web',
-    description: 'No easy way to compartmentalize your information sources and content',
+    name: 'Homegate',
+    description: 'Create a homeserver UI that shows different types of plans for users to sign up.',
     tags: ['browser', 'productivity', 'tagging'],
     scores: {
       complexity: 6,
@@ -47,7 +47,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['browser', 'research'],
-    teamMembers: ['Lena Brooks'],
+    teamMembers: ['@Miguel', '@Oier', '@Severin'],
     aiScore: 75
   },
   {
@@ -63,7 +63,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['sharing'],
-    teamMembers: ['Hiro Tanaka', 'Mia Patel'],
+    teamMembers: ['@Jams', '@Tomos'],
     aiScore: 72
   },
   {
@@ -79,7 +79,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['onboarding', 'docs'],
-    teamMembers: ['Sasha Rivera'],
+    teamMembers: ['@Aldert'],
     aiScore: 83
   },
   {
@@ -95,12 +95,12 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['wiki'],
-    teamMembers: ['Omar Williams', 'Ji-Eun Park'],
+    teamMembers: ['@Carlos', '@Pav', '@Ovi'],
     aiScore: 78
   },
   {
     id: 'monky',
-    name: 'MonKy',
+    name: 'ConsentKy',
     description: 'Social contracts based on keys',
     tags: ['social', 'identity', 'governance'],
     scores: {
@@ -111,7 +111,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['identity'],
-    teamMembers: ['Noah Andersson'],
+    teamMembers: ['@Jacobo', '@Oliver'],
     aiScore: 82
   },
   {
@@ -127,7 +127,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['voting'],
-    teamMembers: ['Adedeji Afolabi', 'Grace Liu'],
+    teamMembers: ['@JC'],
     aiScore: 88
   },
   {
@@ -144,23 +144,55 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['mapping'],
-    teamMembers: ['Amelia Jones'],
+    teamMembers: ['@Corey'],
     aiScore: 84
   },
   {
-    id: 'realm',
-    name: 'Realm',
-    description: 'UDP relay that attaches itself to a homeserver instance',
-    tags: ['networking', 'infrastructure', 'homeserver'],
+    id: 'publar',
+    name: 'Publar',
+    description: 'A developer tool similar to Polar (for Lightning), but for the Pubky ecosystem',
+    tags: ['developer-tools', 'pubky', 'payments'],
     scores: {
-      complexity: 8,
-      creativity: 6,
+      complexity: 7,
+      creativity: 8,
+      presentation: 7,
+      feedback: 8
+    },
+    readiness: false,
+    userTags: ['developer-tools'],
+    teamMembers: ['@Kevin'],
+    aiScore: 81
+  },
+  {
+    id: 'pubkylab',
+    name: 'PubkyLab',
+    description: 'An interactive web-based playground where developers can instantly test SDK operations',
+    tags: ['developer-tools', 'playground', 'sdk'],
+    scores: {
+      complexity: 6,
+      creativity: 7,
+      presentation: 8,
+      feedback: 7
+    },
+    readiness: false,
+    userTags: ['sdk', 'playground'],
+    teamMembers: ['@Joao'],
+    aiScore: 77
+  },
+  {
+    id: 'p2pjobs',
+    name: 'P2PJobs',
+    description: 'Decentralized Job Board',
+    tags: ['jobs', 'marketplace', 'p2p'],
+    scores: {
+      complexity: 6,
+      creativity: 7,
       presentation: 6,
       feedback: 7
     },
-    readiness: true,
-    userTags: ['infra'],
-    teamMembers: ['Logan Harper', 'Valentina Rossi'],
-    aiScore: 80
+    readiness: false,
+    userTags: ['jobs'],
+    teamMembers: ['@P2PJobsTeam'],
+    aiScore: 70
   }
 ];

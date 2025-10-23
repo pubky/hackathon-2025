@@ -118,19 +118,6 @@
                 "popular": 82,
                 "ai": 84
             }
-        },
-        {
-            "projectId": "realm",
-            "total": 78.6,
-            "components": {
-                "complexity": 82,
-                "creativity": 74,
-                "readiness": 84,
-                "presentation": 70,
-                "feedback": 76,
-                "popular": 72,
-                "ai": 80
-            }
         }
     ]
 }

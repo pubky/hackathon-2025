@@ -131,20 +131,6 @@
                 "tags": [
                     "mapping"
                 ]
-            },
-            {
-                "projectId": "realm",
-                "scores": {
-                    "complexity": 8,
-                    "creativity": 6,
-                    "presentation": 6,
-                    "feedback": 7
-                },
-                "readiness": true,
-                "comment": "Love the resilient networking angle.",
-                "tags": [
-                    "infra"
-                ]
             }
         ],
         "popularRanking": [
@@ -153,7 +139,6 @@
             "geostories",
             "pubky-cookbook",
             "monky",
-            "realm",
             "pubky-homeserver-cli",
             "pubky-tag-extension",
             "booksy",
@@ -289,20 +274,6 @@
                 "tags": [
                     "mapping"
                 ]
-            },
-            {
-                "projectId": "realm",
-                "scores": {
-                    "complexity": 8,
-                    "creativity": 6,
-                    "presentation": 6,
-                    "feedback": 7
-                },
-                "readiness": true,
-                "comment": "Relay stats look solid.",
-                "tags": [
-                    "infra"
-                ]
             }
         ],
         "popularRanking": [
@@ -311,7 +282,6 @@
             "pubky-mcp-server",
             "geostories",
             "monky",
-            "realm",
             "pubky-homeserver-cli",
             "pubky-tag-extension",
             "decentralized-wiki",
@@ -447,20 +417,6 @@
                 "tags": [
                     "mapping"
                 ]
-            },
-            {
-                "projectId": "realm",
-                "scores": {
-                    "complexity": 8,
-                    "creativity": 6,
-                    "presentation": 6,
-                    "feedback": 7
-                },
-                "readiness": true,
-                "comment": "Redundancy plan feels strong.",
-                "tags": [
-                    "infra"
-                ]
             }
         ],
         "popularRanking": [
@@ -468,7 +424,6 @@
             "pubky-live-vote",
             "pubky-mcp-server",
             "pubky-cookbook",
-            "realm",
             "monky",
             "pubky-tag-extension",
             "pubky-homeserver-cli",
