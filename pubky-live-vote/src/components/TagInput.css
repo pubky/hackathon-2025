@@ -91,39 +91,3 @@
   border-color: rgba(155, 168, 255, 0.65);
   box-shadow: 0 0 0 3px rgba(121, 136, 255, 0.24);
 }
-
-.tag-input__suggestions {
-  display: grid;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tag-input__suggestions button {
-  width: 100%;
-  text-align: left;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: linear-gradient(135deg, rgba(19, 20, 33, 0.85), rgba(13, 14, 24, 0.88));
-  border: 1px solid rgba(130, 145, 255, 0.32);
-  border-radius: 12px;
-  padding: 0.55rem 0.8rem;
-  color: rgba(210, 216, 255, 0.85);
-  cursor: pointer;
-  transition: border 0.18s ease, transform 0.18s ease;
-}
-
-.tag-input__suggestions button:hover {
-  border-color: rgba(155, 168, 255, 0.6);
-  transform: translateY(-1px);
-}
-
-.tag-input__suggestions button.tone-green {
-  border-color: rgba(62, 210, 168, 0.55);
-}
-
-.tag-input__suggestions button.tone-purple {
-  border-color: rgba(200, 152, 255, 0.6);
-}

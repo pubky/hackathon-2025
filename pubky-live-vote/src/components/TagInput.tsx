@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, useState } from 'react';
 import { getTagTone } from '../utils/tagTone';
 import './TagInput.css';
 
@@ -10,21 +10,6 @@ interface Props {
 
 export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
   const [draft, setDraft] = useState('');
-
-  const suggestions = useMemo(() => {
-    const unique = new Set([
-      'ux',
-      'ai',
-      'education',
-      'governance',
-      'defi',
-      'infrastructure',
-      'tooling',
-      'community'
-    ]);
-    value.forEach((tag) => unique.delete(tag));
-    return Array.from(unique).filter((tag) => tag.includes(draft.toLowerCase())).slice(0, 6);
-  }, [draft, value]);
 
   const addTag = (tag: string) => {
     const trimmed = tag.trim().toLowerCase();
@@ -85,18 +70,6 @@ export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
           Add
         </button>
       </form>
-      {suggestions.length > 0 && (
-        <ul className="tag-input__suggestions">
-          {suggestions.map((suggestion) => (
-            <li key={suggestion}>
-              <button type="button" className={getTagTone(suggestion)} onClick={() => addTag(suggestion)}>
-                <span aria-hidden="true">#</span>
-                {suggestion}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 };
