@@ -16,23 +16,18 @@ const emptyState: LeaderboardHookState = {
   error: null
 };
 
-export const useLiveLeaderboard = (projects: Project[], ranking: string[]) => {
+export const useLiveLeaderboard = (projects: Project[]) => {
   const [state, setState] = useState<LeaderboardHookState>(emptyState);
   const projectsRef = useRef(projects);
-  const rankingRef = useRef(ranking);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
     projectsRef.current = projects;
   }, [projects]);
 
-  useEffect(() => {
-    rankingRef.current = ranking;
-  }, [ranking]);
-
   const refresh = useCallback(async () => {
     try {
-      const snapshot = await loadLeaderboard(projectsRef.current, rankingRef.current);
+      const snapshot = await loadLeaderboard(projectsRef.current);
       if (!isMountedRef.current) return;
       setState({ ...snapshot, isLoading: false, error: null });
     } catch (error) {
@@ -62,7 +57,7 @@ export const useLiveLeaderboard = (projects: Project[], ranking: string[]) => {
 
   useEffect(() => {
     void refresh();
-  }, [projects, ranking, refresh]);
+  }, [projects, refresh]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;

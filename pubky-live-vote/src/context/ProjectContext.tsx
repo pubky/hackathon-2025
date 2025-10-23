@@ -12,8 +12,6 @@ interface ProjectContextValue {
   updateComment: (projectId: string, comment: string) => void;
   updateTags: (projectId: string, tags: string[]) => void;
   submitBallot: () => Promise<void>;
-  popularRanking: string[];
-  setPopularRanking: (ranking: string[]) => void;
   userProjectId: string | null;
   setUserProjectId: (projectId: string | null) => void;
   hasPendingChanges: boolean;
@@ -23,7 +21,6 @@ interface ProjectContextValue {
 const ProjectContext = createContext<ProjectContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'pubky-live-vote:projects';
-const RANKING_KEY = 'pubky-live-vote:popular';
 const SUBMISSION_KEY = 'pubky-live-vote:last-submission';
 const OWN_PROJECT_KEY = 'pubky-live-vote:own-project';
 
@@ -75,16 +72,17 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
     }
     return demoProjects;
   });
-  const [popularRanking, setPopularRanking] = useState<string[]>(() => {
-    const stored = localStorage.getItem(RANKING_KEY);
-    if (stored) {
-      return JSON.parse(stored) as string[];
-    }
-    return [];
-  });
   const [hasPendingChanges, setPending] = useState(false);
   const [lastSubmittedAt, setLastSubmittedAt] = useState<string | null>(() => localStorage.getItem(SUBMISSION_KEY));
   const [userProjectId, setUserProjectId] = useState<string | null>(() => localStorage.getItem(OWN_PROJECT_KEY));
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem('pubky-live-vote:popular');
+    } catch (error) {
+      console.debug('Unable to clear legacy popular vote storage', error);
+    }
+  }, []);
 
   useEffect(() => {
     if (!sessionStorage) {
@@ -99,15 +97,14 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
     };
   }, [sessionStorage]);
 
-  const persistState = (updatedProjects: Project[], updatedRanking: string[]) => {
+  const persistState = (updatedProjects: Project[]) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedProjects));
-    localStorage.setItem(RANKING_KEY, JSON.stringify(updatedRanking));
   };
 
   const mutateProject = (projectId: string, updater: (project: Project) => Project) => {
     setProjects((current) => {
       const updated = current.map((project) => (project.id === projectId ? updater(project) : project));
-      persistState(updated, popularRanking);
+      persistState(updated);
       setPending(true);
       return updated;
     });
@@ -138,12 +135,16 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
     const submittedAt = new Date().toISOString();
     const submissionEvent = buildSubmissionEvent(submittedAt, session, authMethod);
 
+    const submitableProjects = userProjectId
+      ? projects.filter((project) => project.id !== userProjectId)
+      : projects;
+
     const payload: BallotPayload = {
       voterId: user.publicKey,
       submittedAt,
       events: [submissionEvent],
-      popularRanking,
-      scores: projects.map((project) => ({
+      popularRanking: [],
+      scores: submitableProjects.map((project) => ({
         projectId: project.id,
         scores: project.scores,
         readiness: project.readiness,
@@ -152,7 +153,7 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
       }))
     };
     enqueueBallot(payload);
-    persistState(projects, popularRanking);
+    persistState(projects);
     const queueSender = sessionStorage ? createBallotStorageSender(sessionStorage) : null;
     try {
       if (queueSender) {
@@ -176,13 +177,6 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
       updateComment,
       updateTags,
       submitBallot,
-      popularRanking,
-      setPopularRanking: (ranking: string[]) => {
-        const next = ranking.filter((id, index) => ranking.indexOf(id) === index).slice(0, 5);
-        setPopularRanking(next);
-        localStorage.setItem(RANKING_KEY, JSON.stringify(next));
-        setPending(true);
-      },
       userProjectId,
       setUserProjectId: (projectId: string | null) => {
         setUserProjectId(projectId);
@@ -196,7 +190,7 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
       hasPendingChanges,
       lastSubmittedAt
     }),
-    [projects, popularRanking, hasPendingChanges, lastSubmittedAt, userProjectId]
+    [projects, hasPendingChanges, lastSubmittedAt, userProjectId]
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

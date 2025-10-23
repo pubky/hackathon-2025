@@ -40,11 +40,8 @@ const integerFormatter = new Intl.NumberFormat(undefined, {
 });
 
 export const Leaderboard = () => {
-  const { projects, popularRanking } = useProjects();
-  const { entries, totalVoters, generatedAt, source, isLoading, error } = useLiveLeaderboard(
-    projects,
-    popularRanking
-  );
+  const { projects } = useProjects();
+  const { entries, totalVoters, generatedAt, source, isLoading, error } = useLiveLeaderboard(projects);
 
   const rows = useMemo(() => (entries.length ? entries : placeholderRows(projects)), [entries, projects]);
 

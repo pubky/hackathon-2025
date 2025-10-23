@@ -5,6 +5,7 @@ interface Props {
   label: string;
   value: number;
   onChange: (value: number) => void;
+  disabled?: boolean;
 }
 
 const buildGradient = (value: number) => {
@@ -12,11 +13,11 @@ const buildGradient = (value: number) => {
   return `linear-gradient(90deg, rgba(155, 168, 255, 0.92) ${percentage}%, rgba(47, 52, 80, 0.35) ${percentage}%)`;
 };
 
-export const ScoreSlider = ({ label, value, onChange }: Props) => {
-  const background = useMemo(() => buildGradient(value), [value]);
+export const ScoreSlider = ({ label, value, onChange, disabled = false }: Props) => {
+  const background = useMemo(() => (disabled ? undefined : buildGradient(value)), [value, disabled]);
 
   return (
-    <label className="slider">
+    <label className={`slider${disabled ? ' slider--disabled' : ''}`}>
       <span className="slider__label">{label}</span>
       <div className="slider__input">
         <input
@@ -25,8 +26,12 @@ export const ScoreSlider = ({ label, value, onChange }: Props) => {
           max={10}
           step={1}
           value={value}
-          style={{ backgroundImage: background }}
-          onChange={(event) => onChange(Number(event.target.value))}
+          style={background ? { backgroundImage: background } : undefined}
+          onChange={(event) => {
+            if (disabled) return;
+            onChange(Number(event.target.value));
+          }}
+          disabled={disabled}
           aria-valuetext={`${value} out of 10`}
         />
         <span className="slider__value">{value}</span>

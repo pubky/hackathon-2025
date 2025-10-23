@@ -4,7 +4,7 @@ import { useProjects } from '../context/ProjectContext';
 import { LoginCard } from './LoginCard';
 import { ProjectList } from './ProjectList';
 import { Leaderboard } from './Leaderboard';
-import { PopularVoteBoard } from './PopularVoteBoard';
+import { MyProjectPanel } from './MyProjectPanel';
 import { SubmissionBanner } from './SubmissionBanner';
 import './Layout.css';
 
@@ -66,7 +66,7 @@ export const Layout = () => {
       <main className="app-main">
         <section className="left-column">
           <LoginCard />
-          {session && <PopularVoteBoard />}
+          {session && <MyProjectPanel />}
         </section>
         <section className="right-column">
           <ProjectList searchQuery={searchQuery} />

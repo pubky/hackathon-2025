@@ -20,10 +20,7 @@ const WEIGHTS: Record<LeaderboardComponent, number> = {
   ai: 0.15
 };
 
-export const loadLeaderboard = async (
-  projects: Project[],
-  fallbackRanking: string[]
-): Promise<LeaderboardState> => {
+export const loadLeaderboard = async (projects: Project[]): Promise<LeaderboardState> => {
   const summary = await fetchLeaderboardSummary();
   if (summary) {
     return normalizeSummary(summary, projects);
@@ -34,7 +31,7 @@ export const loadLeaderboard = async (
     return computeFromBallots(ballots, projects);
   }
 
-  return computeFromLocalProjects(projects, fallbackRanking);
+  return computeFromLocalProjects(projects);
 };
 
 const normalizeSummary = (
@@ -130,11 +127,7 @@ const computeFromBallots = (ballots: BallotPayload[], projects: Project[]): Lead
   };
 };
 
-const computeFromLocalProjects = (
-  projects: Project[],
-  ranking: string[]
-): LeaderboardState => {
-  const totalProjects = projects.length || 1;
+const computeFromLocalProjects = (projects: Project[]): LeaderboardState => {
   const entries: LeaderboardEntry[] = projects.map((project) => {
     const components: LeaderboardComponents = {
       complexity: project.scores.complexity * 10,
@@ -142,7 +135,7 @@ const computeFromLocalProjects = (
       readiness: project.readiness ? 100 : 0,
       presentation: project.scores.presentation * 10,
       feedback: project.scores.feedback * 10,
-      popular: computeLocalPopularScore(project.id, ranking, totalProjects),
+      popular: 0,
       ai: project.aiScore ?? 0
     };
 
@@ -244,13 +237,6 @@ const normalizeSlider = (sum: number, count: number) => {
 const normalizeBoolean = (sum: number, count: number) => {
   if (!count) return 0;
   return (sum / count) * 100;
-};
-
-const computeLocalPopularScore = (projectId: string, ranking: string[], totalProjects: number) => {
-  const index = ranking.indexOf(projectId);
-  if (index === -1) return 0;
-  const weight = Math.max(totalProjects - index, 0);
-  return Math.round((weight / totalProjects) * 100);
 };
 
 const computeTotal = (components: LeaderboardComponents) =>

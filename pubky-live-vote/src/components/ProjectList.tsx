@@ -15,7 +15,14 @@ const normalizeQuery = (query: string) =>
     .replace(/\s+/g, ' ');
 
 export const ProjectList = ({ searchQuery = '' }: ProjectListProps) => {
-  const { projects, updateProjectScore, toggleReadiness, updateComment, updateTags } = useProjects();
+  const {
+    projects,
+    updateProjectScore,
+    toggleReadiness,
+    updateComment,
+    updateTags,
+    userProjectId
+  } = useProjects();
   const normalizedQuery = normalizeQuery(searchQuery);
 
   const sortedProjects = useMemo(
@@ -67,6 +74,7 @@ export const ProjectList = ({ searchQuery = '' }: ProjectListProps) => {
                 onReadinessToggle={toggleReadiness}
                 onCommentChange={updateComment}
                 onTagsChange={updateTags}
+                isOwnProject={project.id === userProjectId}
               />
             </Fragment>
           ))}

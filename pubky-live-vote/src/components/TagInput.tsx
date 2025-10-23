@@ -6,12 +6,14 @@ interface Props {
   value: string[];
   onChange: (tags: string[]) => void;
   ariaLabel: string;
+  disabled?: boolean;
 }
 
-export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
+export const TagInput = ({ value, onChange, ariaLabel, disabled = false }: Props) => {
   const [draft, setDraft] = useState('');
 
   const addTag = (tag: string) => {
+    if (disabled) return;
     const trimmed = tag.trim().toLowerCase();
     if (!trimmed || value.includes(trimmed)) {
       return;
@@ -21,15 +23,18 @@ export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
   };
 
   const removeTag = (tag: string) => {
+    if (disabled) return;
     onChange(value.filter((item) => item !== tag));
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (disabled) return;
     addTag(draft);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       addTag(draft);
@@ -39,7 +44,7 @@ export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
   };
 
   return (
-    <div className="tag-input">
+    <div className={`tag-input${disabled ? ' tag-input--disabled' : ''}`}>
       <div className="tag-input__header">
         <h4>Tags</h4>
         <p>Label projects with themes to make browsing easier.</p>
@@ -51,7 +56,12 @@ export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
               #
             </span>
             <span className="chip__label">{tag}</span>
-            <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove ${tag}`}>
+            <button
+              type="button"
+              onClick={() => removeTag(tag)}
+              aria-label={`Remove ${tag}`}
+              disabled={disabled}
+            >
               ×
             </button>
           </span>
@@ -65,8 +75,9 @@ export const TagInput = ({ value, onChange, ariaLabel }: Props) => {
           onKeyDown={handleKeyDown}
           placeholder="Add a tag"
           aria-label={ariaLabel}
+          disabled={disabled}
         />
-        <button className="button" type="submit">
+        <button className="button" type="submit" disabled={disabled}>
           Add
         </button>
       </form>

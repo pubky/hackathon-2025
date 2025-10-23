@@ -23,6 +23,27 @@
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
+.slider--disabled .slider__label {
+  color: rgba(206, 214, 255, 0.45);
+}
+
+.slider--disabled .slider__input input[type='range'] {
+  background: linear-gradient(90deg, rgba(42, 47, 78, 0.35), rgba(29, 32, 55, 0.2));
+  cursor: not-allowed;
+}
+
+.slider--disabled .slider__input input[type='range']::-webkit-slider-thumb,
+.slider--disabled .slider__input input[type='range']::-moz-range-thumb {
+  background: rgba(120, 128, 168, 0.45);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.slider--disabled .slider__value {
+  color: rgba(214, 220, 255, 0.5);
+}
+
 .slider__input input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 20px;
