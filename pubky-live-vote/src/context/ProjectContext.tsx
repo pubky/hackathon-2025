@@ -134,6 +134,7 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
 
   const submitBallot = async () => {
     if (!user) return;
+    if (lastSubmittedAt && !hasPendingChanges) return;
     const submittedAt = new Date().toISOString();
     const submissionEvent = buildSubmissionEvent(submittedAt, session, authMethod);
 
