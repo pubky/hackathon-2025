@@ -153,8 +153,13 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
     };
     enqueueBallot(payload);
     persistState(projects, popularRanking);
+    const queueSender = sessionStorage ? createBallotStorageSender(sessionStorage) : null;
     try {
-      await flushQueue();
+      if (queueSender) {
+        await flushQueue(queueSender);
+      } else {
+        await flushQueue();
+      }
       setPending(false);
       setLastSubmittedAt(payload.submittedAt);
       localStorage.setItem(SUBMISSION_KEY, payload.submittedAt);
