@@ -7,61 +7,6 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: publar
-    steps:
-      - name: Check out sources
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install npm dependencies
-        run: npm install
-
-      - name: Install Dioxus CLI (pre-built binary)
-        run: |
-          # Download pre-built binary for much faster setup (v0.6.3)
-          curl -L https://github.com/DioxusLabs/dioxus/releases/download/v0.6.3/dx-x86_64-pc-windows-msvc-v0.6.3.zip -o dx.zip
-          unzip dx.zip
-          New-Item -ItemType Directory -Force -Path "$HOME/.cargo/bin"
-          Move-Item -Force dx.exe "$HOME/.cargo/bin/dx.exe"
-          dx --version
-
-      - name: Build Tailwind CSS
-        run: npx tailwindcss -i ./assets/input.css -o ./assets/tailwind.css --minify
-
-      - name: Cache cargo build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: publar-windows
-          workspaces: publar
-
-      - name: Build Windows installer (debug mode for speed)
-        run: |
-          mkdir -p dist
-          # Build in dev profile for faster pre-release builds (no optimizations)
-          dx bundle --platform desktop --profile dev --package-types msi
-
-          # Find and copy the built installer
-          Get-ChildItem -Path target/dx/publar/bundle -Filter "*.msi" -Recurse | Copy-Item -Destination dist/
-
-          Get-ChildItem dist
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: publar-windows
-          path: publar/dist/*
-
   build-macos:
     runs-on: macos-latest
     defaults:
@@ -147,7 +92,6 @@ jobs:
 
   publish-release:
     needs:
-      - build-windows
       - build-macos
     runs-on: ubuntu-latest
     steps:
