@@ -1,0 +1,3 @@
+[submodule "geostories"]
+	path = geostories
+	url = https://github.com/coreyphillips/geostories.git
