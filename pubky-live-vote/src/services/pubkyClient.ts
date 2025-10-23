@@ -11,6 +11,10 @@ declare global {
 
 const STAGING_HOMESERVER_URL = 'https://homeserver.staging.pubky.app';
 const STAGING_HOMESERVER_PUBLIC_KEY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
+const STAGING_CONFIG: HomeserverConfig = {
+  homeserverUrl: STAGING_HOMESERVER_URL,
+  homeserverPublicKey: STAGING_HOMESERVER_PUBLIC_KEY
+};
 const TESTNET_HOMESERVER_URL = 'http://localhost:8787';
 const TESTNET_HOMESERVER_PUBLIC_KEY = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
 
@@ -124,6 +128,20 @@ const isPkarrMissingHttpsError = (error: unknown): error is Error =>
   (error.message.includes('No HTTPS endpoints found') ||
     error.message.includes('Pkarr record is malformed'));
 
+const isNetworkUnreachableError = (error: unknown): boolean => {
+  if (error instanceof TypeError) return true;
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('network error') ||
+    message.includes('load failed') ||
+    message.includes('econnrefused') ||
+    message.includes('econnreset')
+  );
+};
+
 const fallbackToMockClient = async (clientToReplace: PubkyClient, cause: unknown): Promise<SessionResult> => {
   console.warn('Falling back to mock Pubky client after homeserver bootstrap failure', cause);
   const mockClient = createMockClient();
@@ -133,19 +151,35 @@ const fallbackToMockClient = async (clientToReplace: PubkyClient, cause: unknown
 };
 
 const createPubkyClient = (): PubkyClient => {
-  const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
-  const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
-  const homeserverPublicKey = config?.homeserverPublicKey ?? DEFAULT_HOMESERVER_PUBLIC_KEY;
-  resolvedConfig = {
+  const configOverride = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
+  const homeserverUrl = configOverride?.homeserverUrl ?? resolveDefaultHomeserverUrl();
+  const homeserverPublicKey = configOverride?.homeserverPublicKey ?? DEFAULT_HOMESERVER_PUBLIC_KEY;
+  const config: HomeserverConfig = {
     homeserverUrl,
     homeserverPublicKey
   };
 
-  const homeserverHostname = parseHostname(homeserverUrl);
+  const hostname = parseHostname(homeserverUrl);
+  const isDefaultLocalTestnet =
+    !configOverride?.homeserverUrl &&
+    !envHomeserverUrl &&
+    import.meta.env.DEV &&
+    isLocalHostname(hostname);
+
+  return createPubkyClientWithConfig(config, { allowStagingFallback: isDefaultLocalTestnet });
+};
+
+const createPubkyClientWithConfig = (
+  config: HomeserverConfig,
+  { allowStagingFallback }: { allowStagingFallback: boolean }
+): PubkyClient => {
+  resolvedConfig = config;
+
+  const homeserverHostname = parseHostname(config.homeserverUrl);
   const useLocalTestnet = isLocalHostname(homeserverHostname);
   const pubky = useLocalTestnet ? Pubky.testnet(homeserverHostname ?? undefined) : new Pubky();
   const publicStorage = pubky.publicStorage;
-  const homeserverKey = PublicKey.from(homeserverPublicKey);
+  const homeserverKey = PublicKey.from(config.homeserverPublicKey);
 
   let signer: Signer | null = null;
   let signerWasPersisted = false;
@@ -188,6 +222,9 @@ const createPubkyClient = (): PubkyClient => {
     try {
       session = persisted ? await activeSigner.signin() : await signupWithHomeserver(activeSigner);
     } catch (error) {
+      if (allowStagingFallback && isNetworkUnreachableError(error)) {
+        return fallbackToStagingHomeserver(client, error);
+      }
       if (isPkarrMissingHttpsError(error)) {
         return fallbackToMockClient(client, error);
       }
@@ -197,6 +234,9 @@ const createPubkyClient = (): PubkyClient => {
           session = await signupWithHomeserver(activeSigner);
           method = 'signup';
         } catch (signupError) {
+          if (allowStagingFallback && isNetworkUnreachableError(signupError)) {
+            return fallbackToStagingHomeserver(client, signupError);
+          }
           if (isPkarrMissingHttpsError(signupError)) {
             return fallbackToMockClient(client, signupError);
           }
@@ -244,6 +284,14 @@ const createPubkyClient = (): PubkyClient => {
   };
 
   return client;
+};
+
+const fallbackToStagingHomeserver = async (clientToReplace: PubkyClient, cause: unknown): Promise<SessionResult> => {
+  console.warn('Local Pubky testnet unavailable, falling back to staging homeserver', cause);
+  const stagingClient = createPubkyClientWithConfig(STAGING_CONFIG, { allowStagingFallback: false });
+  cachedClient = stagingClient;
+  Object.assign(clientToReplace, stagingClient);
+  return stagingClient.ensureSession();
 };
 
 const createMockClient = (): PubkyClient => {
