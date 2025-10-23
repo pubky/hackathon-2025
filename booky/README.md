@@ -4,7 +4,7 @@
 
 # Booky
 
-Booky is a browser extension that syncs your bookmarks using the Pubky protocol. It provides decentralized bookmark storage and synchronization across devices using Pubky homeservers.
+Booky is a browser extension that syncs your bookmarks using the Pubky protocol. It provides decentralized bookmark storage and synchronization across devices using Pubky homeservers. It also allows for privately sharing bookmarks with other Pubky Users.
 
 ## Features
 
