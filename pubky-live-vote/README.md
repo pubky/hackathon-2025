@@ -104,6 +104,16 @@ src/
 2. Each project’s component scores are normalised to a 0–100 range, the official weights are applied, and tie-ready totals are produced. The UI highlights whether the snapshot came from the summary file, raw ballots, or a local preview.
 3. The table updates in place without a page reload, giving organisers and participants a reliable view of standings as ballots from up to 24 voters (and beyond) land during the event.
 
+## Deploying to GitHub Pages
+
+A ready-to-use GitHub Actions workflow lives in [`.github/workflows/deploy-pages.yml`](../.github/workflows/deploy-pages.yml). It builds the Vite app, packages the static output from `pubky-live-vote/dist`, and publishes it to the repository’s GitHub Pages environment. To go live:
+
+1. Push the workflow to your fork or repository and make sure the default branch is `main` (or update the workflow trigger).
+2. In **Settings → Pages**, select **GitHub Actions** as the source.
+3. Merge to `main` or run the workflow manually from the **Actions** tab. The job automatically sets the correct base path so the app works from `https://<username>.github.io/<repo>/` on both desktop and mobile browsers.
+
+If you need to serve the site from a custom subdirectory, override the `VITE_BASE_PATH` environment variable in the **Build static site** step of the workflow. For custom domains, configure the CNAME record in the repository settings after the first deployment completes.
+
 ## License
 
 This project is released under the MIT license. See [LICENSE](./LICENSE).
