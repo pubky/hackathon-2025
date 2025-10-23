@@ -1,0 +1,3 @@
+[submodule "vladimir-piotr/pubky-cli"]
+	path = vladimir-piotr/pubky-cli
+	url = https://github.com/pubky/pubky-cli.git
