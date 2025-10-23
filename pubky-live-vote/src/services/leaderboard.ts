@@ -17,7 +17,7 @@ const WEIGHTS: Record<LeaderboardComponent, number> = {
   presentation: 0.15,
   feedback: 0.15,
   popular: 0.15,
-  ai: 0.15
+  ai: 0
 };
 
 export const loadLeaderboard = async (projects: Project[]): Promise<LeaderboardState> => {
@@ -42,12 +42,16 @@ const normalizeSummary = (
   const coveredIds = new Set(summary.entries.map((entry) => entry.projectId));
 
   const entries: LeaderboardEntry[] = [
-    ...summary.entries.map((entry) => ({
-      projectId: entry.projectId,
-      projectName: projectById.get(entry.projectId)?.name ?? entry.projectId,
-      total: entry.total,
-      components: entry.components
-    }))
+    ...summary.entries.map((entry) => {
+      const components = entry.components;
+
+      return {
+        projectId: entry.projectId,
+        projectName: projectById.get(entry.projectId)?.name ?? entry.projectId,
+        total: computeTotal(components),
+        components
+      } satisfies LeaderboardEntry;
+    })
   ];
 
   projects.forEach((project) => {
@@ -239,14 +243,27 @@ const normalizeBoolean = (sum: number, count: number) => {
   return (sum / count) * 100;
 };
 
-const computeTotal = (components: LeaderboardComponents) =>
-  (components.complexity ?? 0) * WEIGHTS.complexity +
-  (components.creativity ?? 0) * WEIGHTS.creativity +
-  (components.readiness ?? 0) * WEIGHTS.readiness +
-  (components.presentation ?? 0) * WEIGHTS.presentation +
-  (components.feedback ?? 0) * WEIGHTS.feedback +
-  (components.popular ?? 0) * WEIGHTS.popular +
-  (components.ai ?? 0) * WEIGHTS.ai;
+const computeTotal = (components: LeaderboardComponents) => {
+  let weightedSum = 0;
+  let weightSum = 0;
+
+  (Object.keys(WEIGHTS) as LeaderboardComponent[]).forEach((component) => {
+    const weight = WEIGHTS[component];
+    if (weight <= 0) {
+      return;
+    }
+
+    const value = components[component] ?? 0;
+    weightedSum += value * weight;
+    weightSum += weight;
+  });
+
+  if (weightSum <= 0) {
+    return 0;
+  }
+
+  return weightedSum / weightSum;
+};
 
 const sortEntries = (entries: LeaderboardEntry[]) =>
   [...entries].sort((a, b) => b.total - a.total);
