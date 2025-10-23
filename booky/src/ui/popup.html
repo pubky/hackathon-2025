@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Booky</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="screen" style="display: none;">
+      <div class="header">
+        <img src="icons/logo.gif" alt="Booky Logo" class="header-logo">
+        <div class="header-text">
+          <h1>Welcome to Booky</h1>
+          <p>Sync your bookmarks using Pubky</p>
+        </div>
+        <div class="header-actions">
+          <button id="pop-out-button" class="pop-out-button" title="Open in new window">⧉</button>
+        </div>
+      </div>
+
+      <div class="setup-form">
+        <label for="homeserver">Homeserver Pubky</label>
+        <input type="text" id="homeserver" placeholder="Enter homeserver pubky" value="ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy">
+
+        <label for="invite-code">Invite Code (optional)</label>
+        <input type="text" id="invite-code" placeholder="Enter invite code">
+
+        <div class="setup-options">
+          <button id="setup-button" class="primary-button">Setup Booky</button>
+          <button id="import-button" class="secondary-button">Import Recovery File</button>
+          <button id="signin-recovery-code-button" class="secondary-button">Sign In with Recovery Code</button>
+        </div>
+
+        <input type="file" id="recovery-file-input" accept=".pkarr" style="display: none;">
+      </div>
+
+
+      <div id="setup-result" style="display: none;">
+        <div class="success-message">
+          <p>Setup complete!</p>
+          <p><strong>Your Pubky:</strong> <span id="generated-pubkey"></span></p>
+          <p><strong>Folder:</strong> <span id="generated-folder"></span></p>
+          <p class="warning-text">⚠️ Make sure to backup your pubky with a recovery file or code - you'll need it to sign in after signing out!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="main-screen" class="screen" style="display: none;">
+      <div class="header">
+        <img src="icons/logo.gif" alt="Booky Logo" class="header-logo">
+        <div class="header-text">
+          <h1>Booky</h1>
+        </div>
+        <div class="header-buttons">
+          <button id="export-button" class="header-export-button">Download Recovery File</button>
+          <button id="copy-recovery-code-main-button" class="header-export-button">Copy Recovery Code</button>
+          <button id="pop-out-button-main" class="pop-out-button" title="Open in new window">⧉</button>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-row">
+          <span class="label">Your Pubky:</span>
+          <span id="user-pubkey" class="value"></span>
+        </div>
+        <div class="info-row">
+          <span class="label">Main Folder:</span>
+          <span id="user-folder" class="value"></span>
+        </div>
+      </div>
+
+      <div class="add-pubky-section">
+        <h3>Monitor Other Pubkys</h3>
+        <div class="input-group">
+          <input type="text" id="monitor-pubkey" placeholder="Enter pubky to monitor">
+          <button id="add-pubkey-button" class="secondary-button">Add</button>
+        </div>
+      </div>
+
+      <div class="folders-section">
+        <h3>Synced Folders</h3>
+        <div id="folders-list"></div>
+      </div>
+
+      <div class="actions">
+        <button id="manual-sync-button" class="primary-button">Sync Now</button>
+        <button id="sign-out-button" class="sign-out-button">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" style="display: none;">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <!-- Passphrase Modal -->
+    <div id="passphrase-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Enter Passphrase</h3>
+          <button id="close-passphrase-modal" class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">Enter the passphrase used to encrypt your recovery file (leave empty for no passphrase):</p>
+          <input type="password" id="passphrase-input" placeholder="Enter passphrase (optional)" autocomplete="off">
+          <div class="modal-actions">
+            <button id="confirm-passphrase" class="primary-button">Confirm</button>
+            <button id="cancel-passphrase" class="secondary-button">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recovery Code Modal -->
+    <div id="recovery-code-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Sign In with Recovery Code</h3>
+          <button id="close-recovery-code-modal" class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">Paste your recovery code below to sign back in to your account:</p>
+          <textarea id="recovery-code-modal-input" placeholder="Paste your recovery code here" rows="4"></textarea>
+          <div class="modal-actions">
+            <button id="confirm-recovery-code" class="primary-button">Sign In</button>
+            <button id="cancel-recovery-code" class="secondary-button">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+
