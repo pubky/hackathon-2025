@@ -877,6 +877,12 @@ export class BookmarkSync {
             const filename = pathParts.pop(); // Last part is filename
             const filePath = pathParts.length > 0 ? pathParts.join('/') + '/' : ''; // Remaining is path
 
+            // Skip files in priv/ folder when fetching public bookmarks for other users
+            if (isPublic && filePath.startsWith('priv/')) {
+              logger.log('Skipping file in priv/ folder for monitored user:', fullRelativePath);
+              continue;
+            }
+
             logger.log('Bookmark file path calculation - entryPath:', entryPath, 'normalizedBasePath:', normalizedBasePath, 'fullRelativePath:', fullRelativePath, 'filePath:', filePath);
 
             // Fetch the bookmark data using the entry directly
