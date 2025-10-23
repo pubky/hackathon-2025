@@ -1,143 +1,479 @@
 [
-  {
-    "voterId": "demo-voter-1",
-    "submittedAt": "2025-02-15T10:00:00.000Z",
-    "scores": [
-      {
-        "projectId": "pubky-live-vote",
-        "scores": {
-          "complexity": 9,
-          "creativity": 9,
-          "presentation": 9,
-          "feedback": 9
-        },
-        "readiness": true,
-        "comment": "Polished end-to-end flow with clear UX.",
-        "tags": ["ux", "realtime"]
-      },
-      {
-        "projectId": "pubky-mcp-server",
-        "scores": {
-          "complexity": 8,
-          "creativity": 8,
-          "presentation": 8,
-          "feedback": 8
-        },
-        "readiness": true,
-        "comment": "Solid developer tooling story.",
-        "tags": ["sdk", "automation"]
-      },
-      {
-        "projectId": "pubky-homeserver-cli",
-        "scores": {
-          "complexity": 7,
-          "creativity": 7,
-          "presentation": 7,
-          "feedback": 7
-        },
-        "readiness": true,
-        "comment": "CLI is nearly production ready.",
-        "tags": ["cli", "ops"]
-      }
-    ],
-    "popularRanking": [
-      "pubky-live-vote",
-      "pubky-mcp-server",
-      "pubky-homeserver-cli"
-    ]
-  },
-  {
-    "voterId": "demo-voter-2",
-    "submittedAt": "2025-02-15T10:05:00.000Z",
-    "scores": [
-      {
-        "projectId": "pubky-live-vote",
-        "scores": {
-          "complexity": 8,
-          "creativity": 9,
-          "presentation": 9,
-          "feedback": 8
-        },
-        "readiness": true,
-        "comment": "Great QR onboarding and leaderboard polish.",
-        "tags": ["polish"]
-      },
-      {
-        "projectId": "pubky-mcp-server",
-        "scores": {
-          "complexity": 8,
-          "creativity": 8,
-          "presentation": 7,
-          "feedback": 8
-        },
-        "readiness": true,
-        "comment": "Nice automation of common flows.",
-        "tags": ["cli"]
-      },
-      {
-        "projectId": "pubky-homeserver-cli",
-        "scores": {
-          "complexity": 7,
-          "creativity": 7,
-          "presentation": 7,
-          "feedback": 6
-        },
-        "readiness": true,
-        "comment": "Would love additional docs.",
-        "tags": ["docs"]
-      }
-    ],
-    "popularRanking": [
-      "pubky-live-vote",
-      "pubky-homeserver-cli",
-      "pubky-mcp-server"
-    ]
-  },
-  {
-    "voterId": "demo-voter-3",
-    "submittedAt": "2025-02-15T10:15:00.000Z",
-    "scores": [
-      {
-        "projectId": "pubky-live-vote",
-        "scores": {
-          "complexity": 8,
-          "creativity": 8,
-          "presentation": 9,
-          "feedback": 9
-        },
-        "readiness": true,
-        "comment": "Impressive offline fallback story.",
-        "tags": ["offline"]
-      },
-      {
-        "projectId": "pubky-mcp-server",
-        "scores": {
-          "complexity": 7,
-          "creativity": 7,
-          "presentation": 8,
-          "feedback": 8
-        },
-        "readiness": true,
-        "comment": "Sensible defaults for new developers.",
-        "tags": ["getting-started"]
-      },
-      {
-        "projectId": "pubky-homeserver-cli",
-        "scores": {
-          "complexity": 7,
-          "creativity": 6,
-          "presentation": 7,
-          "feedback": 7
-        },
-        "readiness": false,
-        "comment": "Needs more validation but promising.",
-        "tags": ["roadmap"]
-      }
-    ],
-    "popularRanking": [
-      "pubky-live-vote",
-      "pubky-mcp-server",
-      "pubky-homeserver-cli"
-    ]
-  }
+    {
+        "voterId": "demo-voter-1",
+        "submittedAt": "2025-02-15T10:00:00.000Z",
+        "scores": [
+            {
+                "projectId": "pubky-mcp-server",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 7,
+                    "presentation": 8,
+                    "feedback": 8
+                },
+                "readiness": true,
+                "comment": "Great way to hide SDK friction.",
+                "tags": [
+                    "sdk",
+                    "automation"
+                ]
+            },
+            {
+                "projectId": "pubky-homeserver-cli",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 6,
+                    "presentation": 7,
+                    "feedback": 7
+                },
+                "readiness": true,
+                "comment": "Slick CLI coverage.",
+                "tags": [
+                    "cli",
+                    "ops"
+                ]
+            },
+            {
+                "projectId": "pubky-tag-extension",
+                "scores": {
+                    "complexity": 6,
+                    "creativity": 8,
+                    "presentation": 7,
+                    "feedback": 8
+                },
+                "readiness": false,
+                "comment": "Tagging UX is clear already.",
+                "tags": [
+                    "browser"
+                ]
+            },
+            {
+                "projectId": "booksy",
+                "scores": {
+                    "complexity": 5,
+                    "creativity": 7,
+                    "presentation": 8,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Needs sync polish but promising.",
+                "tags": [
+                    "sharing"
+                ]
+            },
+            {
+                "projectId": "pubky-cookbook",
+                "scores": {
+                    "complexity": 6,
+                    "creativity": 6,
+                    "presentation": 9,
+                    "feedback": 9
+                },
+                "readiness": true,
+                "comment": "Docs look ready to ship.",
+                "tags": [
+                    "docs"
+                ]
+            },
+            {
+                "projectId": "decentralized-wiki",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 7,
+                    "presentation": 6,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Curious to see moderation story.",
+                "tags": [
+                    "wiki"
+                ]
+            },
+            {
+                "projectId": "monky",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 8,
+                    "presentation": 6,
+                    "feedback": 6
+                },
+                "readiness": true,
+                "comment": "Contracts flow is clever.",
+                "tags": [
+                    "identity"
+                ]
+            },
+            {
+                "projectId": "pubky-live-vote",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 9,
+                    "presentation": 9,
+                    "feedback": 9
+                },
+                "readiness": true,
+                "comment": "Polished end-to-end flow with clear UX.",
+                "tags": [
+                    "ux",
+                    "realtime"
+                ]
+            },
+            {
+                "projectId": "geostories",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 9,
+                    "presentation": 7,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Map interactions feel smooth.",
+                "tags": [
+                    "mapping"
+                ]
+            },
+            {
+                "projectId": "realm",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 6,
+                    "presentation": 6,
+                    "feedback": 7
+                },
+                "readiness": true,
+                "comment": "Love the resilient networking angle.",
+                "tags": [
+                    "infra"
+                ]
+            }
+        ],
+        "popularRanking": [
+            "pubky-live-vote",
+            "pubky-mcp-server",
+            "geostories",
+            "pubky-cookbook",
+            "monky",
+            "realm",
+            "pubky-homeserver-cli",
+            "pubky-tag-extension",
+            "booksy",
+            "decentralized-wiki"
+        ]
+    },
+    {
+        "voterId": "demo-voter-2",
+        "submittedAt": "2025-02-15T10:05:00.000Z",
+        "scores": [
+            {
+                "projectId": "pubky-mcp-server",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 8,
+                    "presentation": 7,
+                    "feedback": 8
+                },
+                "readiness": true,
+                "comment": "Great developer story.",
+                "tags": [
+                    "sdk"
+                ]
+            },
+            {
+                "projectId": "pubky-homeserver-cli",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 7,
+                    "presentation": 7,
+                    "feedback": 6
+                },
+                "readiness": true,
+                "comment": "Could use more examples.",
+                "tags": [
+                    "docs"
+                ]
+            },
+            {
+                "projectId": "pubky-tag-extension",
+                "scores": {
+                    "complexity": 6,
+                    "creativity": 8,
+                    "presentation": 8,
+                    "feedback": 8
+                },
+                "readiness": false,
+                "comment": "Tag filter view is neat.",
+                "tags": [
+                    "browser"
+                ]
+            },
+            {
+                "projectId": "booksy",
+                "scores": {
+                    "complexity": 5,
+                    "creativity": 7,
+                    "presentation": 7,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Excited for sharing features.",
+                "tags": [
+                    "sharing"
+                ]
+            },
+            {
+                "projectId": "pubky-cookbook",
+                "scores": {
+                    "complexity": 6,
+                    "creativity": 6,
+                    "presentation": 9,
+                    "feedback": 9
+                },
+                "readiness": true,
+                "comment": "Love the runnable snippets.",
+                "tags": [
+                    "docs"
+                ]
+            },
+            {
+                "projectId": "decentralized-wiki",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 7,
+                    "presentation": 6,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Needs governance details.",
+                "tags": [
+                    "wiki"
+                ]
+            },
+            {
+                "projectId": "monky",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 8,
+                    "presentation": 7,
+                    "feedback": 6
+                },
+                "readiness": true,
+                "comment": "Key linking is powerful.",
+                "tags": [
+                    "identity"
+                ]
+            },
+            {
+                "projectId": "pubky-live-vote",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 9,
+                    "presentation": 9,
+                    "feedback": 8
+                },
+                "readiness": true,
+                "comment": "Great QR onboarding and leaderboard polish.",
+                "tags": [
+                    "polish"
+                ]
+            },
+            {
+                "projectId": "geostories",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 9,
+                    "presentation": 8,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Would like offline cache soon.",
+                "tags": [
+                    "mapping"
+                ]
+            },
+            {
+                "projectId": "realm",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 6,
+                    "presentation": 6,
+                    "feedback": 7
+                },
+                "readiness": true,
+                "comment": "Relay stats look solid.",
+                "tags": [
+                    "infra"
+                ]
+            }
+        ],
+        "popularRanking": [
+            "pubky-live-vote",
+            "pubky-cookbook",
+            "pubky-mcp-server",
+            "geostories",
+            "monky",
+            "realm",
+            "pubky-homeserver-cli",
+            "pubky-tag-extension",
+            "decentralized-wiki",
+            "booksy"
+        ]
+    },
+    {
+        "voterId": "demo-voter-3",
+        "submittedAt": "2025-02-15T10:15:00.000Z",
+        "scores": [
+            {
+                "projectId": "pubky-mcp-server",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 7,
+                    "presentation": 8,
+                    "feedback": 8
+                },
+                "readiness": true,
+                "comment": "Makes onboarding trivial.",
+                "tags": [
+                    "sdk"
+                ]
+            },
+            {
+                "projectId": "pubky-homeserver-cli",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 6,
+                    "presentation": 7,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Add more validation checks.",
+                "tags": [
+                    "roadmap"
+                ]
+            },
+            {
+                "projectId": "pubky-tag-extension",
+                "scores": {
+                    "complexity": 6,
+                    "creativity": 8,
+                    "presentation": 7,
+                    "feedback": 8
+                },
+                "readiness": false,
+                "comment": "Tag search is already helpful.",
+                "tags": [
+                    "browser"
+                ]
+            },
+            {
+                "projectId": "booksy",
+                "scores": {
+                    "complexity": 5,
+                    "creativity": 7,
+                    "presentation": 8,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Sync roadmap makes sense.",
+                "tags": [
+                    "sharing"
+                ]
+            },
+            {
+                "projectId": "pubky-cookbook",
+                "scores": {
+                    "complexity": 6,
+                    "creativity": 6,
+                    "presentation": 9,
+                    "feedback": 9
+                },
+                "readiness": true,
+                "comment": "Love the walkthrough format.",
+                "tags": [
+                    "docs"
+                ]
+            },
+            {
+                "projectId": "decentralized-wiki",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 7,
+                    "presentation": 6,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Curious how moderation scales.",
+                "tags": [
+                    "wiki"
+                ]
+            },
+            {
+                "projectId": "monky",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 8,
+                    "presentation": 6,
+                    "feedback": 6
+                },
+                "readiness": true,
+                "comment": "Key-based contracts feel fresh.",
+                "tags": [
+                    "identity"
+                ]
+            },
+            {
+                "projectId": "pubky-live-vote",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 8,
+                    "presentation": 9,
+                    "feedback": 9
+                },
+                "readiness": true,
+                "comment": "Impressive offline fallback story.",
+                "tags": [
+                    "offline"
+                ]
+            },
+            {
+                "projectId": "geostories",
+                "scores": {
+                    "complexity": 7,
+                    "creativity": 9,
+                    "presentation": 8,
+                    "feedback": 7
+                },
+                "readiness": false,
+                "comment": "Stories pop on the map.",
+                "tags": [
+                    "mapping"
+                ]
+            },
+            {
+                "projectId": "realm",
+                "scores": {
+                    "complexity": 8,
+                    "creativity": 6,
+                    "presentation": 6,
+                    "feedback": 7
+                },
+                "readiness": true,
+                "comment": "Redundancy plan feels strong.",
+                "tags": [
+                    "infra"
+                ]
+            }
+        ],
+        "popularRanking": [
+            "geostories",
+            "pubky-live-vote",
+            "pubky-mcp-server",
+            "pubky-cookbook",
+            "realm",
+            "monky",
+            "pubky-tag-extension",
+            "pubky-homeserver-cli",
+            "decentralized-wiki",
+            "booksy"
+        ]
+    }
 ]

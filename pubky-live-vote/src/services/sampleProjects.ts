@@ -3,9 +3,9 @@ import type { Project } from '../types/project';
 export const demoProjects: Project[] = [
   {
     id: 'pubky-mcp-server',
-    name: 'Pubky MCP Server',
+    name: 'Pubky MCP server',
     description:
-      'An MCP server that lets developers talk to Pubky in plain English instead of wrestling with testnet setup, keypair management, and API docs.',
+      'An MCP server can let developers talk to Pubky in plain English instead of wrestling with testnet setup, keypair management, and API docs.',
     tags: ['developer-tools', 'automation', 'sdk'],
     scores: {
       complexity: 8,
@@ -19,8 +19,8 @@ export const demoProjects: Project[] = [
   },
   {
     id: 'pubky-homeserver-cli',
-    name: 'CLI for Pubky Homeserver',
-    description: 'A single command-line tool that automates homeserver flows so teams can script deployments without writing code.',
+    name: 'CLI for pubky homeserver',
+    description: 'One tool for automation of flow with commands instead of code',
     tags: ['cli', 'infrastructure', 'automation'],
     scores: {
       complexity: 7,
@@ -34,8 +34,8 @@ export const demoProjects: Project[] = [
   },
   {
     id: 'pubky-tag-extension',
-    name: 'Browser Extension to Tag the Web',
-    description: 'A browser companion that lets you tag articles and research with Pubky metadata so information sources stay compartmentalised.',
+    name: 'Browser extension to tag the web',
+    description: 'No easy way to compartmentalize your information sources and content',
     tags: ['browser', 'productivity', 'tagging'],
     scores: {
       complexity: 6,
@@ -50,7 +50,7 @@ export const demoProjects: Project[] = [
   {
     id: 'booksy',
     name: 'Booksy',
-    description: 'A bookmark sharing browser extension so teams can curate and exchange Pubky-powered reading lists.',
+    description: 'A bookmark sharing browser extension',
     tags: ['community', 'browser', 'sharing'],
     scores: {
       complexity: 5,
@@ -65,7 +65,7 @@ export const demoProjects: Project[] = [
   {
     id: 'pubky-cookbook',
     name: 'Cookbook',
-    description: 'A fast-start cookbook that makes it easy to onboard developers with runnable Pubky code samples.',
+    description: 'To bmake it easy to onboard developers',
     tags: ['education', 'docs', 'developer-tools'],
     scores: {
       complexity: 6,
@@ -80,7 +80,7 @@ export const demoProjects: Project[] = [
   {
     id: 'decentralized-wiki',
     name: 'Decentralized Wiki',
-    description: 'A Pubky-based wiki where community knowledge is published without central control.',
+    description: 'Pubky-based decentralized wiki',
     tags: ['knowledge', 'governance', 'pubky'],
     scores: {
       complexity: 7,
@@ -95,7 +95,7 @@ export const demoProjects: Project[] = [
   {
     id: 'monky',
     name: 'MonKy',
-    description: 'Social contracts anchored to Pubky keys so agreements stay verifiable across the network.',
+    description: 'Social contracts based on keys',
     tags: ['social', 'identity', 'governance'],
     scores: {
       complexity: 8,
@@ -110,7 +110,7 @@ export const demoProjects: Project[] = [
   {
     id: 'pubky-live-vote',
     name: 'Pubky Live Vote',
-    description: 'Let hackathon participants score every project with real-time leaderboards and Pubky authentication.',
+    description: 'Allow participants of the hackathon to vote for each projects',
     tags: ['voting', 'event', 'pubky'],
     scores: {
       complexity: 6,
@@ -126,7 +126,7 @@ export const demoProjects: Project[] = [
     id: 'geostories',
     name: 'GeoStories',
     description:
-      'An interactive map for sharing stories and photos at specific locations using the pubky-sdk to anchor provenance.',
+      'A way to view and add markers to a map for sharing stories and photos to particular geographic locations using pubky-sdk',
     tags: ['mapping', 'storytelling', 'pubky'],
     scores: {
       complexity: 7,
@@ -141,7 +141,7 @@ export const demoProjects: Project[] = [
   {
     id: 'realm',
     name: 'Realm',
-    description: 'A UDP relay that attaches itself to a homeserver instance to keep Pubky traffic resilient.',
+    description: 'UDP relay that attaches itself to a homeserver instance',
     tags: ['networking', 'infrastructure', 'homeserver'],
     scores: {
       complexity: 8,
@@ -152,21 +152,5 @@ export const demoProjects: Project[] = [
     readiness: true,
     userTags: ['infra'],
     aiScore: 80
-  },
-  {
-    id: 'pubkylab',
-    name: 'PubkyLab',
-    description:
-      'A web-based playground where developers can instantly test Pubky SDK operations with real-time results.',
-    tags: ['developer-tools', 'playground', 'sdk'],
-    scores: {
-      complexity: 7,
-      creativity: 8,
-      presentation: 8,
-      feedback: 9
-    },
-    readiness: true,
-    userTags: ['sdk', 'playground'],
-    aiScore: 90
   }
 ];
