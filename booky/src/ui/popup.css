@@ -254,11 +254,11 @@ body.popup-window .pop-out-button {
   border-radius: 2px;
 }
 
-.add-pubkey-section {
+.add-pubky-section {
   margin-bottom: 20px;
 }
 
-.add-pubkey-section h3 {
+.add-pubky-section h3 {
   font-size: 16px;
   color: #f5f5f5;
   margin-bottom: 12px;
@@ -314,7 +314,7 @@ body.popup-window .pop-out-button {
   margin-bottom: 4px;
 }
 
-.folder-pubkey {
+.folder-pubky {
   font-size: 12px;
   color: #aaa;
   font-family: monospace;

@@ -105,13 +105,13 @@ function showMainScreen(data) {
   mainScreen.style.display = 'block';
   updatePopOutButtonVisibility();
 
-  // Display user info - full pubkey
+  // Display user info - full pubky
   userPubkey.textContent = data.pubkey;
   userPubkey.title = 'Click to copy';
   userPubkey.style.cursor = 'pointer';
   
-  // Make pubkey copyable
-  userPubkey.onclick = () => copyToClipboard(data.pubkey, 'Public key copied!');
+  // Make pubky copyable
+  userPubkey.onclick = () => copyToClipboard(data.pubkey, 'Pubky copied!');
   
   userFolder.textContent = data.folderName;
 
@@ -158,7 +158,7 @@ function createFolderItem(folderName, pubkey, status, canRemove) {
   name.textContent = folderName;
 
   const pubkeyEl = document.createElement('div');
-  pubkeyEl.className = 'folder-pubkey';
+  pubkeyEl.className = 'folder-pubky';
   pubkeyEl.textContent = pubkey.substring(0, 20) + '...';
 
   info.appendChild(name);
@@ -281,7 +281,7 @@ async function handleSetup() {
 
   // Validate homeserver
   if (!homeserver) {
-    showError('Please enter a homeserver public key');
+    showError('Please enter a homeserver pubky');
     return;
   }
 
@@ -334,12 +334,12 @@ async function handleAddPubkey() {
   const pubkey = monitorPubkeyInput.value.trim();
 
   if (!pubkey) {
-    showError('Please enter a pubkey');
+    showError('Please enter a pubky');
     return;
   }
 
   if (pubkey.length < 7) {
-    showError('Invalid pubkey format');
+    showError('Invalid pubky format');
     return;
   }
 
@@ -361,7 +361,7 @@ async function handleAddPubkey() {
         displayFolders(statusResponse.data);
       }
     } else {
-      showError(response.error || 'Failed to add public key');
+      showError(response.error || 'Failed to add pubky');
     }
   } catch (error) {
     console.error('Add pubkey error:', error);
@@ -414,7 +414,7 @@ async function removePubkey(pubkey) {
         displayFolders(statusResponse.data);
       }
     } else {
-      showError(response.error || 'Failed to remove public key');
+      showError(response.error || 'Failed to remove pubky');
     }
   } catch (error) {
     console.error('Remove pubkey error:', error);
@@ -491,7 +491,7 @@ async function handleRecoveryFileSelect(event) {
     const inviteCode = inviteCodeInput.value.trim() || null;
     
     if (!homeserver) {
-      showError('Please enter a homeserver public key');
+      showError('Please enter a homeserver pubky');
       return;
     }
 
