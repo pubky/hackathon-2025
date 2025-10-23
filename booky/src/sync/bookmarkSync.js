@@ -19,6 +19,7 @@ export class BookmarkSync {
     this.deletingUrls = new Set(); // Track URLs currently being deleted
     this.ignoreEvents = false; // Flag to ignore bookmark events during sync
     this.urlCache = new Map(); // Cache browser ID -> URL mapping
+    this.syncTimeout = null; // Debounce timer reference
   }
 
   /**
@@ -276,6 +277,40 @@ export class BookmarkSync {
         }
       }
     });
+  }
+
+  /**
+   * Tear down listeners and clear caches to avoid leakage across users
+   */
+  async destroy() {
+    try {
+      // Prevent any further reactions from this instance
+      this.ignoreEvents = true;
+
+      // Clear any pending sync timers
+      if (this.syncTimeout) {
+        clearTimeout(this.syncTimeout);
+        this.syncTimeout = null;
+      }
+
+      // Clear internal caches
+      if (this.folderCache) this.folderCache.clear();
+      if (this.urlCache) this.urlCache.clear();
+      if (this.deletingUrls) this.deletingUrls.clear();
+
+      // Invalidate any cached keypair in this instance's key manager
+      if (this.keyManager && this.keyManager.cachedKeypair) {
+        this.keyManager.cachedKeypair = null;
+      }
+
+      // Clear homeserver session for this instance
+      if (this.homeserverClient) {
+        this.homeserverClient.session = null;
+        this.homeserverClient.signer = null;
+      }
+    } catch (error) {
+      logger.warn('Failed to destroy BookmarkSync cleanly:', error);
+    }
   }
 
   /**

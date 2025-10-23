@@ -17,6 +17,35 @@ let bookmarkSync;
 let storageManager;
 
 /**
+ * Ensure global instances are initialized
+ */
+async function ensureInitialized() {
+  if (!storageManager) {
+    // const { StorageManager } = await import('./storage/storageManager.js');
+    storageManager = new StorageManager();
+  }
+  if (!keyManager) {
+    // const { KeyManager } = await import('./crypto/keyManager.js');
+    keyManager = new KeyManager();
+  }
+  if (!homeserverClient) {
+    // const { HomeserverClient } = await import('./pubky/homeserverClient.js');
+    homeserverClient = new HomeserverClient();
+  }
+  if (!bookmarkSync) {
+    // const { BookmarkSync } = await import('./sync/bookmarkSync.js');
+    bookmarkSync = new BookmarkSync();
+    
+    // If user is set up, initialize the sync engine and do initial sync
+    const hasSetup = await storageManager.hasCompletedSetup();
+    if (hasSetup) {
+      await bookmarkSync.initialize();
+      await bookmarkSync.syncAll();
+    }
+  }
+}
+
+/**
  * Initialize the extension
  */
 async function initialize() {
@@ -65,6 +94,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * Handle message actions
  */
 async function handleMessage(message) {
+  // Ensure global instances are initialized
+  await ensureInitialized();
+
   switch (message.action) {
     case 'setup':
       await handleSetup(message.homeserver, message.inviteCode);
@@ -298,19 +330,23 @@ async function handleSignOut() {
   logger.log('Signing out user');
 
   try {
-    // Clear homeserver session
-    if (homeserverClient) {
-      homeserverClient.session = null;
-      homeserverClient.signer = null;
+    // Stop and tear down any active sync engine
+    if (bookmarkSync) {
+      await bookmarkSync.destroy();
     }
+
+    // Clear homeserver session/client
+    homeserverClient = null;
 
     // Clear all local storage
     await storageManager.clearAll();
+    storageManager = null;
 
     // Clear cached keypair
-    if (keyManager) {
-      keyManager.cachedKeypair = null;
-    }
+    keyManager = null;
+
+    // Clear bookmark sync
+    bookmarkSync = null;
 
     logger.log('Sign out completed');
   } catch (error) {
