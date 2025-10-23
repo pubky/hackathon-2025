@@ -45,10 +45,10 @@ fn load_icon() -> Result<egui::IconData> {
     let image = image::open(icon_path)
         .map_err(|e| anyhow!("Failed to load icon: {e}"))?
         .into_rgba8();
-    
+
     let (width, height) = image.dimensions();
     let rgba = image.into_raw();
-    
+
     Ok(egui::IconData {
         rgba,
         width: width as u32,
@@ -61,7 +61,7 @@ fn load_logo_image() -> Option<egui::ColorImage> {
     let image = image::open(logo_path).ok()?.into_rgba8();
     let size = [image.width() as usize, image.height() as usize];
     let pixels = image.into_raw();
-    
+
     Some(egui::ColorImage::from_rgba_unmultiplied(size, &pixels))
 }
 
@@ -251,6 +251,11 @@ impl PubkyApp {
         let follows = self.get_my_follows(session);
 
         let mut result = vec![];
+
+        // Add the current user's version as a fork (root version)
+        let own_pk = session.info().public_key().to_string();
+        result.push(format!("{own_pk}/{page_id}"));
+
         for follow_pk in follows {
             let fork_path = format!("pubky://{follow_pk}/pub/wiki.app/{page_id}");
             log::info!("fork_path = {fork_path}");
@@ -274,7 +279,7 @@ impl eframe::App for PubkyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
-                
+
                 // Display logo
                 if self.logo_texture.is_none() {
                     if let Some(logo_image) = &self.logo_image {
@@ -285,13 +290,13 @@ impl eframe::App for PubkyApp {
                         ));
                     }
                 }
-                
+
                 if let Some(texture) = &self.logo_texture {
                     let logo_size = egui::vec2(64.0, 64.0);
                     ui.add(egui::Image::from_texture(texture).max_size(logo_size));
                     ui.add_space(10.0);
                 }
-                
+
                 ui.heading(APP_NAME);
                 ui.add_space(20.0);
 
