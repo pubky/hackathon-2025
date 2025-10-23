@@ -77,11 +77,11 @@ echo "🌐 Fetching pkdns (DNS resolver)..."
 if [ -d "$DATA_DIR/pkdns/.git" ]; then
     echo "   Updating existing pkdns..."
     cd "$DATA_DIR/pkdns"
-    git pull origin main --depth 1
+    git pull origin master --depth 1
     cd - > /dev/null
 else
     echo "   Cloning pkdns..."
-    git clone --depth 1 --filter=blob:none --sparse https://github.com/pubky/pkdns.git "$DATA_DIR/pkdns"
+    git clone --depth 1 --filter=blob:none --sparse --branch master https://github.com/pubky/pkdns.git "$DATA_DIR/pkdns"
     cd "$DATA_DIR/pkdns"
     git sparse-checkout set docs cli server
     cd - > /dev/null
