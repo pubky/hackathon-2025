@@ -1,0 +1,71 @@
+{
+  "name": "@pubky/mcp-server",
+  "version": "1.0.0",
+  "description": "Complete Pubky ecosystem MCP server - All 6 official projects (Pkarr, Pkdns, Pubky Core, App Specs, Nexus API, Nexus) with 75+ resources and 65+ dev tools",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "pubky-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "data",
+    "README.md",
+    "SETUP.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "fetch-resources": "bash scripts/fetch-resources.sh",
+    "build": "npm run fetch-resources && tsc",
+    "build:quick": "tsc",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js",
+    "dev": "npm run build:quick && node dist/index.js",
+    "prepublishOnly": "npm run build",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check",
+    "fix": "npm run lint:fix && npm run format"
+  },
+  "keywords": [
+    "pubky",
+    "pkarr",
+    "pkdns",
+    "pubky-core",
+    "pubky-app-specs",
+    "pubky-nexus",
+    "nexus-api",
+    "mcp",
+    "model-context-protocol",
+    "decentralized",
+    "social",
+    "dht",
+    "dns",
+    "web3",
+    "ai-assistant",
+    "cursor"
+  ],
+  "author": "Pubky Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pubky/pubky-hackathon.git",
+    "directory": "pubky-mcp-server"
+  },
+  "homepage": "https://github.com/pubky/pubky-hackathon/tree/main/pubky-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/pubky/pubky-hackathon/issues"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "oxlint": "^1.23.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pubky": {
+      "command": "node",
+      "args": ["/absolute/path/to/hackathon-2025/pubky-mcp-server/dist/index.js"]
+    }
+  }
+}
+
+// Note: No environment variables needed!
+// All resources (Pkarr, Pkdns, Pubky Core, App Specs, Nexus) 
+// are automatically fetched and bundled during 'npm run build'

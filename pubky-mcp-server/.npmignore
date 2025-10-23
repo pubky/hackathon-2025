@@ -1,0 +1,29 @@
+# Source files
+src/
+tsconfig.json
+
+# Development files
+node_modules/
+.cursor/
+scripts/
+
+# Git
+.git/
+.gitignore
+**/.git/
+
+# Test files
+*.test.js
+*.test.ts
+
+# Documentation (keep README.md and SETUP.md)
+cursor-config-example.json
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
