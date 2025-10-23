@@ -42,3 +42,10 @@ Start the app and create a wiki page with
 Browse the links, fork any page, or create new pages.
 
 ## Downloads
+
+You can find binaries here: https://github.com/ok300/hackathon-2025/releases/tag/v0.1
+
+
+## License
+
+MIT
