@@ -259,14 +259,10 @@ impl PubkyApp {
         for follow_pk in follows {
             let fork_path = format!("pubky://{follow_pk}/pub/wiki.app/{page_id}");
             log::info!("fork_path = {fork_path}");
-            let exists_fut = pub_storage.exists(fork_path);
+            let exists_fut = pub_storage.get(fork_path);
 
             match self.rt.block_on(exists_fut) {
-                Ok(exists) => {
-                    if exists {
-                        result.push(format!("{follow_pk}/{page_id}"));
-                    }
-                }
+                Ok(_) => result.push(format!("{follow_pk}/{page_id}")),
                 Err(e) => log::error!("Failed to check if file exists: {e}"),
             }
         }
