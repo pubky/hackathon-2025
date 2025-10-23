@@ -11,6 +11,8 @@ const setupButton = document.getElementById('setup-button');
 const importButton = document.getElementById('import-button');
 const recoveryFileInput = document.getElementById('recovery-file-input');
 const signinRecoveryCodeButton = document.getElementById('signin-recovery-code-button');
+const popOutButton = document.getElementById('pop-out-button');
+const popOutButtonMain = document.getElementById('pop-out-button-main');
 const homeserverInput = document.getElementById('homeserver');
 const inviteCodeInput = document.getElementById('invite-code');
 const setupResult = document.getElementById('setup-result');
@@ -91,6 +93,7 @@ function showSetupScreen() {
   loading.style.display = 'none';
   setupScreen.style.display = 'block';
   mainScreen.style.display = 'none';
+  updatePopOutButtonVisibility();
 }
 
 /**
@@ -100,6 +103,7 @@ function showMainScreen(data) {
   loading.style.display = 'none';
   setupScreen.style.display = 'none';
   mainScreen.style.display = 'block';
+  updatePopOutButtonVisibility();
 
   // Display user info - full pubkey
   userPubkey.textContent = data.pubkey;
@@ -581,6 +585,35 @@ async function handleCopyRecoveryCodeMain() {
 }
 
 /**
+ * Handle pop out to new window
+ */
+function handlePopOut() {
+  try {
+    // Get the current popup URL with a parameter to mark it as a popup window
+    const popupUrl = browserAPI.runtime.getURL('popup.html?popup=true');
+    
+    // Open in a new window with dimensions matching extension popup
+    browserAPI.windows.create({
+      url: popupUrl,
+      type: 'popup',
+      width: 400,
+      height: 520,
+      left: 100,
+      top: 100
+    }).then((window) => {
+      // Close the original popup
+      window.close();
+    }).catch((error) => {
+      console.error('Failed to open popup window:', error);
+      showError('Failed to open in new window');
+    });
+  } catch (error) {
+    console.error('Error opening popup window:', error);
+    showError('Failed to open in new window');
+  }
+}
+
+/**
  * Show passphrase modal
  */
 function showPassphraseModal(operation, recoveryFileContent = null, homeserver = null, inviteCode = null) {
@@ -685,6 +718,11 @@ setupButton.addEventListener('click', handleSetup);
 importButton.addEventListener('click', handleImportRecoveryFile);
 recoveryFileInput.addEventListener('change', handleRecoveryFileSelect);
 signinRecoveryCodeButton.addEventListener('click', showRecoveryCodeModal);
+
+// Pop-out event listeners
+popOutButton.addEventListener('click', handlePopOut);
+popOutButtonMain.addEventListener('click', handlePopOut);
+
 addPubkeyButton.addEventListener('click', handleAddPubkey);
 manualSyncButton.addEventListener('click', handleManualSync);
 exportButton.addEventListener('click', handleExportRecoveryFile);
@@ -700,6 +738,7 @@ closePassphraseModalButton.addEventListener('click', hidePassphraseModal);
 confirmRecoveryCodeButton.addEventListener('click', handleRecoveryCodeModalConfirm);
 cancelRecoveryCodeButton.addEventListener('click', hideRecoveryCodeModal);
 closeRecoveryCodeModalButton.addEventListener('click', hideRecoveryCodeModal);
+
 
 // Handle Enter key in passphrase input
 passphraseInput.addEventListener('keypress', (e) => {
@@ -728,5 +767,52 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  checkWindowType();
+});
+
+/**
+ * Check if we should show the pop-out button and hide it when not needed
+ */
+function checkWindowType() {
+  updatePopOutButtonVisibility();
+  
+  // Check if we're in a popup window by looking for the URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const isPopupWindow = urlParams.get('popup') === 'true';
+  
+  if (isPopupWindow) {
+    // Add a visual indicator that we're in popup mode
+    document.body.classList.add('popup-window');
+  }
+}
+
+/**
+ * Update pop-out button visibility based on current context
+ */
+function updatePopOutButtonVisibility() {
+  // Check if we're in a popup window by looking for the URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const isPopupWindow = urlParams.get('popup') === 'true';
+  
+  // Detect if we're in Firefox
+  const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+  
+  // Check if we're on the setup screen (sign-up page)
+  const isSetupScreen = setupScreen && setupScreen.style.display !== 'none';
+  
+  // Only show pop-out button on Firefox during sign-up (setup screen)
+  const shouldShowPopOut = isFirefox && !isPopupWindow && isSetupScreen;
+  
+  if (shouldShowPopOut) {
+    // Show the pop-out buttons
+    if (popOutButton) popOutButton.style.display = 'flex';
+    if (popOutButtonMain) popOutButtonMain.style.display = 'flex';
+  } else {
+    // Hide the pop-out buttons
+    if (popOutButton) popOutButton.style.display = 'none';
+    if (popOutButtonMain) popOutButtonMain.style.display = 'none';
+  }
+}
 
