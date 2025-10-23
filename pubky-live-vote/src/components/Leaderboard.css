@@ -35,7 +35,7 @@
 
 .leaderboard__row {
   display: grid;
-  grid-template-columns: 60px minmax(160px, 1fr) repeat(7, minmax(60px, 1fr));
+  grid-template-columns: 60px minmax(160px, 1fr) repeat(6, minmax(60px, 1fr));
   gap: 0.8rem;
   align-items: center;
   background: linear-gradient(135deg, rgba(18, 20, 33, 0.9), rgba(12, 14, 24, 0.92));
@@ -72,14 +72,14 @@
 @media (max-width: 960px) {
   .leaderboard__row,
   .leaderboard__row--header {
-    grid-template-columns: 50px minmax(140px, 1fr) repeat(7, minmax(50px, 1fr));
+    grid-template-columns: 50px minmax(140px, 1fr) repeat(6, minmax(50px, 1fr));
   }
 }
 
 @media (max-width: 720px) {
   .leaderboard__row,
   .leaderboard__row--header {
-    grid-template-columns: 45px minmax(130px, 1fr) repeat(7, minmax(45px, 1fr));
+    grid-template-columns: 45px minmax(130px, 1fr) repeat(6, minmax(45px, 1fr));
     font-size: 0.85rem;
   }
 }

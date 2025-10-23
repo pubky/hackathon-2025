@@ -68,7 +68,6 @@ export const Leaderboard = () => {
           <span role="columnheader">Readiness</span>
           <span role="columnheader">Presentation</span>
           <span role="columnheader">Feedback</span>
-          <span role="columnheader">Popular</span>
         </div>
         {rows.map((row, index) => (
           <div key={row.projectId} className="leaderboard__row" role="row">
@@ -82,7 +81,6 @@ export const Leaderboard = () => {
             <span role="cell">{integerFormatter.format(row.components.readiness)}</span>
             <span role="cell">{integerFormatter.format(row.components.presentation)}</span>
             <span role="cell">{integerFormatter.format(row.components.feedback)}</span>
-            <span role="cell">{integerFormatter.format(row.components.popular)}</span>
           </div>
         ))}
       </div>
