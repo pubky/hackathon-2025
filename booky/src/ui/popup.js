@@ -171,6 +171,13 @@ function createFolderItem(folderName, pubkey, status, canRemove) {
   statusContainer.appendChild(statusIcon);
 
   if (canRemove) {
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'share-button';
+    shareBtn.textContent = '+';
+    shareBtn.title = 'Create private sharing folder for this key';
+    shareBtn.onclick = () => createSharingFolder(pubkey);
+    statusContainer.appendChild(shareBtn);
+
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove-button';
     removeBtn.textContent = 'Remove';
@@ -362,6 +369,27 @@ async function handleAddPubkey() {
   } finally {
     addPubkeyButton.disabled = false;
     addPubkeyButton.textContent = 'Add';
+  }
+}
+
+/**
+ * Handle creating sharing folder for monitored pubkey
+ */
+async function createSharingFolder(pubkey) {
+  try {
+    const response = await sendMessage({
+      action: 'createSharingFolder',
+      pubkey: pubkey
+    });
+
+    if (response.success) {
+      showToast('Sharing folder created successfully');
+    } else {
+      showError(response.error || 'Failed to create sharing folder');
+    }
+  } catch (error) {
+    console.error('Create sharing folder error:', error);
+    showError(error.message);
   }
 }
 

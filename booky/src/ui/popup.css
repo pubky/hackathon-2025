@@ -354,6 +354,23 @@ body.popup-window .pop-out-button {
   to { transform: rotate(360deg); }
 }
 
+.share-button {
+  padding: 4px 8px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  min-width: 28px;
+}
+
+.share-button:hover {
+  background: #2a2a2a;
+}
+
 .remove-button {
   padding: 4px 8px;
   background: #dc3545;

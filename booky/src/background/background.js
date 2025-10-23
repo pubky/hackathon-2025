@@ -110,6 +110,10 @@ async function handleMessage(message) {
       await handleRemoveMonitoredPubkey(message.pubkey);
       return { success: true };
 
+    case 'createSharingFolder':
+      await handleCreateSharingFolder(message.pubkey);
+      return { success: true };
+
     case 'manualSync':
       await bookmarkSync.syncAll();
       return { success: true };
@@ -321,6 +325,18 @@ async function handleRemoveMonitoredPubkey(pubkey) {
   await storageManager.removeMonitoredPubkey(pubkey);
 
   logger.log('Monitored pubkey removed:', pubkey);
+}
+
+/**
+ * Handle creating sharing folder for a monitored pubkey
+ */
+async function handleCreateSharingFolder(pubkey) {
+  logger.log('Creating sharing folder for pubkey:', pubkey);
+
+  // Create folder in priv_sharing with the monitored key's folder name
+  await bookmarkSync.createPrivSharingFolder(pubkey);
+
+  logger.log('Sharing folder created for:', pubkey);
 }
 
 /**

@@ -531,6 +531,51 @@ export class BookmarkSync {
   }
 
   /**
+   * Create a sharing folder in priv_sharing for a monitored pubkey
+   * This creates a folder in the current user's priv_sharing directory
+   * named after the monitored key, so bookmarks can be shared with them
+   */
+  async createPrivSharingFolder(monitoredPubkey) {
+    try {
+      // Get the user's own pubkey and folder
+      const ownPubkey = await this.keyManager.getPublicKey();
+
+      // Get or create the user's main folder
+      const mainFolderId = await this.getOrCreateFolder(ownPubkey, true);
+      if (!mainFolderId) {
+        throw new Error('User main folder not found');
+      }
+
+      // Ensure priv_sharing folder exists in user's main folder
+      const privSharingFolderId = await this.ensurePrivSharingFolder(mainFolderId);
+
+      // Create folder named after the MONITORED key (the key we're sharing WITH)
+      const monitoredFolderName = this.keyManager.getFolderName(monitoredPubkey);
+
+      // Check if folder already exists
+      const children = await browser.bookmarks.getChildren(privSharingFolderId);
+      for (const child of children) {
+        if (!child.url && child.title === monitoredFolderName) {
+          logger.log('Sharing folder already exists for:', monitoredFolderName);
+          return child.id;
+        }
+      }
+
+      // Create the folder for sharing with the monitored key
+      const sharingFolder = await browser.bookmarks.create({
+        parentId: privSharingFolderId,
+        title: monitoredFolderName
+      });
+
+      logger.log('Created sharing folder:', monitoredFolderName, 'in current user\'s priv_sharing for sharing with:', monitoredPubkey);
+      return sharingFolder.id;
+    } catch (error) {
+      logger.error('Failed to create sharing folder:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get bookmarks bar ID
    */
   async getBookmarksBar() {
