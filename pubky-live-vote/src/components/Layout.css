@@ -9,7 +9,7 @@
 
 .top-nav {
   display: grid;
-  grid-template-columns: auto minmax(200px, 1fr) auto;
+  grid-template-columns: auto minmax(200px, 1fr);
   align-items: center;
   gap: clamp(1rem, 3vw, 2rem);
   padding: 0.9rem clamp(1rem, 2.5vw, 1.5rem);
