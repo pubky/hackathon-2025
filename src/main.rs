@@ -25,15 +25,44 @@ fn main() -> Result<()> {
     let rt = Runtime::new()?;
     let app = PubkyApp::new(rt);
 
+    // Load icon
+    let icon = load_icon()?;
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([600.0, 700.0])
-            .with_title(APP_NAME),
+            .with_title(APP_NAME)
+            .with_icon(icon),
         ..Default::default()
     };
 
     eframe::run_native(APP_NAME, options, Box::new(|_cc| Ok(Box::new(app))))
         .map_err(|e| anyhow!("{e}"))
+}
+
+fn load_icon() -> Result<egui::IconData> {
+    let icon_path = "assets/logo.png";
+    let image = image::open(icon_path)
+        .map_err(|e| anyhow!("Failed to load icon: {e}"))?
+        .into_rgba8();
+    
+    let (width, height) = image.dimensions();
+    let rgba = image.into_raw();
+    
+    Ok(egui::IconData {
+        rgba,
+        width: width as u32,
+        height: height as u32,
+    })
+}
+
+fn load_logo_image() -> Option<egui::ColorImage> {
+    let logo_path = "assets/logo.png";
+    let image = image::open(logo_path).ok()?.into_rgba8();
+    let size = [image.width() as usize, image.height() as usize];
+    let pixels = image.into_raw();
+    
+    Some(egui::ColorImage::from_rgba_unmultiplied(size, &pixels))
 }
 
 #[derive(Clone)]
@@ -62,6 +91,8 @@ pub(crate) enum ViewState {
 pub(crate) struct PubkyApp {
     pub(crate) state: Arc<Mutex<AuthState>>,
     qr_texture: Option<egui::TextureHandle>,
+    logo_texture: Option<egui::TextureHandle>,
+    logo_image: Option<egui::ColorImage>,
     pub(crate) view_state: ViewState,
     /// Content for the Edit Wiki view
     pub(crate) edit_wiki_content: String,
@@ -118,9 +149,14 @@ impl PubkyApp {
             }
         });
 
+        // Load logo image
+        let logo_image = load_logo_image();
+
         Self {
             state,
             qr_texture: None,
+            logo_texture: None,
+            logo_image,
             view_state: ViewState::WikiList,
             edit_wiki_content: String::new(),
             selected_wiki_page_id: String::new(),
@@ -238,6 +274,24 @@ impl eframe::App for PubkyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
+                
+                // Display logo
+                if self.logo_texture.is_none() {
+                    if let Some(logo_image) = &self.logo_image {
+                        self.logo_texture = Some(ui.ctx().load_texture(
+                            "logo",
+                            logo_image.clone(),
+                            Default::default(),
+                        ));
+                    }
+                }
+                
+                if let Some(texture) = &self.logo_texture {
+                    let logo_size = egui::vec2(64.0, 64.0);
+                    ui.add(egui::Image::from_texture(texture).max_size(logo_size));
+                    ui.add_space(10.0);
+                }
+                
                 ui.heading(APP_NAME);
                 ui.add_space(20.0);
 
