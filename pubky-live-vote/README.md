@@ -12,6 +12,61 @@ Pubky Live Vote is a responsive hackathon voting interface that uses the Pubky J
 - **Offline cache** – ballots queue in local storage whenever the network is down and flush automatically once connectivity is restored.
 - **Live leaderboard** – polls the Pubky homeserver summary (or aggregates ballots directly) every 10 seconds, showing the voter count and data source for transparency.
 
+## Architecture overview
+
+Pubky Live Vote is a single-page Vite + React application that talks directly to the Pubky JavaScript SDK. The architecture is intentionally thin—everything runs client-side so hackathon organisers can deploy the app as static files while still benefiting from secure storage through Pubky.
+
+### Core modules
+
+| Layer | Key modules | Responsibilities |
+| --- | --- | --- |
+| **UI** | `src/components/*` | Presentation components for ballot entry, leaderboard, navigation chrome, and responsive layouts. Each component receives state via props or React context to keep rendering predictable. |
+| **State & context** | `src/context/AuthContext`, `src/context/ProjectsContext` | Centralises session, project catalogue, and submission state. Auth context exposes the connected Pubky identity plus loading/error states. Projects context provides rubric metadata, cached ballots, and helper actions. |
+| **Services** | `src/services/pubkyClient`, `src/services/offlineQueue`, `src/services/sampleData` | Wrap Pubky SDK calls (login, ballot CRUD, summary fetch) and isolate network logic. The offline queue abstracts localStorage persistence, while sample data powers the preview mode used before the homeserver is reachable. |
+| **Types & utilities** | `src/types`, `src/services/scoring` | Declare the shared interfaces for ballots, rubric weights, and leaderboard entries, plus pure functions to calculate weighted scores and tie-breakers. |
+
+### Runtime data flow
+
+1. **Bootstrap** – when the app mounts, it loads configuration from `window.__PUBKY_CONFIG__`, instantiates the Pubky SDK (or the mocked client), and pulls the current project list plus any cached ballots.
+2. **Authentication** – the login dialog triggers a Pubky Ring session. Auth context resolves to either a verified Pubky identity or the offline mock identity so users can continue testing.
+3. **Ballot capture** – the ballot form emits updates into local React state; on submit the service layer signs and uploads the payload to `pubky-live-vote/ballots/<public-key>.json` via the SDK. When offline, submissions append to the queue and display a pending badge.
+4. **Leaderboard refresh** – a polling effect queries `summary.json`. When the summary endpoint fails, the app composes the leaderboard from cached ballots and marks the data source accordingly.
+5. **Feedback loop** – successful submissions rehydrate the local cache, prune duplicates, and broadcast the update to any open tabs using the browser Broadcast Channel API so multiple screens stay in sync.
+
+### Build & deployment pipeline
+
+1. Developers run `npm run dev` for a hot-reloading Vite server with the mock Pubky client prewired.
+2. `npm run build` performs a production build and TypeScript type checking, emitting static assets in `dist/`.
+3. GitHub Actions (see [`.github/workflows/deploy-pages.yml`](../.github/workflows/deploy-pages.yml)) runs on pushes to `main`, builds the app, and publishes `dist/` to GitHub Pages with a correctly scoped base path.
+4. Organisers can host the same `dist/` bundle on any static hosting provider; no server-side component is required beyond the Pubky homeserver that stores ballots.
+
+## Voting lifecycle
+
+The diagram below summarises a typical voter session:
+
+1. **Discovery** – voter opens the published URL from a QR code or shared link.
+2. **Join** – the app requests a login session; the voter scans the Pubky Ring QR code or, if unavailable, uses the mock client to simulate approval.
+3. **Score** – projects load with rubric sliders, comment fields, and quick tags. The UI validates input ranges and blocks submission until every mandatory criterion is rated.
+4. **Submit** – once the user presses **Submit ballot**, the app signs the payload and attempts to push it to the configured homeserver. Any failure routes the ballot into the offline queue.
+5. **Sync** – the background worker retries queued ballots whenever connectivity returns and posts toast notifications for each success.
+6. **Leaderboard** – after a ballot lands, the leaderboard refreshes to show the updated totals and ranking with context on the data source (summary vs. locally aggregated ballots).
+
+## Development process & friction log
+
+During the hackathon build we followed a tight feedback loop:
+
+1. **Prototype UX** – sketched the mobile-first ballot flow in Figma, then stubbed the React components using static data.
+2. **Integrate Pubky** – wired the SDK into the mock client first, swapped to the staging homeserver, and validated auth + storage flows end-to-end.
+3. **Harden offline mode** – implemented the queue, background flush, and conflict resolution before styling polish to guarantee ballot resilience.
+4. **Polish & QA** – ran through event-day scripts (onboarding voters, resetting ballots, viewing standings) with organisers to ensure the copy and state transitions made sense.
+
+### Friction points
+
+- **Invitation code handling** – staging homeserver login required manual token generation, slowing down new device onboarding. Mitigation: added the CLI helper (`npm run signup`) and documented the admin endpoint in this README.
+- **SDK typings lag** – the 0.6.0-rc.6 TypeScript definitions were missing a few optional fields (notably around summary responses), forcing us to extend types locally. We upstreamed the feedback to the Pubky core team.
+- **Mobile keyboard overlap** – iOS Safari covered the lower rubric sliders during testing. The fix was to implement viewport-height safe area CSS variables and adjust scroll anchoring in the ballot component.
+- **Leaderboard polling limits** – aggressive polling tripped rate limiting on early builds. We introduced exponential backoff and a circuit breaker that switches to local aggregation after repeated failures.
+
 ## Getting started
 
 ### Prerequisites
