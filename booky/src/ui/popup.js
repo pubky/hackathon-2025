@@ -31,8 +31,21 @@ const exportButton = document.getElementById('export-button');
 const copyRecoveryCodeMainButton = document.getElementById('copy-recovery-code-main-button');
 const signOutButton = document.getElementById('sign-out-button');
 
+// Passphrase modal elements
+const passphraseModal = document.getElementById('passphrase-modal');
+const passphraseInput = document.getElementById('passphrase-input');
+const confirmPassphraseButton = document.getElementById('confirm-passphrase');
+const cancelPassphraseButton = document.getElementById('cancel-passphrase');
+const closePassphraseModalButton = document.getElementById('close-passphrase-modal');
+
 // Browser API compatibility
 const browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
+
+// Modal state
+let currentOperation = null;
+let pendingRecoveryFileContent = null;
+let pendingHomeserver = null;
+let pendingInviteCode = null;
 
 /**
  * Initialize popup
@@ -408,31 +421,8 @@ async function handleManualSync() {
  * Handle export recovery file
  */
 async function handleExportRecoveryFile() {
-  try {
-    const response = await sendMessage({ action: 'exportRecoveryFile' });
-    
-    if (response.success) {
-      // The recovery file data comes as a regular array from the message system
-      // Convert it back to Uint8Array for proper binary file creation
-      const binaryData = new Uint8Array(response.data);
-      const blob = new Blob([binaryData], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `booky-recovery-${Date.now()}.pkarr`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      showToast('Recovery file downloaded');
-    } else {
-      showError(response.error || 'Export failed');
-    }
-  } catch (error) {
-    console.error('Error exporting recovery file:', error);
-    showError(error.message);
-  }
+  // Show passphrase modal for export
+  showPassphraseModal('exportRecoveryFile');
 }
 
 /**
@@ -470,27 +460,10 @@ async function handleRecoveryFileSelect(event) {
       return;
     }
 
-    showLoading();
-
-    const response = await sendMessage({
-      action: 'importRecoveryFile',
-      recoveryFileContent: Array.from(recoveryBytes), // Convert Uint8Array to regular array for message passing
-      homeserver: homeserver,
-      inviteCode: inviteCode
-    });
-
-    if (response.success) {
-      showToast('Recovery file imported successfully');
-      // Reload the popup to show main screen
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } else {
-      showError(response.error || 'Import failed');
-      showSetupScreen();
-    }
+    // Show passphrase modal instead of directly importing
+    showPassphraseModal('importRecoveryFile', Array.from(recoveryBytes), homeserver, inviteCode);
   } catch (error) {
-    console.error('Error importing recovery file:', error);
+    console.error('Error reading recovery file:', error);
     showError('Invalid recovery file format');
     showSetupScreen();
   }
@@ -604,6 +577,106 @@ async function handleCopyRecoveryCodeMain() {
   }
 }
 
+/**
+ * Show passphrase modal
+ */
+function showPassphraseModal(operation, recoveryFileContent = null, homeserver = null, inviteCode = null) {
+  currentOperation = operation;
+  pendingRecoveryFileContent = recoveryFileContent;
+  pendingHomeserver = homeserver;
+  pendingInviteCode = inviteCode;
+  
+  passphraseInput.value = '';
+  passphraseModal.style.display = 'flex';
+  passphraseInput.focus();
+}
+
+/**
+ * Hide passphrase modal
+ */
+function hidePassphraseModal() {
+  // Clear the file input so it can be triggered again if this was an import operation
+  if (currentOperation === 'importRecoveryFile') {
+    recoveryFileInput.value = '';
+  }
+  
+  passphraseModal.style.display = 'none';
+  currentOperation = null;
+  pendingRecoveryFileContent = null;
+  pendingHomeserver = null;
+  pendingInviteCode = null;
+  passphraseInput.value = '';
+}
+
+/**
+ * Handle passphrase confirmation
+ */
+async function handlePassphraseConfirm() {
+  const passphrase = passphraseInput.value.trim();
+  
+  // Allow empty passphrase (will use empty string)
+  
+  confirmPassphraseButton.disabled = true;
+  confirmPassphraseButton.textContent = 'Processing...';
+  
+  try {
+    if (currentOperation === 'importRecoveryFile') {
+      const response = await sendMessage({
+        action: 'importRecoveryFile',
+        recoveryFileContent: pendingRecoveryFileContent,
+        homeserver: pendingHomeserver,
+        inviteCode: pendingInviteCode,
+        passphrase: passphrase
+      });
+      
+      if (response.success) {
+        hidePassphraseModal();
+        showToast('Recovery file imported successfully');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showError(response.error || 'Import failed');
+        hidePassphraseModal();
+        showSetupScreen();
+      }
+    } else if (currentOperation === 'exportRecoveryFile') {
+      const response = await sendMessage({
+        action: 'exportRecoveryFile',
+        passphrase: passphrase
+      });
+      
+      if (response.success) {
+        hidePassphraseModal();
+        // The recovery file data comes as a regular array from the message system
+        // Convert it back to Uint8Array for proper binary file creation
+        const binaryData = new Uint8Array(response.data);
+        const blob = new Blob([binaryData], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `booky-recovery-${Date.now()}.pkarr`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Recovery file downloaded');
+      } else {
+        showError(response.error || 'Export failed');
+        hidePassphraseModal();
+      }
+    }
+  } catch (error) {
+    console.error('Error processing with passphrase:', error);
+    showError(error.message);
+    hidePassphraseModal();
+  } finally {
+    confirmPassphraseButton.disabled = false;
+    confirmPassphraseButton.textContent = 'Confirm';
+  }
+}
+
 // Event listeners
 setupButton.addEventListener('click', handleSetup);
 importButton.addEventListener('click', handleImportRecoveryFile);
@@ -616,6 +689,25 @@ manualSyncButton.addEventListener('click', handleManualSync);
 exportButton.addEventListener('click', handleExportRecoveryFile);
 copyRecoveryCodeMainButton.addEventListener('click', handleCopyRecoveryCodeMain);
 signOutButton.addEventListener('click', handleSignOut);
+
+// Passphrase modal event listeners
+confirmPassphraseButton.addEventListener('click', handlePassphraseConfirm);
+cancelPassphraseButton.addEventListener('click', hidePassphraseModal);
+closePassphraseModalButton.addEventListener('click', hidePassphraseModal);
+
+// Handle Enter key in passphrase input
+passphraseInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    handlePassphraseConfirm();
+  }
+});
+
+// Handle Escape key to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && passphraseModal.style.display === 'flex') {
+    hidePassphraseModal();
+  }
+});
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', init);

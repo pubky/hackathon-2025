@@ -149,17 +149,17 @@ export class KeyManager {
   /**
    * Export keypair as recovery file using Pubky SDK
    */
-  async exportRecoveryFile() {
+  async exportRecoveryFile(passphrase = '') {
     try {
       const keypair = await this.getKeypair();
       if (!keypair) {
         throw new Error('No keypair found');
       }
 
-      // Use Pubky SDK's createRecoveryFile method
-      const recoveryFile = await keypair.createRecoveryFile('booky');
+      // Use Pubky SDK's createRecoveryFile method with custom passphrase
+      const recoveryFile = await keypair.createRecoveryFile(passphrase);
 
-      logger.log('Created recovery file');
+      logger.log('Created recovery file with custom passphrase');
       return recoveryFile;
     } catch (error) {
       logger.error('Failed to export recovery file:', error);
@@ -190,16 +190,16 @@ export class KeyManager {
   /**
    * Import keypair from recovery file using Pubky SDK
    */
-  async importRecoveryFile(recoveryFileContent) {
+  async importRecoveryFile(recoveryFileContent, passphrase = '') {
     try {
-      // Use Pubky SDK's fromRecoveryFile method
-      const keypair = Keypair.fromRecoveryFile(recoveryFileContent, 'booky');
+      // Use Pubky SDK's fromRecoveryFile method with custom passphrase
+      const keypair = Keypair.fromRecoveryFile(recoveryFileContent, passphrase);
 
       // Get the public key string
       const publicKeyStr = keypair.publicKey.z32();
       const secretKey = keypair.secretKey();
 
-      logger.log('Imported keypair from recovery file, pubkey:', publicKeyStr);
+      logger.log('Imported keypair from recovery file with custom passphrase, pubkey:', publicKeyStr);
 
       return {
         keypair,

@@ -87,7 +87,8 @@ async function handleMessage(message) {
       return { success: true, data: status };
 
     case 'exportRecoveryFile':
-      const recoveryFile = await keyManager.exportRecoveryFile();
+      const passphrase = message.passphrase || '';
+      const recoveryFile = await keyManager.exportRecoveryFile(passphrase);
       // Convert Uint8Array to regular array for message passing
       const recoveryFileArray = Array.from(recoveryFile);
       return { success: true, data: recoveryFileArray };
@@ -97,7 +98,7 @@ async function handleMessage(message) {
       return { success: true, data: recoveryCode };
 
     case 'importRecoveryFile':
-      await handleImportRecoveryFile(message.recoveryFileContent, message.homeserver, message.inviteCode);
+      await handleImportRecoveryFile(message.recoveryFileContent, message.homeserver, message.inviteCode, message.passphrase);
       return { success: true };
 
     case 'signInWithRecoveryCode':
@@ -163,7 +164,7 @@ async function handleSetup(homeserver, inviteCode) {
 /**
  * Handle importing recovery file
  */
-async function handleImportRecoveryFile(recoveryFileContent, homeserver, inviteCode) {
+async function handleImportRecoveryFile(recoveryFileContent, homeserver, inviteCode, passphrase = '') {
   logger.log('Starting import recovery file with homeserver:', homeserver);
 
   let keypair = null;
@@ -175,12 +176,12 @@ async function handleImportRecoveryFile(recoveryFileContent, homeserver, inviteC
     const recoveryFileUint8 = new Uint8Array(recoveryFileContent);
 
     // Import key from recovery file (don't store yet)
-    const keyData = await keyManager.importRecoveryFile(recoveryFileUint8);
+    const keyData = await keyManager.importRecoveryFile(recoveryFileUint8, passphrase);
     keypair = keyData.keypair;
     publicKeyStr = keyData.publicKey;
     secretKey = keyData.secretKey;
 
-    logger.log('Imported keypair from recovery file (not stored yet)');
+    logger.log('Imported keypair from recovery file with custom passphrase (not stored yet)');
 
     // Try to sign in with homeserver
     await homeserverClient.initialize();
