@@ -67,7 +67,9 @@ export const LoginCard = () => {
         <div className="qr-wrapper" aria-live="polite">
           {authorizationUrl ? (
             <div className="qr-container">
-              <QRCode value={authorizationUrl} />
+              <div className="qr-code">
+                <QRCode value={authorizationUrl} />
+              </div>
               <p className="qr-caption">{statusMessage}</p>
               <a className="qr-link" href={authorizationUrl} target="_blank" rel="noreferrer">
                 Open authorization link

@@ -140,9 +140,7 @@ const createPubkyClientWithConfig = (
 ): PubkyClient => {
   resolvedConfig = config;
 
-  const homeserverHostname = parseHostname(config.homeserverUrl);
-  const useLocalTestnet = isLocalHostname(homeserverHostname);
-  const pubky = useLocalTestnet ? Pubky.testnet(homeserverHostname ?? undefined) : new Pubky();
+  const pubky = new Pubky();
   const publicStorage = pubky.publicStorage;
 
   let session: Session | null = null;
@@ -250,7 +248,7 @@ const createPubkyClientWithConfig = (
 };
 
 const fallbackToStagingHomeserver = (clientToReplace: PubkyClient, cause: unknown): PubkyClient => {
-  console.warn('Local Pubky testnet unavailable, falling back to staging homeserver', cause);
+  console.warn('Configured Pubky homeserver unavailable, falling back to staging homeserver', cause);
   const stagingClient = createPubkyClientWithConfig(STAGING_CONFIG, { allowStagingFallback: false });
   cachedClient = stagingClient;
   Object.assign(clientToReplace, stagingClient);

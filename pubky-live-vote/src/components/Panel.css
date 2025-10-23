@@ -81,9 +81,18 @@
   text-align: center;
 }
 
-.qr-container svg {
+.qr-code {
+  background: rgba(222, 225, 236, 0.92);
+  padding: clamp(0.85rem, 2.5vw, 1.1rem);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(7, 9, 21, 0.45);
+  margin-top: clamp(0.35rem, 1.2vw, 0.75rem);
+}
+
+.qr-code svg {
   width: min(220px, 60vw);
   height: auto;
+  display: block;
 }
 
 .qr-caption {
