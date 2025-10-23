@@ -284,6 +284,216 @@ async fn main() -> pubky::Result<()> {
 }
 `,
   },
+
+  // Pkarr templates
+  'pkarr-client-js': {
+    name: 'Pkarr Client (JavaScript)',
+    description: 'Basic Pkarr client for publishing and resolving DNS records',
+    language: 'javascript',
+    dependencies: ['pkarr'],
+    code: `const { Client, Keypair, SignedPacket } = require('pkarr');
+
+// Initialize client with default relays
+const client = new Client();
+
+// Generate or load keypair
+const keypair = new Keypair();
+const publicKey = keypair.public_key_string();
+console.log('Public Key:', publicKey);
+
+// Build DNS records
+const builder = SignedPacket.builder();
+builder.addTxtRecord('_service', 'myapp=v1.0', 3600);
+builder.addARecord('www', '192.168.1.1', 3600);
+
+// Sign and publish
+const packet = builder.buildAndSign(keypair);
+await client.publish(packet);
+
+console.log('Published! Your domain is:', \`https://\${publicKey}\`);
+
+// Resolve records later
+const resolved = await client.resolve(publicKey);
+console.log('DNS Records:', resolved.records);
+`,
+  },
+
+  'pkarr-client-rust': {
+    name: 'Pkarr Client (Rust)',
+    description: 'Basic Pkarr client for publishing and resolving DNS records',
+    language: 'rust',
+    dependencies: ['pkarr = "5.0"'],
+    code: `use pkarr::{Client, Keypair, SignedPacket};
+use simple_dns::{Name, CLASS, ResourceRecord, rdata::TXT};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize client
+    let client = Client::default();
+    
+    // Generate or load keypair
+    let keypair = Keypair::random();
+    let public_key = keypair.public_key();
+    println!("Public Key: {}", public_key);
+    
+    // Create signed packet
+    let mut packet = SignedPacket::new(&keypair)?;
+    
+    // Add DNS records
+    packet.add_answer(ResourceRecord::new(
+        Name::new_unchecked("_service"),
+        CLASS::IN,
+        3600,
+        TXT::new().with_string("myapp=v1.0")
+    ));
+    
+    // Publish to DHT
+    client.publish(&packet).await?;
+    
+    println!("Published! Your domain is: https://{}", public_key);
+    
+    // Resolve records later
+    if let Some(resolved) = client.resolve(&public_key.to_string()).await? {
+        println!("DNS Records: {:?}", resolved);
+    }
+    
+    Ok(())
+}
+`,
+  },
+
+  'pkarr-publish-records': {
+    name: 'Publish DNS Records',
+    description: 'Publish various DNS record types using Pkarr',
+    language: 'javascript',
+    dependencies: ['pkarr'],
+    code: `const { Client, Keypair, SignedPacket } = require('pkarr');
+
+const client = new Client();
+const keypair = new Keypair();
+
+// Build comprehensive DNS records
+const builder = SignedPacket.builder();
+
+// TXT record for service metadata
+builder.addTxtRecord('_service', 'app=myapp version=1.0', 3600);
+
+// A record for IPv4
+builder.addARecord('www', '192.168.1.1', 3600);
+
+// AAAA record for IPv6
+builder.addAAAARecord('www', '2001:db8::1', 3600);
+
+// CNAME record for alias
+builder.addCnameRecord('api', 'www', 3600);
+
+// HTTPS record with service parameters
+builder.addHttpsRecord('@', 1, '.', 3600, {
+  port: 443,
+  ipv4hint: '192.168.1.1',
+  alpn: ['h2', 'http/1.1']
+});
+
+// Sign and publish
+const packet = builder.buildAndSign(keypair);
+await client.publish(packet);
+
+console.log('All records published for key:', keypair.public_key_string());
+`,
+  },
+
+  'pkarr-resolve-key': {
+    name: 'Resolve Pkarr Key',
+    description: 'Resolve a public key to get DNS records',
+    language: 'javascript',
+    dependencies: ['pkarr'],
+    code: `const { Client } = require('pkarr');
+
+async function resolveKey(publicKey) {
+  const client = new Client();
+  
+  try {
+    const packet = await client.resolve(publicKey);
+    
+    if (!packet) {
+      console.log('No records found for key:', publicKey);
+      return null;
+    }
+    
+    console.log('Resolved records for key:', publicKey);
+    console.log('Timestamp:', new Date(packet.timestampMs));
+    console.log('Records:');
+    
+    for (const record of packet.records) {
+      console.log(\`  - \${record.name}: \${record.type} = \${record.data}\`);
+    }
+    
+    return packet;
+  } catch (error) {
+    console.error('Resolution failed:', error.message);
+    return null;
+  }
+}
+
+// Example usage
+const publicKey = 'YOUR_PUBLIC_KEY_HERE';
+await resolveKey(publicKey);
+`,
+  },
+
+  'pkarr-keypair-management': {
+    name: 'Keypair Management',
+    description: 'Generate, save, and load Pkarr keypairs securely',
+    language: 'javascript',
+    dependencies: ['pkarr'],
+    code: `const { Keypair } = require('pkarr');
+const fs = require('fs').promises;
+
+// Generate new keypair
+function generateKeypair() {
+  const keypair = new Keypair();
+  const publicKey = keypair.public_key_string();
+  const secretKey = keypair.secret_key_bytes();
+  
+  return {
+    publicKey,
+    secretKey: Buffer.from(secretKey).toString('hex')
+  };
+}
+
+// Save keypair securely (use proper encryption in production!)
+async function saveKeypair(keys, filepath) {
+  await fs.writeFile(
+    filepath,
+    JSON.stringify(keys, null, 2),
+    { mode: 0o600 } // Owner read/write only
+  );
+  console.log('Keypair saved to:', filepath);
+  console.log('Public Key:', keys.publicKey);
+  console.log('⚠️  Keep the secret key secure!');
+}
+
+// Load keypair from file
+async function loadKeypair(filepath) {
+  const data = await fs.readFile(filepath, 'utf-8');
+  const keys = JSON.parse(data);
+  
+  // Recreate keypair from secret key
+  const secretBytes = Buffer.from(keys.secretKey, 'hex');
+  const keypair = Keypair.from_secret_key(secretBytes);
+  
+  return keypair;
+}
+
+// Example usage
+const keys = generateKeypair();
+await saveKeypair(keys, './pkarr-keys.json');
+
+// Later, load the keypair
+const loadedKeypair = await loadKeypair('./pkarr-keys.json');
+console.log('Loaded keypair for:', loadedKeypair.public_key_string());
+`,
+  },
 };
 
 export function getTemplate(name: string): CodeTemplate | undefined {

@@ -31,12 +31,15 @@ const __dirname = path.dirname(__filename);
 // Point to bundled data directory (dist/../data after build)
 const DATA_ROOT = path.join(__dirname, '..', 'data');
 const PUBKY_CORE_ROOT = path.join(DATA_ROOT, 'pubky-core');
+const PKARR_ROOT = path.join(DATA_ROOT, 'pkarr');
+const PKDNS_ROOT = path.join(DATA_ROOT, 'pkdns');
+const NEXUS_ROOT = path.join(DATA_ROOT, 'pubky-nexus');
 const WORKSPACE_ROOT = DATA_ROOT;
 
 // Initialize handlers
-const fileReader = new FileReader(PUBKY_CORE_ROOT);
+const fileReader = new FileReader(PUBKY_CORE_ROOT, PKARR_ROOT, PKDNS_ROOT, NEXUS_ROOT);
 const resourceHandler = new ResourceHandler(fileReader, WORKSPACE_ROOT);
-const toolHandler = new ToolHandler(fileReader, PUBKY_CORE_ROOT, WORKSPACE_ROOT);
+const toolHandler = new ToolHandler(fileReader, PUBKY_CORE_ROOT, WORKSPACE_ROOT, PKARR_ROOT, PKDNS_ROOT, NEXUS_ROOT);
 const promptHandler = new PromptHandler();
 
 // Create MCP server
@@ -167,14 +170,21 @@ async function main() {
   console.error('  • Tools: Code generation, validation, testnet management');
   console.error('  • Prompts: Interactive guides for building on Pubky');
   console.error('');
-  console.error('🔺 Hub-Spoke Architecture:');
-  console.error('  • Your Homeserver (pubky-core) - WHERE you WRITE data');
-  console.error('  • App Specs (pubky-app-specs) - WHAT format to use');
-  console.error('  • Nexus Indexer (nexus-webapi) - WHERE you READ social data');
+  console.error('🔺 Complete Pubky Stack (4 Layers + Tools):');
+  console.error('  • Layer 1a: Pkarr (protocol) - Discovery via Mainline DHT');
+  console.error('  • Layer 1b: Pkdns (resolver) - DNS server for Pkarr domains');
+  console.error('  • Layer 2: Pubky Core (protocol) - HOW to read/write homeserver');
+  console.error('  • Layer 3: App Specs (models) - WHAT format to use');
+  console.error('  • Layer 4a: Nexus API (interface) - WHERE you READ social data');
+  console.error('  • Layer 4b: Nexus (implementation) - Graph indexer internals');
   console.error('');
-  console.error('💡 Key Concept:');
-  console.error('   Write to YOUR homeserver → Nexus indexes it → Read from Nexus');
+  console.error('💡 Complete Flow:');
+  console.error('   1. Resolve pubkey → homeserver URL (Pkarr + Pkdns)');
+  console.error('   2. Write data to YOUR homeserver (Pubky Core + App Specs)');
+  console.error('   3. Nexus watcher indexes from all homeservers');
+  console.error('   4. Read aggregated social data (Nexus API)');
   console.error('');
+  console.error('🛠️  Now covering 6 Pubky projects with 65+ tools!');
   console.error('Your complete Pubky ecosystem expert is ready! 🎉');
 }
 

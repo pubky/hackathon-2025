@@ -116,3 +116,82 @@ export const APP_SPEC_MODELS = {
 } as const;
 
 export type AppSpecModel = (typeof APP_SPEC_MODELS)[keyof typeof APP_SPEC_MODELS];
+
+// Pkarr concepts
+export const PKARR_CONCEPTS = {
+  DISCOVERY: 'discovery',
+  DHT: 'dht',
+  RELAY: 'relay',
+  SIGNED_PACKET: 'signed-packet',
+  DNS_RECORDS: 'dns-records',
+  REPUBLISHING: 'republishing',
+  KEYPAIR: 'keypair',
+  MAINLINE: 'mainline',
+} as const;
+
+export type PkarrConcept = (typeof PKARR_CONCEPTS)[keyof typeof PKARR_CONCEPTS];
+
+// Pkarr example types
+export const PKARR_EXAMPLE_TYPES = {
+  PUBLISH: 'publish',
+  RESOLVE: 'resolve',
+  HTTP_SERVE: 'http-serve',
+  HTTP_GET: 'http-get',
+} as const;
+
+export type PkarrExampleType = (typeof PKARR_EXAMPLE_TYPES)[keyof typeof PKARR_EXAMPLE_TYPES];
+
+// Default Pkarr relay URLs
+export const DEFAULT_PKARR_RELAYS = [
+  'https://pkarr.pubky.app',
+  'https://pkarr.pubky.org',
+] as const;
+
+// Pkarr relay default port
+export const PKARR_RELAY_DEFAULT_PORT = 6881;
+
+// Pkarr design document types
+export const PKARR_DESIGN_DOCS = {
+  BASE: 'base',
+  RELAYS: 'relays',
+  ENDPOINTS: 'endpoints',
+  TLS: 'tls',
+  RESOLVERS: 'resolvers',
+} as const;
+
+export type PkarrDesignDoc = (typeof PKARR_DESIGN_DOCS)[keyof typeof PKARR_DESIGN_DOCS];
+
+// PKDNS constants (DNS resolver for Pkarr domains)
+export const PKDNS_DEFAULT_PORT = 53;
+export const PKDNS_DOH_PORT = 443;
+
+export const PKDNS_COMMANDS = {
+  PUBLISH: 'publish',
+  RESOLVE: 'resolve',
+  GENERATE: 'generate',
+  PUBLICKEY: 'publickey',
+} as const;
+
+export type PkdnsCommand = (typeof PKDNS_COMMANDS)[keyof typeof PKDNS_COMMANDS];
+
+export const PUBLIC_PKDNS_SERVERS = [
+  'https://dns.pubky.app',
+  'https://dns.pubky.org',
+] as const;
+
+// Pubky Nexus constants (social indexer implementation)
+export const NEXUS_COMPONENTS = {
+  WATCHER: 'watcher',
+  SERVICE: 'service',
+  NEXUSD: 'nexusd',
+  COMMON: 'common',
+} as const;
+
+export type NexusComponent = (typeof NEXUS_COMPONENTS)[keyof typeof NEXUS_COMPONENTS];
+
+export const NEXUS_DATABASES = {
+  NEO4J: 'neo4j',
+  REDIS: 'redis',
+} as const;
+
+export type NexusDatabase = (typeof NEXUS_DATABASES)[keyof typeof NEXUS_DATABASES];

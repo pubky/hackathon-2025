@@ -5,54 +5,27 @@ Get your Pubky MCP Server running in 3 minutes!
 ## 1. Build (if not already done)
 
 ```bash
-cd /Users/vlada/Projects/pubky-mcp-server
+cd pubky-mcp-server
 npm install
-npm run build
+npm run build  # Automatically fetches all resources
 ```
 
 ## 2. Configure Cursor
 
-### Option A: User Settings (Recommended)
-
-1. Open Cursor
-2. Go to Settings (Cmd+, on Mac)
-3. Search for "MCP"
-4. Click "Edit in settings.json"
-5. Add this configuration:
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "pubky-core": {
-        "command": "node",
-        "args": ["/Users/vlada/Projects/pubky-mcp-server/dist/index.js"],
-        "env": {
-          "PUBKY_CORE_PATH": "/Users/vlada/Projects/pubky-core"
-        }
-      }
-    }
-  }
-}
-```
-
-### Option B: Workspace Settings
-
-Create `.cursor/config.json` in your project:
+Edit your Cursor MCP config file (`~/.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "pubky-core": {
+    "pubky": {
       "command": "node",
-      "args": ["/Users/vlada/Projects/pubky-mcp-server/dist/index.js"],
-      "env": {
-        "PUBKY_CORE_PATH": "/Users/vlada/Projects/pubky-core"
-      }
+      "args": ["/absolute/path/to/hackathon-2025/pubky-mcp-server/dist/index.js"]
     }
   }
 }
 ```
+
+**Note:** No environment variables needed! All resources are bundled during build.
 
 ## 3. Restart Cursor
 
@@ -62,107 +35,124 @@ Close and reopen Cursor to load the MCP server.
 
 Open Cursor and try these commands:
 
-### Test 1: Ask About Pubky
+### Test 1: Understand the Architecture
 
 ```
-"What is a Pubky homeserver?"
+"Explain the Pubky architecture with all 4 layers"
 ```
 
-The MCP server will use the `get_pubky_concept` tool to explain.
+Should explain Pkarr (discovery), Pubky Core (protocol), App Specs (data models), and Nexus (social API).
 
-### Test 2: Get an Example
-
-```
-"Show me how to implement Pubky authentication in JavaScript"
-```
-
-The MCP server will use `get_code_example` or `implement-auth` prompt.
-
-### Test 3: Create a New App
+### Test 2: Pkarr Discovery
 
 ```
-"Create a new Pubky app called 'my-social-app' in TypeScript"
+"How do I resolve a public key to find the homeserver using Pkarr?"
 ```
 
-The MCP server will use `generate_app_scaffold` to create the project.
+The MCP server will explain Pkarr's discovery layer.
 
-### Test 4: Start Testnet
+### Test 3: Get Examples
 
 ```
-"Start the Pubky testnet so I can test locally"
+"Show me how to publish DNS records with Pkarr in JavaScript"
 ```
 
-The MCP server will use `start_testnet` to launch a local testnet.
+Will show Pkarr code examples.
+
+### Test 4: Start Development Environment
+
+```
+"Start the Pubky testnet for local development"
+```
+
+Starts local testnet with DHT, homeserver, and Pkarr relay.
+
+### Test 5: Build an App
+
+```
+"Create a new Pubky social app called 'my-app' in TypeScript"
+```
+
+Generates a complete app scaffold.
 
 ## What Can You Do?
 
-### Documentation Access
+### Layer 1: Discovery
+
+**Pkarr (Protocol)**
+- "Explain how Pkarr discovery works"
+- "Generate a Pkarr client to publish DNS records"
+- "Show me how to resolve a public key"
+- "Start a local Pkarr relay"
+- "Generate code to create Pkarr keypairs"
+
+**Pkdns (DNS Resolver)**
+- "How do I set up pkdns in my browser?"
+- "Configure my system DNS to use pkdns"
+- "Install pkdns server"
+- "Show me public pkdns servers"
+
+### Layer 2: Pubky Core (Protocol)
 
 - "Explain Pubky capabilities"
-- "Show me the authentication spec"
+- "Show me the authentication flow"
 - "What is a root key?"
-- "Search the docs for 'storage'"
+- "How do I store data on a homeserver?"
 
-### Code Generation
+### Layer 3: App Specs (Data Models)
+
+- "Show me how to create a post with validation"
+- "Explain the User model"
+- "Generate code for PubkyAppPost"
+- "Validate my post data"
+
+### Layer 4: Social Graph
+
+**Nexus API (Interface)**
+- "Show me all Nexus API endpoints"
+- "How do I query a social feed?"
+- "Generate a Nexus API client"
+- "Explain the UserView schema"
+
+**Nexus Implementation (For Advanced Users)**
+- "Explain Nexus architecture"
+- "How do I set up Nexus development environment?"
+- "Explain the Nexus watcher component"
+- "Show me how to run Nexus locally"
+
+### Development Tools
 
 - "Create a new Pubky app"
-- "Show me a template for auth flow"
-- "Generate storage code for my app"
-
-### Environment Setup
-
-- "Check if I have all the tools installed"
-- "Install pubky-testnet"
-- "Add Pubky to my project"
-- "Set up my environment for Pubky development"
-
-### Testnet Management
-
 - "Start the testnet"
-- "What's the status of my testnet?"
-- "Give me the testnet connection details"
-- "Stop the testnet"
-
-### Integration Help
-
 - "Add Pubky to my existing React app"
-- "How do I integrate Pubky with my project?"
-- "Analyze my project and suggest Pubky setup"
+- "Check if I have all tools installed"
 
 ## Troubleshooting
 
 ### "MCP server not found"
 
-1. Check the path in your config is correct
+1. Check the path in your config is correct (use absolute path)
 2. Make sure you ran `npm run build`
 3. Restart Cursor completely
 
-### "Pubky Core not found"
+### "Resources not found"
 
-Update `PUBKY_CORE_PATH` in your MCP config to point to your pubky-core location:
-
-```json
-{
-  "env": {
-    "PUBKY_CORE_PATH": "/correct/path/to/pubky-core"
-  }
-}
-```
+Run `npm run build` to fetch all resources (Pkarr, Pubky Core, App Specs, Nexus).
 
 ### "Tool execution failed"
 
-Most tools provide error messages explaining what went wrong. Common fixes:
+Most tools provide error messages. Common fixes:
 
 - Install missing dependencies (`cargo`, `node`, etc.)
-- Start the testnet if needed
-- Check file paths
+- Start the testnet if needed: "Start testnet"
+- For Pkarr relay tools: Ensure Rust/Cargo is installed
 
 ## Next Steps
 
-1. **Read the README**: `/Users/vlada/Projects/pubky-mcp-server/README.md`
-2. **Explore Resources**: Browse Pubky docs through the MCP resources panel
-3. **Try Tools**: Experiment with different tools to see what they can do
-4. **Build Something**: Create a Pubky app and start developing!
+1. **Explore the 4 Layers**: Ask about each layer (Pkarr, Core, App Specs, Nexus)
+2. **Browse Resources**: Access documentation via MCP resources panel
+3. **Try Tools**: Experiment with 55+ development tools
+4. **Build Something**: Create your first Pubky app!
 
 ## Pro Tips
 

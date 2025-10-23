@@ -182,12 +182,173 @@ export class ResourceHandler {
         mimeType: 'text/markdown',
         description: 'JavaScript usage examples for all data models',
       },
+
+      // Pkarr resources
+      {
+        uri: 'pkarr://overview',
+        name: 'Pkarr Overview',
+        mimeType: 'text/markdown',
+        description: 'Overview of Pkarr - Public-Key Addressable Resource Records',
+      },
+      {
+        uri: 'pkarr://design/base',
+        name: 'Pkarr Base Specification',
+        mimeType: 'text/markdown',
+        description: 'Core Pkarr protocol specification',
+      },
+      {
+        uri: 'pkarr://design/relays',
+        name: 'Pkarr Relay Specification',
+        mimeType: 'text/markdown',
+        description: 'HTTP relay servers for Pkarr',
+      },
+      {
+        uri: 'pkarr://design/endpoints',
+        name: 'Pkarr Endpoints Specification',
+        mimeType: 'text/markdown',
+        description: 'Resolving query names to endpoints using SVCB records',
+      },
+      {
+        uri: 'pkarr://design/tls',
+        name: 'Pkarr TLS Specification',
+        mimeType: 'text/markdown',
+        description: 'End-to-end encryption for Pkarr domains',
+      },
+      {
+        uri: 'pkarr://design/resolvers',
+        name: 'Pkarr Resolvers Specification',
+        mimeType: 'text/markdown',
+        description: 'DNS resolver specification for Pkarr',
+      },
+      {
+        uri: 'pkarr://examples/rust/publish',
+        name: 'Pkarr Publish Example (Rust)',
+        mimeType: 'text/rust',
+        description: 'Example of publishing signed packets to DHT',
+      },
+      {
+        uri: 'pkarr://examples/rust/resolve',
+        name: 'Pkarr Resolve Example (Rust)',
+        mimeType: 'text/rust',
+        description: 'Example of resolving public keys from DHT',
+      },
+      {
+        uri: 'pkarr://examples/rust/http-serve',
+        name: 'Pkarr HTTP Serve Example (Rust)',
+        mimeType: 'text/rust',
+        description: 'Example HTTP server listening on a Pkarr key',
+      },
+      {
+        uri: 'pkarr://examples/rust/http-get',
+        name: 'Pkarr HTTP Get Example (Rust)',
+        mimeType: 'text/rust',
+        description: 'Example HTTP client resolving Pkarr domains',
+      },
+      {
+        uri: 'pkarr://examples/javascript',
+        name: 'Pkarr JavaScript Examples',
+        mimeType: 'text/markdown',
+        description: 'JavaScript bindings and usage examples',
+      },
+      {
+        uri: 'pkarr://relay/config',
+        name: 'Pkarr Relay Configuration',
+        mimeType: 'text/toml',
+        description: 'Example configuration file for Pkarr relay',
+      },
+
+      // Pkdns resources (DNS resolver for Pkarr domains)
+      {
+        uri: 'pkdns://overview',
+        name: 'Pkdns Overview',
+        mimeType: 'text/markdown',
+        description: 'DNS server for Pkarr domains - makes public keys work as TLDs',
+      },
+      {
+        uri: 'pkdns://docs/dns-over-https',
+        name: 'DNS-over-HTTPS Setup',
+        mimeType: 'text/markdown',
+        description: 'Setting up DNS-over-HTTPS with pkdns',
+      },
+      {
+        uri: 'pkdns://docs/dyn-dns',
+        name: 'DynDNS Configuration',
+        mimeType: 'text/markdown',
+        description: 'Dynamic DNS setup with pkdns',
+      },
+      {
+        uri: 'pkdns://config',
+        name: 'Pkdns Server Configuration',
+        mimeType: 'text/toml',
+        description: 'Example server configuration for pkdns',
+      },
+      {
+        uri: 'pkdns://servers',
+        name: 'Public Pkdns Servers',
+        mimeType: 'text/plain',
+        description: 'List of public pkdns DNS servers',
+      },
+
+      // Pubky Nexus resources (social indexer implementation)
+      {
+        uri: 'nexus://overview',
+        name: 'Pubky Nexus Overview',
+        mimeType: 'text/markdown',
+        description: 'Social graph indexer - architecture and implementation',
+      },
+      {
+        uri: 'nexus://architecture',
+        name: 'Nexus Architecture',
+        mimeType: 'text/markdown',
+        description: 'Watcher, service, and database architecture',
+      },
+      {
+        uri: 'nexus://component/watcher',
+        name: 'Nexus Watcher',
+        mimeType: 'text/markdown',
+        description: 'Event aggregator and indexing component',
+      },
+      {
+        uri: 'nexus://component/service',
+        name: 'Nexus Service API',
+        mimeType: 'text/markdown',
+        description: 'REST API server component',
+      },
+      {
+        uri: 'nexus://component/common',
+        name: 'Nexus Common',
+        mimeType: 'text/markdown',
+        description: 'Shared library for database and models',
+      },
+      {
+        uri: 'nexus://setup/development',
+        name: 'Nexus Development Setup',
+        mimeType: 'text/markdown',
+        description: 'Setting up Neo4j, Redis, and Docker for development',
+      },
+      {
+        uri: 'nexus://examples',
+        name: 'Nexus Code Examples',
+        mimeType: 'text/markdown',
+        description: 'Example code for watcher and API usage',
+      },
     ];
   }
 
   async getResource(
     uri: string
   ): Promise<{ contents: { uri: string; mimeType: string; text: string }[] }> {
+    // Handle different URI schemes
+    if (uri.startsWith('pkarr://')) {
+      return await this.getPkarrResource(uri);
+    }
+    if (uri.startsWith('pkdns://')) {
+      return await this.getPkdnsResource(uri);
+    }
+    if (uri.startsWith('nexus://')) {
+      return await this.getNexusResource(uri);
+    }
+
     // Parse the URI
     const uriPath = uri.replace('pubky://', '');
     const parts = uriPath.split('/');
@@ -465,6 +626,238 @@ export class ResourceHandler {
       };
     } else {
       throw new Error(`Unknown specs resource: ${parts.join('/')}`);
+    }
+  }
+
+  private async getPkarrResource(
+    uri: string
+  ): Promise<{ contents: { uri: string; mimeType: string; text: string }[] }> {
+    const uriPath = uri.replace('pkarr://', '');
+    const parts = uriPath.split('/');
+
+    try {
+      // Overview
+      if (uriPath === 'overview') {
+        const readme = await this.fileReader.readPkarrFile('README.md');
+        return {
+          contents: [
+            {
+              uri: 'pkarr://overview',
+              mimeType: 'text/markdown',
+              text: readme,
+            },
+          ],
+        };
+      }
+
+      // Design documents
+      if (parts[0] === 'design' && parts[1]) {
+        const content = await this.fileReader.readPkarrDesignDoc(parts[1]);
+        return {
+          contents: [
+            {
+              uri: `pkarr://design/${parts[1]}`,
+              mimeType: 'text/markdown',
+              text: content,
+            },
+          ],
+        };
+      }
+
+      // Rust examples
+      if (parts[0] === 'examples' && parts[1] === 'rust' && parts[2]) {
+        const exampleName = parts[2];
+        const content = await this.fileReader.readPkarrExample(exampleName);
+        const readme = await this.fileReader.readPkarrFile('pkarr/examples/README.md');
+        return {
+          contents: [
+            {
+              uri: `pkarr://examples/rust/${exampleName}`,
+              mimeType: 'text/rust',
+              text: `# Pkarr ${exampleName} Example\n\n${readme}\n\n---\n\n## Source Code\n\n\`\`\`rust\n${content}\n\`\`\``,
+            },
+          ],
+        };
+      }
+
+      // JavaScript examples
+      if (parts[0] === 'examples' && parts[1] === 'javascript') {
+        const pkgReadme = await this.fileReader.readPkarrJsBindings('pkg/README.md');
+        const exampleJs = await this.fileReader.readPkarrJsBindings('pkg/example.js');
+        return {
+          contents: [
+            {
+              uri: 'pkarr://examples/javascript',
+              mimeType: 'text/markdown',
+              text: `${pkgReadme}\n\n---\n\n## Example Code\n\n\`\`\`javascript\n${exampleJs}\n\`\`\``,
+            },
+          ],
+        };
+      }
+
+      // Relay config
+      if (parts[0] === 'relay' && parts[1] === 'config') {
+        const config = await this.fileReader.readPkarrRelayConfig();
+        return {
+          contents: [
+            {
+              uri: 'pkarr://relay/config',
+              mimeType: 'text/toml',
+              text: `# Pkarr Relay Configuration Example\n\n\`\`\`toml\n${config}\n\`\`\``,
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unknown Pkarr resource: ${uriPath}`);
+    } catch (error: any) {
+      throw new Error(`Failed to load Pkarr resource ${uri}: ${error.message}`);
+    }
+  }
+
+  private async getPkdnsResource(
+    uri: string
+  ): Promise<{ contents: { uri: string; mimeType: string; text: string }[] }> {
+    const uriPath = uri.replace('pkdns://', '');
+    const parts = uriPath.split('/');
+
+    try {
+      if (uriPath === 'overview') {
+        const readme = await this.fileReader.readPkdnsFile('README.md');
+        return {
+          contents: [
+            {
+              uri: 'pkdns://overview',
+              mimeType: 'text/markdown',
+              text: readme,
+            },
+          ],
+        };
+      }
+
+      if (parts[0] === 'docs' && parts[1]) {
+        const content = await this.fileReader.readPkdnsDoc(parts[1]);
+        return {
+          contents: [
+            {
+              uri: `pkdns://docs/${parts[1]}`,
+              mimeType: 'text/markdown',
+              text: content,
+            },
+          ],
+        };
+      }
+
+      if (uriPath === 'config') {
+        const config = await this.fileReader.readPkdnsFile('server/config.sample.toml');
+        return {
+          contents: [
+            {
+              uri: 'pkdns://config',
+              mimeType: 'text/toml',
+              text: `# Pkdns Server Configuration\n\n\`\`\`toml\n${config}\n\`\`\``,
+            },
+          ],
+        };
+      }
+
+      if (uriPath === 'servers') {
+        const servers = await this.fileReader.readPkdnsFile('servers.txt');
+        return {
+          contents: [
+            {
+              uri: 'pkdns://servers',
+              mimeType: 'text/plain',
+              text: `# Public Pkdns Servers\n\n${servers}`,
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unknown Pkdns resource: ${uriPath}`);
+    } catch (error: any) {
+      throw new Error(`Failed to load Pkdns resource ${uri}: ${error.message}`);
+    }
+  }
+
+  private async getNexusResource(
+    uri: string
+  ): Promise<{ contents: { uri: string; mimeType: string; text: string }[] }> {
+    const uriPath = uri.replace('nexus://', '');
+    const parts = uriPath.split('/');
+
+    try {
+      if (uriPath === 'overview') {
+        const readme = await this.fileReader.readNexusFile('README.md');
+        return {
+          contents: [
+            {
+              uri: 'nexus://overview',
+              mimeType: 'text/markdown',
+              text: readme,
+            },
+          ],
+        };
+      }
+
+      if (uriPath === 'architecture') {
+        const readme = await this.fileReader.readNexusFile('README.md');
+        const docsReadme = await this.fileReader.readNexusDoc('readme.md');
+        return {
+          contents: [
+            {
+              uri: 'nexus://architecture',
+              mimeType: 'text/markdown',
+              text: `# Nexus Architecture\n\n${readme}\n\n---\n\n${docsReadme}`,
+            },
+          ],
+        };
+      }
+
+      if (parts[0] === 'component' && parts[1]) {
+        const component = parts[1] as 'common' | 'watcher' | 'webapi';
+        const content = await this.fileReader.readNexusComponentReadme(component);
+        return {
+          contents: [
+            {
+              uri: `nexus://component/${component}`,
+              mimeType: 'text/markdown',
+              text: content,
+            },
+          ],
+        };
+      }
+
+      if (parts[0] === 'setup' && parts[1] === 'development') {
+        const readme = await this.fileReader.readNexusFile('README.md');
+        // Extract setup section
+        return {
+          contents: [
+            {
+              uri: 'nexus://setup/development',
+              mimeType: 'text/markdown',
+              text: readme,
+            },
+          ],
+        };
+      }
+
+      if (uriPath === 'examples') {
+        const examplesReadme = await this.fileReader.readNexusFile('examples/README.md');
+        return {
+          contents: [
+            {
+              uri: 'nexus://examples',
+              mimeType: 'text/markdown',
+              text: examplesReadme,
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unknown Nexus resource: ${uriPath}`);
+    } catch (error: any) {
+      throw new Error(`Failed to load Nexus resource ${uri}: ${error.message}`);
     }
   }
 

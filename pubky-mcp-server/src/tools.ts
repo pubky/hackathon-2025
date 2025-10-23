@@ -1,10 +1,79 @@
 /**
  * MCP Tools for Pubky development assistance
+ * 
+ * TABLE OF CONTENTS:
+ * ==================
+ * 
+ * 1. PUBKY CORE TOOLS (lines ~810-1170)
+ *    - get_pubky_concept: Explain Pubky concepts
+ *    - get_code_example: Get code examples
+ *    - search_documentation: Search docs
+ *    - explain_capabilities: Parse capabilities
+ *    - generate_app_scaffold: Create new app
+ *    - get_code_template: Get templates
+ *    - list_templates: List available templates
+ * 
+ * 2. ENVIRONMENT & SETUP TOOLS (lines ~1170-1480)
+ *    - analyze_project: Analyze existing project
+ *    - detect_environment: Detect installed tools
+ *    - suggest_setup: Suggest setup steps
+ *    - ensure_dependencies: Install dependencies
+ *    - install_pubky_testnet: Install testnet
+ *    - setup_project_dependencies: Add Pubky deps
+ *    - verify_installation: Verify tools
+ *    - adapt_to_project: Generate integration code
+ *    - integrate_pubky: Add Pubky to project
+ * 
+ * 3. TESTNET TOOLS (lines ~1480-1560)
+ *    - start_testnet: Start local testnet
+ *    - stop_testnet: Stop testnet
+ *    - restart_testnet: Restart testnet
+ *    - check_testnet_status: Check if running
+ *    - get_testnet_info: Get testnet details
+ * 
+ * 4. NEXUS API TOOLS (lines ~1600-1680)
+ *    - query_nexus_api: Search Nexus endpoints
+ *    - explain_nexus_endpoint: Explain endpoint
+ *    - generate_nexus_client: Generate client code
+ * 
+ * 5. APP SPECS TOOLS (lines ~1680-1720)
+ *    - generate_data_model: Generate model code
+ *    - validate_model_data: Validate data
+ *    - explain_model: Explain model rules
+ *    - create_model_example: Create example
+ * 
+ * 6. PKARR TOOLS (lines ~1800-2460)
+ *    - get_pkarr_concept: Explain Pkarr concepts
+ *    - search_pkarr_docs: Search Pkarr docs
+ *    - get_pkarr_example: Get Pkarr examples
+ *    - generate_pkarr_client: Generate client
+ *    - start_pkarr_relay: Start relay
+ *    - stop_pkarr_relay: Stop relay
+ *    - restart_pkarr_relay: Restart relay
+ *    - check_pkarr_relay_status: Check status
+ *    - get_pkarr_relay_info: Get relay info
+ *    - generate_pkarr_keypair: Generate keypair
+ *    - generate_dns_record_builder: Build DNS records
+ *    - explain_pkarr_key: Analyze public key
+ *    - install_pkarr_relay: Install relay binary
+ *    - setup_pkarr_project: Add Pkarr to project
+ * 
+ * 7. PKDNS TOOLS (lines ~2460-2540)
+ *    - get_pkdns_info: Overview and public servers
+ *    - setup_pkdns_browser: Configure browser DNS
+ *    - setup_pkdns_system: Configure system DNS
+ *    - install_pkdns: Install pkdns binary
+ * 
+ * 8. NEXUS IMPLEMENTATION TOOLS (lines ~2540-2600)
+ *    - get_nexus_architecture: Architecture overview
+ *    - setup_nexus_dev: Development environment setup
+ *    - explain_nexus_component: Component details
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { FileReader } from './utils/file-reader.js';
 import { TestnetManager } from './utils/testnet.js';
+import { PkarrRelayManager } from './utils/pkarr-relay.js';
 import { EnvironmentDetector } from './utils/environment.js';
 import { getTemplate, listTemplates, generateScaffold, templates } from './utils/templates.js';
 import { NexusApiParser } from './utils/nexus-api.js';
@@ -16,12 +85,23 @@ import {
   FRAMEWORKS,
   CAPABILITY_ACTIONS,
   APP_SPEC_MODELS,
+  PKARR_CONCEPTS,
+  PKARR_EXAMPLE_TYPES,
+  DEFAULT_PKARR_RELAYS,
 } from './constants.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+// Helper functions to reduce code duplication
+function createTextResponse(text: string): { content: Array<{ type: string; text: string }> } {
+  return {
+    content: [{ type: 'text', text }],
+  };
+}
+
 export class ToolHandler {
   private testnetManager: TestnetManager;
+  private pkarrRelayManager: PkarrRelayManager | null = null;
   private envDetector: EnvironmentDetector;
   private nexusParser: NexusApiParser;
   private specsParser: AppSpecsParser;
@@ -29,9 +109,15 @@ export class ToolHandler {
   constructor(
     private fileReader: FileReader,
     private pubkyCoreRoot: string,
-    private workspaceRoot: string
+    private workspaceRoot: string,
+    private pkarrRoot?: string,
+    private pkdnsRoot?: string,
+    private nexusRoot?: string
   ) {
     this.testnetManager = new TestnetManager();
+    if (pkarrRoot) {
+      this.pkarrRelayManager = new PkarrRelayManager(pkarrRoot);
+    }
     this.envDetector = new EnvironmentDetector();
     this.nexusParser = new NexusApiParser(workspaceRoot);
     this.specsParser = new AppSpecsParser(workspaceRoot);
@@ -292,6 +378,284 @@ export class ToolHandler {
         },
       },
 
+      // Pkarr Tools (Discovery Layer)
+      {
+        name: 'get_pkarr_concept',
+        description:
+          'Explain Pkarr concepts (discovery, DHT, relays, signed packets, DNS records, republishing, keypairs)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            concept: {
+              type: 'string',
+              description:
+                'Concept to explain (e.g., "discovery", "dht", "relay", "signed-packet", "dns-records")',
+            },
+          },
+          required: ['concept'],
+        },
+      },
+      {
+        name: 'search_pkarr_docs',
+        description: 'Search Pkarr design docs and examples for specific topics',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Search query or keywords',
+            },
+          },
+          required: ['query'],
+        },
+      },
+      {
+        name: 'get_pkarr_example',
+        description:
+          'Get Pkarr code examples (publish, resolve, http-serve, http-get) in Rust or JavaScript',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            language: {
+              type: 'string',
+              enum: [LANGUAGES.RUST, LANGUAGES.JAVASCRIPT],
+              description: 'Programming language',
+            },
+            example: {
+              type: 'string',
+              enum: [
+                PKARR_EXAMPLE_TYPES.PUBLISH,
+                PKARR_EXAMPLE_TYPES.RESOLVE,
+                PKARR_EXAMPLE_TYPES.HTTP_SERVE,
+                PKARR_EXAMPLE_TYPES.HTTP_GET,
+              ],
+              description: 'Example type',
+            },
+          },
+          required: ['language', 'example'],
+        },
+      },
+      {
+        name: 'generate_pkarr_client',
+        description: 'Generate Pkarr client code for publishing/resolving records',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            language: {
+              type: 'string',
+              enum: [LANGUAGES.RUST, LANGUAGES.JAVASCRIPT, LANGUAGES.TYPESCRIPT],
+              description: 'Programming language',
+            },
+            includePublish: {
+              type: 'boolean',
+              description: 'Include publishing functionality',
+            },
+            includeResolve: {
+              type: 'boolean',
+              description: 'Include resolving functionality',
+            },
+          },
+          required: ['language'],
+        },
+      },
+      {
+        name: 'start_pkarr_relay',
+        description: 'Start local Pkarr relay for development',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            port: {
+              type: 'number',
+              description: 'Port number (default: 6881)',
+            },
+            testnet: {
+              type: 'boolean',
+              description: 'Run in testnet mode',
+            },
+          },
+        },
+      },
+      {
+        name: 'stop_pkarr_relay',
+        description: 'Stop running Pkarr relay',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'restart_pkarr_relay',
+        description: 'Restart Pkarr relay with new config',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            port: {
+              type: 'number',
+              description: 'Port number (default: 6881)',
+            },
+            testnet: {
+              type: 'boolean',
+              description: 'Run in testnet mode',
+            },
+          },
+        },
+      },
+      {
+        name: 'check_pkarr_relay_status',
+        description: 'Check if Pkarr relay is running',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'get_pkarr_relay_info',
+        description: 'Get Pkarr relay details (URL, port, cache info)',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'generate_pkarr_keypair',
+        description: 'Generate code to create/manage Pkarr keypairs',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            language: {
+              type: 'string',
+              enum: [LANGUAGES.RUST, LANGUAGES.JAVASCRIPT, LANGUAGES.TYPESCRIPT],
+              description: 'Programming language',
+            },
+          },
+          required: ['language'],
+        },
+      },
+      {
+        name: 'generate_dns_record_builder',
+        description:
+          'Generate code to build DNS records (A, AAAA, TXT, CNAME, NS, HTTPS, SVCB) for Pkarr',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            language: {
+              type: 'string',
+              enum: [LANGUAGES.RUST, LANGUAGES.JAVASCRIPT, LANGUAGES.TYPESCRIPT],
+              description: 'Programming language',
+            },
+            recordTypes: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'DNS record types to include (e.g., ["A", "TXT", "HTTPS"])',
+            },
+          },
+          required: ['language'],
+        },
+      },
+      {
+        name: 'explain_pkarr_key',
+        description: 'Parse and explain a z-base32 Pkarr public key',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            publicKey: {
+              type: 'string',
+              description: 'Z-base32 encoded public key',
+            },
+          },
+          required: ['publicKey'],
+        },
+      },
+      {
+        name: 'install_pkarr_relay',
+        description: 'Install pkarr-relay binary via cargo',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'setup_pkarr_project',
+        description: 'Add Pkarr dependencies to existing project',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            projectPath: {
+              type: 'string',
+              description: 'Path to the project',
+            },
+          },
+          required: ['projectPath'],
+        },
+      },
+
+      // Pkdns Tools (DNS Resolver)
+      {
+        name: 'get_pkdns_info',
+        description: 'Get pkdns overview and how it resolves Pkarr domains as TLDs',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'setup_pkdns_browser',
+        description: 'Guide to configure browser to use pkdns DNS-over-HTTPS',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'setup_pkdns_system',
+        description: 'Guide to configure system DNS to use pkdns',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'install_pkdns',
+        description: 'Install pkdns binary via cargo',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+
+      // Nexus Implementation Tools (for developers)
+      {
+        name: 'get_nexus_architecture',
+        description: 'Understand Nexus architecture: watcher, service, databases',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'setup_nexus_dev',
+        description: 'Set up Nexus development environment (Neo4j, Redis, Docker)',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'explain_nexus_component',
+        description: 'Explain a specific Nexus component (watcher, service, common)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            component: {
+              type: 'string',
+              enum: ['watcher', 'service', 'common', 'nexusd'],
+              description: 'Component to explain',
+            },
+          },
+          required: ['component'],
+        },
+      },
+
       // Integration & Debugging
       {
         name: 'adapt_to_project',
@@ -513,6 +877,58 @@ export class ToolHandler {
         case 'get_testnet_info':
           return await this.getTestnetInfo();
 
+        // Pkarr Tools
+        case 'get_pkarr_concept':
+          return await this.getPkarrConcept(args.concept);
+        case 'search_pkarr_docs':
+          return await this.searchPkarrDocs(args.query);
+        case 'get_pkarr_example':
+          return await this.getPkarrExample(args.language, args.example);
+        case 'generate_pkarr_client':
+          return await this.generatePkarrClient(
+            args.language,
+            args.includePublish,
+            args.includeResolve
+          );
+        case 'start_pkarr_relay':
+          return await this.startPkarrRelay(args.port, args.testnet);
+        case 'stop_pkarr_relay':
+          return await this.stopPkarrRelay();
+        case 'restart_pkarr_relay':
+          return await this.restartPkarrRelay(args.port, args.testnet);
+        case 'check_pkarr_relay_status':
+          return await this.checkPkarrRelayStatus();
+        case 'get_pkarr_relay_info':
+          return await this.getPkarrRelayInfo();
+        case 'generate_pkarr_keypair':
+          return await this.generatePkarrKeypair(args.language);
+        case 'generate_dns_record_builder':
+          return await this.generateDnsRecordBuilder(args.language, args.recordTypes);
+        case 'explain_pkarr_key':
+          return await this.explainPkarrKey(args.publicKey);
+        case 'install_pkarr_relay':
+          return await this.installPkarrRelay();
+        case 'setup_pkarr_project':
+          return await this.setupPkarrProject(args.projectPath);
+
+        // Pkdns Tools
+        case 'get_pkdns_info':
+          return await this.getPkdnsInfo();
+        case 'setup_pkdns_browser':
+          return await this.setupPkdnsBrowser();
+        case 'setup_pkdns_system':
+          return await this.setupPkdnsSystem();
+        case 'install_pkdns':
+          return await this.installPkdns();
+
+        // Nexus Implementation Tools
+        case 'get_nexus_architecture':
+          return await this.getNexusArchitecture();
+        case 'setup_nexus_dev':
+          return await this.setupNexusDev();
+        case 'explain_nexus_component':
+          return await this.explainNexusComponent(args.component);
+
         // Integration
         case 'adapt_to_project':
           return await this.adaptToProject(args.projectPath);
@@ -552,7 +968,11 @@ export class ToolHandler {
     }
   }
 
-  // Implementation methods
+  // ============================================================================
+  // 1. PUBKY CORE TOOLS
+  // ============================================================================
+  // Concepts, examples, auth, storage, capabilities
+  
   private async getPubkyConcept(
     concept: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
@@ -937,6 +1357,11 @@ export class ToolHandler {
     };
   }
 
+  // ============================================================================
+  // 2. ENVIRONMENT & SETUP TOOLS
+  // ============================================================================
+  // Project analysis, dependency management, installation
+
   private async analyzeProject(
     projectPath: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
@@ -1222,37 +1647,30 @@ export class ToolHandler {
     };
   }
 
-  // Testnet methods
+  // ============================================================================
+  // 3. TESTNET TOOLS
+  // ============================================================================
+  // Local development testnet management
+  
   private async startTestnet(): Promise<{ content: Array<{ type: string; text: string }> }> {
     try {
       const result = await this.testnetManager.start(this.pubkyCoreRoot);
-      return {
-        content: [{ type: 'text', text: result }],
-      };
+      return createTextResponse(result);
     } catch (error: any) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Failed to start testnet: ${error.message}\n\nMake sure pubky-testnet is installed or run from the pubky-core directory.`,
-          },
-        ],
-      };
+      return createTextResponse(
+        `Failed to start testnet: ${error.message}\n\nMake sure pubky-testnet is installed or run from the pubky-core directory.`
+      );
     }
   }
 
   private async stopTestnet(): Promise<{ content: Array<{ type: string; text: string }> }> {
     const result = await this.testnetManager.stop();
-    return {
-      content: [{ type: 'text', text: result }],
-    };
+    return createTextResponse(result);
   }
 
   private async restartTestnet(): Promise<{ content: Array<{ type: string; text: string }> }> {
     const result = await this.testnetManager.restart(this.pubkyCoreRoot);
-    return {
-      content: [{ type: 'text', text: result }],
-    };
+    return createTextResponse(result);
   }
 
   private async checkTestnetStatus(): Promise<{ content: Array<{ type: string; text: string }> }> {
@@ -1344,23 +1762,23 @@ export class ToolHandler {
     return await this.adaptToProject(projectPath);
   }
 
-  // Nexus API methods
+  // ============================================================================
+  // 4. NEXUS API TOOLS
+  // ============================================================================
+  // Social data querying, API exploration, client generation
+  
   private async queryNexusApi(
     query: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const result = await this.nexusParser.searchEndpoints(query);
-    return {
-      content: [{ type: 'text', text: result }],
-    };
+    return createTextResponse(result);
   }
 
   private async explainNexusEndpoint(
     operationId: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const example = await this.nexusParser.generateEndpointExample(operationId);
-    return {
-      content: [{ type: 'text', text: example }],
-    };
+    return createTextResponse(example);
   }
 
   private async generateNexusClient(
@@ -1423,15 +1841,17 @@ export class ToolHandler {
     };
   }
 
-  // Pubky App Specs methods
+  // ============================================================================
+  // 5. APP SPECS TOOLS
+  // ============================================================================
+  // Data model generation, validation, examples
+  
   private async generateDataModel(
     model: string,
     language: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const example = await this.specsParser.generateModelExample(model, language as any);
-    return {
-      content: [{ type: 'text', text: example }],
-    };
+    return createTextResponse(example);
   }
 
   private async validateModelData(
@@ -1439,18 +1859,14 @@ export class ToolHandler {
     data: any
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const validation = await this.specsParser.validateModelData(model, data);
-    return {
-      content: [{ type: 'text', text: validation }],
-    };
+    return createTextResponse(validation);
   }
 
   private async explainModel(
     model: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const info = await this.specsParser.getModelInfo(model);
-    return {
-      content: [{ type: 'text', text: info }],
-    };
+    return createTextResponse(info);
   }
 
   private async createModelExample(
@@ -1458,8 +1874,733 @@ export class ToolHandler {
     language: string
   ): Promise<{ content: Array<{ type: string; text: string }> }> {
     const example = await this.specsParser.generateModelExample(model, language as any);
-    return {
-      content: [{ type: 'text', text: example }],
+    return createTextResponse(example);
+  }
+
+  // ============================================================================
+  // 6. PKARR TOOLS (Discovery Layer)
+  // ============================================================================
+  // Public-Key Addressable Resource Records: DNS, DHT, relay management
+  
+  private async getPkarrConcept(
+    concept: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const conceptMap: Record<string, { doc: string; description: string }> = {
+      discovery: {
+        doc: 'base',
+        description: 'How Pkarr enables discovery of homeservers via public keys',
+      },
+      dht: {
+        doc: 'base',
+        description: 'Mainline DHT - the 10M node distributed hash table powering Pkarr',
+      },
+      relay: {
+        doc: 'relays',
+        description: 'HTTP relay servers for web apps and browsers',
+      },
+      'signed-packet': {
+        doc: 'base',
+        description: 'Cryptographically signed DNS packets published to DHT',
+      },
+      'dns-records': {
+        doc: 'base',
+        description: 'DNS resource records (A, AAAA, TXT, CNAME, NS, HTTPS, SVCB)',
+      },
+      republishing: {
+        doc: 'base',
+        description: 'Keeping records alive by periodic republishing',
+      },
+      keypair: {
+        doc: 'base',
+        description: 'Ed25519 keypairs for signing and verifying records',
+      },
+      mainline: {
+        doc: 'base',
+        description: 'Mainline DHT (BEP44) - the backbone of Pkarr',
+      },
     };
+
+    const info = conceptMap[concept.toLowerCase()] || conceptMap['discovery'];
+    const designDoc = await this.fileReader.readPkarrDesignDoc(info.doc);
+
+    let output = `# Pkarr Concept: ${concept}\n\n`;
+    output += `${info.description}\n\n`;
+    output += `---\n\n`;
+    output += designDoc;
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  private async searchPkarrDocs(
+    query: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const pkarrPaths = this.fileReader.getPkarrPaths();
+    if (!pkarrPaths) {
+      return {
+        content: [{ type: 'text', text: 'Pkarr resources not available' }],
+      };
+    }
+
+    const results = await this.fileReader.searchFiles(pkarrPaths.root, query);
+
+    let output = `# Search Results for "${query}"\n\n`;
+    output += `Found ${results.length} ${results.length === 1 ? 'file' : 'files'} matching your query:\n\n`;
+
+    for (const result of results) {
+      const relativePath = result.path.replace(pkarrPaths.root, '');
+      output += `## ${relativePath}\n\n`;
+      for (const match of result.matches) {
+        output += `- ${match}\n`;
+      }
+      output += `\n`;
+    }
+
+    if (results.length === 0) {
+      output += `No matches found. Try searching for:\n`;
+      output += `- "publish" - Publishing records\n`;
+      output += `- "resolve" - Resolving public keys\n`;
+      output += `- "relay" - Relay configuration\n`;
+      output += `- "DHT" - Distributed Hash Table\n`;
+    }
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  private async getPkarrExample(
+    language: string,
+    example: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    if (language === 'rust') {
+      const exampleContent = await this.fileReader.readPkarrExample(example);
+      const readmeContent = await this.fileReader.readPkarrFile('pkarr/examples/README.md');
+
+      let output = `# Pkarr ${example} Example (Rust)\n\n`;
+      output += readmeContent + '\n\n';
+      output += `## Source Code\n\n\`\`\`rust\n${exampleContent}\n\`\`\`\n`;
+
+      return {
+        content: [{ type: 'text', text: output }],
+      };
+    } else {
+      // JavaScript
+      const pkgReadme = await this.fileReader.readPkarrJsBindings('pkg/README.md');
+      const exampleJs = await this.fileReader.readPkarrJsBindings('pkg/example.js');
+
+      let output = `# Pkarr JavaScript Examples\n\n`;
+      output += pkgReadme + '\n\n';
+      output += `## Example Code\n\n\`\`\`javascript\n${exampleJs}\n\`\`\`\n`;
+
+      return {
+        content: [{ type: 'text', text: output }],
+      };
+    }
+  }
+
+  private async generatePkarrClient(
+    language: string,
+    includePublish?: boolean,
+    includeResolve?: boolean
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const shouldPublish = includePublish !== false;
+    const shouldResolve = includeResolve !== false;
+
+    let output = `# Pkarr Client - ${language}\n\n`;
+
+    if (language === 'javascript' || language === 'typescript') {
+      const isTs = language === 'typescript';
+      output += `\`\`\`${language}\n`;
+      output += `${isTs ? "import { Client, Keypair, SignedPacket } from 'pkarr';\n\n" : "const { Client, Keypair, SignedPacket } = require('pkarr');\n\n"}`;
+      output += `class PkarrClient {\n`;
+      output += `  ${isTs ? 'private client: Client;\n  ' : ''}constructor(relays${isTs ? ': string[]' : ''} = ['${DEFAULT_PKARR_RELAYS[0]}', '${DEFAULT_PKARR_RELAYS[1]}']) {\n`;
+      output += `    this.client = new Client(relays);\n`;
+      output += `  }\n\n`;
+
+      if (shouldPublish) {
+        output += `  async publish(keypair${isTs ? ': Keypair' : ''}, records${isTs ? ': { name: string; value: string; ttl: number }[]' : ''})${isTs ? ': Promise<void>' : ''} {\n`;
+        output += `    const builder = SignedPacket.builder();\n`;
+        output += `    for (const record of records) {\n`;
+        output += `      builder.addTxtRecord(record.name, record.value, record.ttl);\n`;
+        output += `    }\n`;
+        output += `    const packet = builder.buildAndSign(keypair);\n`;
+        output += `    await this.client.publish(packet);\n`;
+        output += `  }\n\n`;
+      }
+
+      if (shouldResolve) {
+        output += `  async resolve(publicKey${isTs ? ': string' : ''})${isTs ? ': Promise<SignedPacket | null>' : ''} {\n`;
+        output += `    return await this.client.resolve(publicKey);\n`;
+        output += `  }\n\n`;
+      }
+
+      output += `}\n\n`;
+      output += `${isTs ? 'export default PkarrClient;\n' : 'module.exports = PkarrClient;\n'}`;
+      output += `\`\`\`\n`;
+    } else {
+      // Rust
+      output += `\`\`\`rust\n`;
+      output += `use pkarr::{Client, Keypair, SignedPacket};\nuse std::error::Error;\n\n`;
+      output += `pub struct PkarrClient {\n`;
+      output += `    client: Client,\n`;
+      output += `}\n\n`;
+      output += `impl PkarrClient {\n`;
+      output += `    pub fn new() -> Self {\n`;
+      output += `        Self {\n`;
+      output += `            client: Client::default(),\n`;
+      output += `        }\n`;
+      output += `    }\n\n`;
+
+      if (shouldPublish) {
+        output += `    pub async fn publish(&self, keypair: &Keypair, packet: &SignedPacket) -> Result<(), Box<dyn Error>> {\n`;
+        output += `        self.client.publish(packet).await?;\n`;
+        output += `        Ok(())\n`;
+        output += `    }\n\n`;
+      }
+
+      if (shouldResolve) {
+        output += `    pub async fn resolve(&self, public_key: &str) -> Result<Option<SignedPacket>, Box<dyn Error>> {\n`;
+        output += `        let packet = self.client.resolve(public_key).await?;\n`;
+        output += `        Ok(packet)\n`;
+        output += `    }\n\n`;
+      }
+
+      output += `}\n`;
+      output += `\`\`\`\n`;
+    }
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  private async startPkarrRelay(
+    port?: number,
+    testnet?: boolean
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    if (!this.pkarrRelayManager) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Pkarr relay manager not available. Make sure Pkarr resources are installed.',
+          },
+        ],
+      };
+    }
+
+    try {
+      const config = { port, testnet };
+      const result = await this.pkarrRelayManager.start(config);
+      return {
+        content: [{ type: 'text', text: result }],
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Failed to start Pkarr relay: ${error.message}\n\nMake sure Rust and Cargo are installed.`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async stopPkarrRelay(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    if (!this.pkarrRelayManager) {
+      return createTextResponse('Pkarr relay manager not available');
+    }
+
+    const result = await this.pkarrRelayManager.stop();
+    return createTextResponse(result);
+  }
+
+  private async restartPkarrRelay(
+    port?: number,
+    testnet?: boolean
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    if (!this.pkarrRelayManager) {
+      return {
+        content: [{ type: 'text', text: 'Pkarr relay manager not available' }],
+      };
+    }
+
+    const config = { port, testnet };
+    const result = await this.pkarrRelayManager.restart(config);
+    return {
+      content: [{ type: 'text', text: result }],
+    };
+  }
+
+  private async checkPkarrRelayStatus(): Promise<{
+    content: Array<{ type: string; text: string }>;
+  }> {
+    if (!this.pkarrRelayManager) {
+      return {
+        content: [{ type: 'text', text: 'Pkarr relay manager not available' }],
+      };
+    }
+
+    const isRunning = await this.pkarrRelayManager.isRunning();
+    const status = isRunning ? '✅ Pkarr relay is running' : '❌ Pkarr relay is not running';
+
+    if (isRunning) {
+      const info = await this.pkarrRelayManager.getInfo();
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `${status}\n\nURL: ${info.url}\nPort: ${info.port}${info.testnet ? '\nMode: Testnet' : ''}`,
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `${status}\n\nStart it with the \`start_pkarr_relay\` tool.`,
+        },
+      ],
+    };
+  }
+
+  private async getPkarrRelayInfo(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    if (!this.pkarrRelayManager) {
+      return {
+        content: [{ type: 'text', text: 'Pkarr relay manager not available' }],
+      };
+    }
+
+    const info = await this.pkarrRelayManager.getInfo();
+
+    let output = `# Pkarr Relay Information\n\n`;
+    output += `**Status**: ${info.running ? '✅ Running' : '❌ Not running'}\n\n`;
+
+    if (info.running) {
+      output += `**URL**: ${info.url}\n`;
+      output += `**Port**: ${info.port}\n`;
+      if (info.cacheLocation) {
+        output += `**Cache Location**: ${info.cacheLocation}\n`;
+      }
+      if (info.testnet) {
+        output += `**Mode**: Testnet\n`;
+      }
+      output += `\n## Usage in Code\n\n`;
+      output += `### JavaScript\n\`\`\`javascript\nconst client = new Client(['${info.url}']);\n\`\`\`\n\n`;
+      output += `### Rust\n\`\`\`rust\nlet client = Client::builder().relay("${info.url}").build();\n\`\`\`\n`;
+    } else {
+      output += `Start the relay with \`start_pkarr_relay\` tool.\n`;
+    }
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  private async generatePkarrKeypair(
+    language: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    let output = `# Generate Pkarr Keypair - ${language}\n\n`;
+
+    if (language === 'javascript' || language === 'typescript') {
+      const isTs = language === 'typescript';
+      output += `\`\`\`${language}\n`;
+      output += `${isTs ? "import { Keypair } from 'pkarr';\n\n" : "const { Keypair } = require('pkarr');\n\n"}`;
+      output += `// Generate a new random keypair\n`;
+      output += `const keypair = new Keypair();\n\n`;
+      output += `// Get the public key (z-base32 encoded)\n`;
+      output += `const publicKey = keypair.public_key_string();\n`;
+      output += `console.log('Public Key:', publicKey);\n\n`;
+      output += `// Get secret key bytes (save securely!)\n`;
+      output += `const secretBytes = keypair.secret_key_bytes();\n\n`;
+      output += `// Recreate keypair from secret key later\n`;
+      output += `// const restoredKeypair = Keypair.from_secret_key(secretBytes);\n`;
+      output += `\`\`\`\n`;
+    } else {
+      // Rust
+      output += `\`\`\`rust\n`;
+      output += `use pkarr::Keypair;\n\n`;
+      output += `// Generate a new random keypair\n`;
+      output += `let keypair = Keypair::random();\n\n`;
+      output += `// Get the public key\n`;
+      output += `let public_key = keypair.public_key();\n`;
+      output += `println!("Public Key: {}", public_key);\n\n`;
+      output += `// Get secret key bytes (save securely!)\n`;
+      output += `let secret_bytes = keypair.secret_key().to_bytes();\n\n`;
+      output += `// Recreate keypair from secret key later\n`;
+      output += `// let restored_keypair = Keypair::from_secret_key(&secret_bytes)?;\n`;
+      output += `\`\`\`\n`;
+    }
+
+    output += `\n⚠️ **Important**: Store the secret key securely! Anyone with access to it can update your DNS records.\n`;
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  private async generateDnsRecordBuilder(
+    language: string,
+    recordTypes?: string[]
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const types = recordTypes || ['A', 'TXT', 'HTTPS'];
+
+    let output = `# DNS Record Builder - ${language}\n\n`;
+    output += `Building ${types.join(', ')} records\n\n`;
+
+    if (language === 'javascript' || language === 'typescript') {
+      const isTs = language === 'typescript';
+      output += `\`\`\`${language}\n`;
+      output += `${isTs ? "import { SignedPacket, Keypair } from 'pkarr';\n\n" : "const { SignedPacket, Keypair } = require('pkarr');\n\n"}`;
+      output += `const builder = SignedPacket.builder();\n\n`;
+
+      for (const type of types) {
+        switch (type.toUpperCase()) {
+          case 'A':
+            output += `// Add A record (IPv4)\n`;
+            output += `builder.addARecord("www", "192.168.1.1", 3600);\n\n`;
+            break;
+          case 'AAAA':
+            output += `// Add AAAA record (IPv6)\n`;
+            output += `builder.addAAAARecord("www", "2001:db8::1", 3600);\n\n`;
+            break;
+          case 'TXT':
+            output += `// Add TXT record\n`;
+            output += `builder.addTxtRecord("_service", "pkarr=v1.0", 3600);\n\n`;
+            break;
+          case 'CNAME':
+            output += `// Add CNAME record\n`;
+            output += `builder.addCnameRecord("alias", "www", 3600);\n\n`;
+            break;
+          case 'HTTPS':
+            output += `// Add HTTPS record with service parameters\n`;
+            output += `builder.addHttpsRecord("@", 1, ".", 3600, {\n`;
+            output += `  port: 443,\n`;
+            output += `  ipv4hint: "192.168.1.1",\n`;
+            output += `  alpn: ["h2", "http/1.1"]\n`;
+            output += `});\n\n`;
+            break;
+        }
+      }
+
+      output += `// Build and sign\n`;
+      output += `const keypair = new Keypair();\n`;
+      output += `const packet = builder.buildAndSign(keypair);\n`;
+      output += `\`\`\`\n`;
+    } else {
+      // Rust
+      output += `\`\`\`rust\n`;
+      output += `use pkarr::{SignedPacket, Keypair};\n`;
+      output += `use simple_dns::{Name, CLASS, ResourceRecord, rdata::*};\n\n`;
+      output += `let mut packet = SignedPacket::new(&keypair)?;\n\n`;
+
+      for (const type of types) {
+        switch (type.toUpperCase()) {
+          case 'A':
+            output += `// Add A record (IPv4)\n`;
+            output += `packet.add_answer(ResourceRecord::new(\n`;
+            output += `    Name::new_unchecked("www"),\n`;
+            output += `    CLASS::IN,\n`;
+            output += `    3600,\n`;
+            output += `    A { address: [192, 168, 1, 1] }\n`;
+            output += `));\n\n`;
+            break;
+          case 'TXT':
+            output += `// Add TXT record\n`;
+            output += `packet.add_answer(ResourceRecord::new(\n`;
+            output += `    Name::new_unchecked("_service"),\n`;
+            output += `    CLASS::IN,\n`;
+            output += `    3600,\n`;
+            output += `    TXT::new().with_string("pkarr=v1.0")\n`;
+            output += `));\n\n`;
+            break;
+        }
+      }
+
+      output += `\`\`\`\n`;
+    }
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  private async explainPkarrKey(
+    publicKey: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    let output = `# Pkarr Public Key Analysis\n\n`;
+    output += `**Key**: \`${publicKey}\`\n\n`;
+
+    // Basic validation
+    if (publicKey.length !== 52) {
+      output += `⚠️ **Warning**: Standard Pkarr keys are 52 characters (z-base32 encoded ed25519 public keys)\n\n`;
+    }
+
+    output += `## Key Properties\n\n`;
+    output += `- **Encoding**: z-base32 (base32 with alternative alphabet)\n`;
+    output += `- **Key Type**: Ed25519 public key (32 bytes)\n`;
+    output += `- **Length**: ${publicKey.length} characters\n\n`;
+
+    output += `## Usage\n\n`;
+    output += `This key can be used as:\n\n`;
+    output += `1. **Top-Level Domain**: \`https://${publicKey}\`\n`;
+    output += `2. **DHT Key**: Lookup signed packets from Mainline DHT\n`;
+    output += `3. **Verification**: Verify signatures on DNS packets\n\n`;
+
+    output += `## Resolve This Key\n\n`;
+    output += `### JavaScript\n\`\`\`javascript\n`;
+    output += `const client = new Client();\n`;
+    output += `const packet = await client.resolve("${publicKey}");\n`;
+    output += `if (packet) {\n`;
+    output += `  console.log('Records:', packet.records);\n`;
+    output += `}\n`;
+    output += `\`\`\`\n\n`;
+
+    output += `### Rust\n\`\`\`rust\n`;
+    output += `let client = Client::default();\n`;
+    output += `if let Some(packet) = client.resolve("${publicKey}").await? {\n`;
+    output += `    println!("Records: {:?}", packet);\n`;
+    output += `}\n`;
+    output += `\`\`\`\n`;
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  private async installPkarrRelay(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      const { stdout, stderr } = await execAsync('cargo install pkarr-relay', {
+        timeout: 300000, // 5 minutes
+      });
+
+      let output = `✅ Pkarr relay installed successfully!\n\n`;
+      output += `Installation output:\n${stdout}\n${stderr}\n\n`;
+      output += `You can now start the relay with the \`start_pkarr_relay\` tool.`;
+
+      return {
+        content: [{ type: 'text', text: output }],
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Failed to install pkarr-relay: ${error.message}\n\nMake sure Rust and Cargo are installed:\nhttps://rustup.rs/`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async setupPkarrProject(
+    projectPath: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const analysis = await this.envDetector.analyzeProject(projectPath);
+
+    let output = `# Add Pkarr to Your Project\n\n`;
+
+    switch (analysis.type) {
+      case PROJECT_TYPES.RUST: {
+        output += `## Add Dependency\n\nAdd to your Cargo.toml:\n\`\`\`toml\n[dependencies]\npkarr = "5.0"\n\`\`\`\n\n`;
+        output += `## Basic Usage\n\n\`\`\`rust\n`;
+        output += `use pkarr::{Client, Keypair, SignedPacket};\n\n`;
+        output += `#[tokio::main]\nasync fn main() -> Result<(), Box<dyn std::error::Error>> {\n`;
+        output += `    let keypair = Keypair::random();\n`;
+        output += `    let client = Client::default();\n`;
+        output += `    \n`;
+        output += `    // Publish records\n`;
+        output += `    let packet = SignedPacket::new(&keypair)?;\n`;
+        output += `    client.publish(&packet).await?;\n`;
+        output += `    \n`;
+        output += `    Ok(())\n`;
+        output += `}\n\`\`\`\n`;
+        break;
+      }
+      case PROJECT_TYPES.JAVASCRIPT:
+      case PROJECT_TYPES.TYPESCRIPT: {
+        output += `## Install Package\n\n\`\`\`bash\nnpm install pkarr\n\`\`\`\n\n`;
+        output += `## Basic Usage\n\n\`\`\`${analysis.type}\n`;
+        if (analysis.type === 'typescript') {
+          output += `import { Client, Keypair, SignedPacket } from 'pkarr';\n\n`;
+        } else {
+          output += `const { Client, Keypair, SignedPacket } = require('pkarr');\n\n`;
+        }
+        output += `const keypair = new Keypair();\n`;
+        output += `const client = new Client();\n\n`;
+        output += `// Publish records\n`;
+        output += `const builder = SignedPacket.builder();\n`;
+        output += `builder.addTxtRecord("_service", "myapp=v1", 3600);\n`;
+        output += `const packet = builder.buildAndSign(keypair);\n`;
+        output += `await client.publish(packet);\n\n`;
+        output += `// Resolve records\n`;
+        output += `const resolved = await client.resolve(keypair.public_key_string());\n`;
+        output += `console.log(resolved.records);\n`;
+        output += `\`\`\`\n`;
+        break;
+      }
+      default:
+        output += `Project type not detected. Install Pkarr manually:\n\n`;
+        output += `**JavaScript/TypeScript**: \`npm install pkarr\`\n`;
+        output += `**Rust**: Add \`pkarr = "5.0"\` to Cargo.toml\n`;
+    }
+
+    return {
+      content: [{ type: 'text', text: output }],
+    };
+  }
+
+  // ============================================================================
+  // 7. PKDNS TOOLS (DNS Resolver for Pkarr Domains)
+  // ============================================================================
+  // Browser/system DNS setup, server installation
+
+  private async getPkdnsInfo(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const readme = await this.fileReader.readPkdnsFile('README.md');
+    const servers = await this.fileReader.readPkdnsFile('servers.txt');
+
+    let output = `# Pkdns - DNS Resolver for Pkarr Domains\n\n`;
+    output += readme + '\n\n';
+    output += `## Public Pkdns Servers\n\n\`\`\`\n${servers}\n\`\`\`\n`;
+
+    return createTextResponse(output);
+  }
+
+  private async setupPkdnsBrowser(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const dohDoc = await this.fileReader.readPkdnsDoc('dns-over-https');
+
+    let output = `# Configure Your Browser for Pkdns\n\n`;
+    output += dohDoc + '\n\n';
+    output += `## Quick Setup\n\n`;
+    output += `1. Pick a DNS-over-HTTPS server from public list\n`;
+    output += `2. Open browser settings\n`;
+    output += `3. Find "DNS over HTTPS" or "Secure DNS"\n`;
+    output += `4. Enter the DoH URL\n\n`;
+    output += `## Test It\n\n`;
+    output += `Visit: http://7fmjpcuuzf54hw18bsgi3zihzyh4awseeuq5tmojefaezjbd64cy/\n`;
+
+    return createTextResponse(output);
+  }
+
+  private async setupPkdnsSystem(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const readme = await this.fileReader.readPkdnsFile('README.md');
+
+    let output = `# Configure System DNS for Pkdns\n\n`;
+    output += `## Why?\n\n`;
+    output += `Makes Pkarr domains work system-wide in all applications.\n\n`;
+    output += `## Steps\n\n`;
+    output += `1. Find a public pkdns server IP (use \`get_pkdns_info\` tool)\n`;
+    output += `2. Add it to your system DNS settings\n\n`;
+    output += `### macOS\n`;
+    output += `System Preferences → Network → Advanced → DNS → Add server IP\n\n`;
+    output += `### Linux (Ubuntu)\n`;
+    output += `\`\`\`bash\n`;
+    output += `sudo nano /etc/resolv.conf\n`;
+    output += `# Add: nameserver YOUR_PKDNS_IP\n`;
+    output += `\`\`\`\n\n`;
+    output += `### Windows\n`;
+    output += `Control Panel → Network → Change adapter settings → Properties → IPv4 → DNS\n\n`;
+    output += `## Test It\n\n`;
+    output += `\`\`\`bash\n`;
+    output += `nslookup 7fmjpcuuzf54hw18bsgi3zihzyh4awseeuq5tmojefaezjbd64cy\n`;
+    output += `\`\`\`\n`;
+
+    return createTextResponse(output);
+  }
+
+  private async installPkdns(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      const { stdout, stderr } = await execAsync('cargo install --git https://github.com/pubky/pkdns pkdns', {
+        timeout: 300000, // 5 minutes
+      });
+
+      return createTextResponse(
+        `✅ Pkdns installed successfully!\n\n${stdout}\n${stderr}\n\nRun with: \`pkdns --verbose\`\n\nThen configure your browser or system DNS.`
+      );
+    } catch (error: any) {
+      return createTextResponse(
+        `Failed to install pkdns: ${error.message}\n\nMake sure Rust and Cargo are installed:\nhttps://rustup.rs/`
+      );
+    }
+  }
+
+  // ============================================================================
+  // 8. NEXUS IMPLEMENTATION TOOLS (For Advanced Users)
+  // ============================================================================
+  // Architecture understanding, development setup, component details
+
+  private async getNexusArchitecture(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const readme = await this.fileReader.readNexusFile('README.md');
+    const docsReadme = await this.fileReader.readNexusDoc('readme.md');
+
+    let output = `# Pubky Nexus Architecture\n\n`;
+    output += `## Overview\n\n${readme}\n\n`;
+    output += `## Detailed Architecture\n\n${docsReadme}\n\n`;
+    output += `## Components\n\n`;
+    output += `- **nexus-watcher**: Event aggregator (listens to homeservers)\n`;
+    output += `- **nexus-service**: REST API server\n`;
+    output += `- **nexus-common**: Shared database and models\n`;
+    output += `- **nexusd**: Daemon manager\n\n`;
+    output += `Use \`explain_nexus_component\` tool to learn more about each component.`;
+
+    return createTextResponse(output);
+  }
+
+  private async setupNexusDev(): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const readme = await this.fileReader.readNexusFile('README.md');
+
+    let output = `# Set Up Nexus Development Environment\n\n`;
+    output += `Nexus requires Neo4j (graph database) and Redis (cache).\n\n`;
+    output += `## Quick Start\n\n`;
+    output += `\`\`\`bash\n`;
+    output += `cd /path/to/pubky-nexus\n`;
+    output += `cd docker\n`;
+    output += `cp .env-sample .env\n`;
+    output += `docker compose up -d\n`;
+    output += `\`\`\`\n\n`;
+    output += `## Run Nexus\n\n`;
+    output += `\`\`\`bash\n`;
+    output += `cargo run -p nexusd\n`;
+    output += `# Or run components separately:\n`;
+    output += `cargo run -p nexusd -- watcher\n`;
+    output += `cargo run -p nexusd -- api\n`;
+    output += `\`\`\`\n\n`;
+    output += `## Access UIs\n\n`;
+    output += `- Swagger API: http://localhost:8080/swagger-ui\n`;
+    output += `- Redis Insight: http://localhost:8001/redis-stack/browser\n`;
+    output += `- Neo4j Browser: http://localhost:7474/browser/\n\n`;
+    output += `See full README for testing, benchmarking, and migrations.`;
+
+    return createTextResponse(output);
+  }
+
+  private async explainNexusComponent(
+    component: string
+  ): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const componentMap: Record<string, 'common' | 'watcher' | 'webapi'> = {
+      common: 'common',
+      watcher: 'watcher',
+      service: 'webapi',
+      webapi: 'webapi',
+      nexusd: 'common', // Fallback
+    };
+
+    const comp = componentMap[component] || 'common';
+    const content = await this.fileReader.readNexusComponentReadme(comp);
+
+    return createTextResponse(`# Nexus Component: ${component}\n\n${content}`);
   }
 }

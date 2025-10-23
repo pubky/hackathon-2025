@@ -1,16 +1,24 @@
 /**
- * Utilities for reading files from the pubky-core repository
+ * Utilities for reading files from the Pubky ecosystem repositories
  */
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { PubkyCorePaths } from '../types.js';
+import type { PubkyCorePaths, PkarrPaths, PkdnsPaths, NexusPaths } from '../types.js';
 import { SEARCH_FILE_EXTENSIONS, IGNORED_DIRECTORIES } from '../constants.js';
 
 export class FileReader {
   private paths: PubkyCorePaths;
+  private pkarrPaths: PkarrPaths | null = null;
+  private pkdnsPaths: PkdnsPaths | null = null;
+  private nexusPaths: NexusPaths | null = null;
 
-  constructor(pubkyCoreRoot: string) {
+  constructor(
+    pubkyCoreRoot: string,
+    pkarrRoot?: string,
+    pkdnsRoot?: string,
+    nexusRoot?: string
+  ) {
     this.paths = {
       root: pubkyCoreRoot,
       docs: path.join(pubkyCoreRoot, 'docs'),
@@ -18,6 +26,38 @@ export class FileReader {
       examplesRust: path.join(pubkyCoreRoot, 'examples', 'rust'),
       examplesJs: path.join(pubkyCoreRoot, 'examples', 'javascript'),
     };
+
+    if (pkarrRoot) {
+      this.pkarrPaths = {
+        root: pkarrRoot,
+        design: path.join(pkarrRoot, 'design'),
+        examples: path.join(pkarrRoot, 'pkarr', 'examples'),
+        bindingsJs: path.join(pkarrRoot, 'bindings', 'js'),
+        relay: path.join(pkarrRoot, 'relay'),
+      };
+    }
+
+    if (pkdnsRoot) {
+      this.pkdnsPaths = {
+        root: pkdnsRoot,
+        docs: path.join(pkdnsRoot, 'docs'),
+        cli: path.join(pkdnsRoot, 'cli'),
+        serverConfig: path.join(pkdnsRoot, 'server', 'config.sample.toml'),
+      };
+    }
+
+    if (nexusRoot) {
+      this.nexusPaths = {
+        root: nexusRoot,
+        docs: path.join(nexusRoot, 'docs'),
+        examples: path.join(nexusRoot, 'examples'),
+        componentReadmes: {
+          common: path.join(nexusRoot, 'nexus-common', 'README.md'),
+          watcher: path.join(nexusRoot, 'nexus-watcher', 'README.md'),
+          webapi: path.join(nexusRoot, 'nexus-webapi', 'README.md'),
+        },
+      };
+    }
   }
 
   async readFile(filePath: string): Promise<string> {
@@ -45,6 +85,46 @@ export class FileReader {
   async readExampleFile(language: 'rust' | 'javascript', relativePath: string): Promise<string> {
     const basePath = language === 'rust' ? this.paths.examplesRust : this.paths.examplesJs;
     const fullPath = path.join(basePath, relativePath);
+    return this.readFile(fullPath);
+  }
+
+  async readPkarrDesignDoc(docName: string): Promise<string> {
+    if (!this.pkarrPaths) {
+      throw new Error('Pkarr paths not initialized');
+    }
+    const fullPath = path.join(this.pkarrPaths.design, `${docName}.md`);
+    return this.readFile(fullPath);
+  }
+
+  async readPkarrExample(exampleName: string): Promise<string> {
+    if (!this.pkarrPaths) {
+      throw new Error('Pkarr paths not initialized');
+    }
+    const fullPath = path.join(this.pkarrPaths.examples, `${exampleName}.rs`);
+    return this.readFile(fullPath);
+  }
+
+  async readPkarrJsBindings(relativePath: string): Promise<string> {
+    if (!this.pkarrPaths) {
+      throw new Error('Pkarr paths not initialized');
+    }
+    const fullPath = path.join(this.pkarrPaths.bindingsJs, relativePath);
+    return this.readFile(fullPath);
+  }
+
+  async readPkarrRelayConfig(): Promise<string> {
+    if (!this.pkarrPaths) {
+      throw new Error('Pkarr paths not initialized');
+    }
+    const fullPath = path.join(this.pkarrPaths.relay, 'src', 'config.example.toml');
+    return this.readFile(fullPath);
+  }
+
+  async readPkarrFile(relativePath: string): Promise<string> {
+    if (!this.pkarrPaths) {
+      throw new Error('Pkarr paths not initialized');
+    }
+    const fullPath = path.join(this.pkarrPaths.root, relativePath);
     return this.readFile(fullPath);
   }
 
@@ -108,5 +188,57 @@ export class FileReader {
 
   getPaths(): PubkyCorePaths {
     return this.paths;
+  }
+
+  getPkarrPaths(): PkarrPaths | null {
+    return this.pkarrPaths;
+  }
+
+  async readPkdnsDoc(docName: string): Promise<string> {
+    if (!this.pkdnsPaths) {
+      throw new Error('Pkdns paths not initialized');
+    }
+    const fullPath = path.join(this.pkdnsPaths.docs, `${docName}.md`);
+    return this.readFile(fullPath);
+  }
+
+  async readPkdnsFile(relativePath: string): Promise<string> {
+    if (!this.pkdnsPaths) {
+      throw new Error('Pkdns paths not initialized');
+    }
+    const fullPath = path.join(this.pkdnsPaths.root, relativePath);
+    return this.readFile(fullPath);
+  }
+
+  getPkdnsPaths(): PkdnsPaths | null {
+    return this.pkdnsPaths;
+  }
+
+  async readNexusDoc(docName: string): Promise<string> {
+    if (!this.nexusPaths) {
+      throw new Error('Nexus paths not initialized');
+    }
+    const fullPath = path.join(this.nexusPaths.docs, docName);
+    return this.readFile(fullPath);
+  }
+
+  async readNexusComponentReadme(component: 'common' | 'watcher' | 'webapi'): Promise<string> {
+    if (!this.nexusPaths) {
+      throw new Error('Nexus paths not initialized');
+    }
+    const fullPath = this.nexusPaths.componentReadmes[component];
+    return this.readFile(fullPath);
+  }
+
+  async readNexusFile(relativePath: string): Promise<string> {
+    if (!this.nexusPaths) {
+      throw new Error('Nexus paths not initialized');
+    }
+    const fullPath = path.join(this.nexusPaths.root, relativePath);
+    return this.readFile(fullPath);
+  }
+
+  getNexusPaths(): NexusPaths | null {
+    return this.nexusPaths;
   }
 }

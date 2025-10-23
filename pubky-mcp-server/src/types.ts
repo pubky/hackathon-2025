@@ -2,12 +2,43 @@
  * Common types for the Pubky MCP Server
  */
 
+// Common response types
+export type ToolResponse = { content: Array<{ type: string; text: string }> };
+export type PromptResponse = { messages: Array<{ role: string; content: { type: string; text: string } }> };
+export type ResourceResponse = { contents: { uri: string; mimeType: string; text: string }[] };
+
 export interface PubkyCorePaths {
   root: string;
   docs: string;
   examples: string;
   examplesRust: string;
   examplesJs: string;
+}
+
+export interface PkarrPaths {
+  root: string;
+  design: string;
+  examples: string;
+  bindingsJs: string;
+  relay: string;
+}
+
+export interface PkdnsPaths {
+  root: string;
+  docs: string;
+  cli: string;
+  serverConfig: string;
+}
+
+export interface NexusPaths {
+  root: string;
+  docs: string;
+  examples: string;
+  componentReadmes: {
+    common: string;
+    watcher: string;
+    webapi: string;
+  };
 }
 
 export interface TestnetInfo {
@@ -68,4 +99,26 @@ export interface CodeTemplate {
   language: 'rust' | 'javascript' | 'typescript';
   code: string;
   dependencies?: string[];
+}
+
+export interface PkarrRelayInfo {
+  running: boolean;
+  port?: number;
+  cacheLocation?: string;
+  url?: string;
+  testnet?: boolean;
+}
+
+export interface PkarrRelayConfig {
+  port?: number;
+  cachePath?: string;
+  cacheSize?: number;
+  minimumTtl?: number;
+  maximumTtl?: number;
+  testnet?: boolean;
+  rateLimiter?: {
+    behindProxy: boolean;
+    burstSize: number;
+    perSecond: number;
+  };
 }

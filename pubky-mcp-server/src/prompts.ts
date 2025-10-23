@@ -1,5 +1,35 @@
 /**
  * MCP Prompts for common Pubky development tasks
+ * 
+ * TABLE OF CONTENTS:
+ * ==================
+ * 
+ * ARCHITECTURE & LEARNING:
+ *   - understand-architecture: Explain hub-spoke architecture
+ * 
+ * DEVELOPMENT WORKFLOW:
+ *   - create-pubky-app: Interactive app creation
+ *   - implement-auth: Authentication guide
+ *   - add-storage: Storage operations guide
+ *   - write-to-homeserver: Writing data guide
+ *   - debug-capabilities: Debug permissions
+ *   - setup-testnet: Local testnet setup
+ * 
+ * SOCIAL FEATURES:
+ *   - build-social-feed: Social feed implementation
+ *   - read-from-nexus: Querying Nexus API
+ *   - create-post-ui: Post creation UI
+ *   - implement-user-profile: Profile management
+ *   - query-social-data: Social data queries
+ * 
+ * DATA & VALIDATION:
+ *   - validate-app-data: Data validation guide
+ * 
+ * NOTE: For better maintainability, consider splitting into:
+ *   - prompts/architecture.ts
+ *   - prompts/development.ts
+ *   - prompts/social.ts
+ *   - prompts/data.ts
  */
 
 import { Prompt } from '@modelcontextprotocol/sdk/types.js';

@@ -4,22 +4,33 @@ Your complete Pubky ecosystem expert! This Model Context Protocol (MCP) server p
 
 ## Features
 
-🔺 **Hub-Spoke Architecture Knowledge**
+🔺 **Complete Pubky Ecosystem Coverage**
 
-The MCP provides expertise on all three components of the Pubky ecosystem:
+The MCP provides expertise on **all 6 official Pubky projects** across 4 layers:
 
-- **Your Homeserver** (pubky-core): Where you WRITE data (auth, storage, PUT/DELETE operations)
-- **Data Specs** (pubky-app-specs): What format to use (User, Post, Tag validation & schemas)
-- **Nexus Indexer** (nexus-webapi): Where you READ social data (feeds, search, discovery)
+**Layer 1: Discovery**
+- **Pkarr** (pkarr): Public-Key Addressable Resource Records - DHT-based discovery
+- **Pkdns** (pkdns): DNS resolver that makes Pkarr domains work as TLDs in browsers
 
-🛠️ **Smart Development Tools**
+**Layer 2: Protocol**
+- **Pubky Core** (pubky-core): Auth, storage, homeserver protocol
 
-- Code generation and project scaffolding
-- API client generation for Nexus
-- Data model validation and examples
-- Environment detection and dependency management
-- Testnet management (start/stop/status)
-- Project analysis and integration helpers
+**Layer 3: Data Models**
+- **App Specs** (pubky-app-specs): Validated data models (User, Post, Tag, etc.)
+
+**Layer 4: Social Graph**
+- **Nexus API** (nexus-webapi): REST API for reading social data
+- **Nexus** (pubky-nexus): Graph indexer implementation (watcher, service, databases)
+
+🛠️ **Smart Development Tools (65+ tools)**
+
+- **Discovery**: Pkarr client generation, DNS record builders, keypair management
+- **DNS Setup**: Pkdns browser/system configuration, server installation
+- **Protocol**: Code generation, project scaffolding, auth flows
+- **Data Models**: Validation, examples, schema generation
+- **Social API**: Nexus client generation, endpoint exploration
+- **Infrastructure**: Testnet management, Pkarr relay, Nexus dev setup
+- **Environment**: Dependency management, project integration
 
 📚 **Rich Code Examples**
 
@@ -30,9 +41,11 @@ The MCP provides expertise on all three components of the Pubky ecosystem:
 
 💡 **Interactive Guides**
 
+- Discovery: Pkarr resolution, DNS setup, domain publishing
 - Protocol: Authentication, storage, capabilities, testnet
-- Social Features: Feeds, posts, user profiles
+- Social Features: Feeds, posts, user profiles, Nexus architecture
 - Data Validation: Model specs and validation rules
+- Advanced: Nexus development, graph databases, indexing
 
 ## Installation
 
