@@ -1,4 +1,4 @@
-import { Keypair, Pubky, PublicKey, type PublicStorage, type Session, type Signer } from '@synonymdev/pubky';
+import { AuthFlow, Pubky, type PublicStorage, type Session } from '@synonymdev/pubky';
 
 declare global {
   interface Window {
@@ -24,7 +24,9 @@ const envHomeserverPublicKey = import.meta.env.VITE_PUBKY_HOMESERVER_PUBLIC_KEY?
 const DEFAULT_HOMESERVER_URL = envHomeserverUrl || (import.meta.env.DEV ? TESTNET_HOMESERVER_URL : STAGING_HOMESERVER_URL);
 const DEFAULT_HOMESERVER_PUBLIC_KEY =
   envHomeserverPublicKey || (import.meta.env.DEV ? TESTNET_HOMESERVER_PUBLIC_KEY : STAGING_HOMESERVER_PUBLIC_KEY);
-const KEYPAIR_STORAGE_KEY = 'pubky-live-vote:keypair-secret';
+
+const AUTH_CAPABILITIES = '/pub/pubky-live-vote/:rw';
+const DEFAULT_AUTH_RELAY = 'https://httprelay.pubky.app/link/';
 const MOCK_STORAGE_PREFIX = 'pubky-live-vote:mock-storage:';
 
 type HomeserverConfig = {
@@ -32,29 +34,7 @@ type HomeserverConfig = {
   homeserverPublicKey: string;
 };
 
-const resolveDefaultHomeserverUrl = () => DEFAULT_HOMESERVER_URL;
-
-const parseHostname = (url: string): string | null => {
-  try {
-    return new URL(url).hostname;
-  } catch (error) {
-    console.warn('Unable to parse homeserver URL hostname', error);
-    return null;
-  }
-};
-
-const isLocalHostname = (hostname: string | null | undefined): boolean => {
-  if (!hostname) return true;
-  const normalized = hostname.toLowerCase();
-  return (
-    normalized === 'localhost' ||
-    normalized === '127.0.0.1' ||
-    normalized === '::1' ||
-    normalized.endsWith('.local')
-  );
-};
-
-export type AuthMethod = 'signin' | 'signup';
+export type AuthMethod = 'approval';
 
 export interface SessionResult {
   session: Session;
@@ -62,13 +42,23 @@ export interface SessionResult {
   publicKey: string;
 }
 
+export interface AuthSessionHandle {
+  authorizationUrl: string;
+  awaitApproval: () => Promise<SessionResult>;
+  cancel: () => void;
+}
+
 export interface PubkyClient {
-  ensureSession: () => Promise<SessionResult>;
+  startAuthSession: () => Promise<AuthSessionHandle>;
+  cancelActiveFlow: () => void;
   signout: () => Promise<void>;
   session: Session | null;
   sessionPublicKey: string | null;
-  lastAuthMethod: AuthMethod | null;
   publicStorage: PublicStorage | null;
+}
+
+function resolveDefaultHomeserverUrl(): string {
+  return DEFAULT_HOMESERVER_URL;
 }
 
 let resolvedConfig: HomeserverConfig = {
@@ -91,42 +81,25 @@ export const ensurePubkyClient = async (): Promise<PubkyClient> => {
 
 export const getHomeserverConfig = (): HomeserverConfig => resolvedConfig;
 
-const hasBrowserStorage = () => typeof window !== 'undefined' && !!window.localStorage;
-
-const serializeSecretKey = (secret: Uint8Array): string => JSON.stringify(Array.from(secret));
-
-const deserializeSecretKey = (payload: string): Uint8Array => {
-  const parsed = JSON.parse(payload) as number[];
-  return new Uint8Array(parsed);
-};
-
-const readPersistedSecret = (): Uint8Array | null => {
-  if (!hasBrowserStorage()) return null;
+const parseHostname = (url: string): string | null => {
   try {
-    const stored = window.localStorage.getItem(KEYPAIR_STORAGE_KEY);
-    if (!stored) return null;
-    return deserializeSecretKey(stored);
+    return new URL(url).hostname;
   } catch (error) {
-    console.warn('Unable to read persisted Pubky secret', error);
+    console.warn('Unable to parse homeserver URL hostname', error);
     return null;
   }
 };
 
-const persistSecret = (keypair: Keypair) => {
-  if (!hasBrowserStorage()) return;
-  try {
-    const secret = keypair.secretKey();
-    window.localStorage.setItem(KEYPAIR_STORAGE_KEY, serializeSecretKey(secret));
-  } catch (error) {
-    console.warn('Unable to persist Pubky secret', error);
-  }
+const isLocalHostname = (hostname: string | null | undefined): boolean => {
+  if (!hostname) return true;
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === 'localhost' ||
+    normalized === '127.0.0.1' ||
+    normalized === '::1' ||
+    normalized.endsWith('.local')
+  );
 };
-
-const isPkarrMissingHttpsError = (error: unknown): error is Error =>
-  error instanceof Error &&
-  error.name === 'PkarrError' &&
-  (error.message.includes('No HTTPS endpoints found') ||
-    error.message.includes('Pkarr record is malformed'));
 
 const isNetworkUnreachableError = (error: unknown): boolean => {
   if (error instanceof TypeError) return true;
@@ -140,14 +113,6 @@ const isNetworkUnreachableError = (error: unknown): boolean => {
     message.includes('econnrefused') ||
     message.includes('econnreset')
   );
-};
-
-const fallbackToMockClient = async (clientToReplace: PubkyClient, cause: unknown): Promise<SessionResult> => {
-  console.warn('Falling back to mock Pubky client after homeserver bootstrap failure', cause);
-  const mockClient = createMockClient();
-  cachedClient = mockClient;
-  Object.assign(clientToReplace, mockClient);
-  return mockClient.ensureSession();
 };
 
 const createPubkyClient = (): PubkyClient => {
@@ -179,85 +144,86 @@ const createPubkyClientWithConfig = (
   const useLocalTestnet = isLocalHostname(homeserverHostname);
   const pubky = useLocalTestnet ? Pubky.testnet(homeserverHostname ?? undefined) : new Pubky();
   const publicStorage = pubky.publicStorage;
-  const homeserverKey = PublicKey.from(config.homeserverPublicKey);
 
-  let signer: Signer | null = null;
-  let signerWasPersisted = false;
   let session: Session | null = null;
   let sessionPublicKey: string | null = null;
-  let lastAuthMethod: AuthMethod | null = null;
+  let activeFlow: AuthFlow | null = null;
 
-  const ensureSigner = (): { signer: Signer; persisted: boolean } => {
-    if (signer) {
-      return { signer, persisted: signerWasPersisted };
+  const releaseFlow = (flow: AuthFlow | null) => {
+    if (!flow) return;
+    try {
+      flow.free();
+    } catch (error) {
+      console.warn('Pubky auth flow cleanup failed', error);
     }
-    const persistedSecret = readPersistedSecret();
-    if (persistedSecret) {
-      const existingKeypair = Keypair.fromSecretKey(persistedSecret);
-      signer = pubky.signer(existingKeypair);
-      signerWasPersisted = true;
-      return { signer, persisted: true };
+    if (activeFlow === flow) {
+      activeFlow = null;
     }
-    const newKeypair = Keypair.random();
-    persistSecret(newKeypair);
-    signer = pubky.signer(newKeypair);
-    signerWasPersisted = false;
-    return { signer, persisted: false };
   };
 
-  const signupWithHomeserver = async (activeSigner: Signer) => activeSigner.signup(homeserverKey, null);
+  const cancelActiveFlow = () => {
+    if (activeFlow) {
+      releaseFlow(activeFlow);
+    }
+  };
 
-  const ensureSession = async (): Promise<SessionResult> => {
+  const startAuthSession = async (): Promise<AuthSessionHandle> => {
     if (session) {
-      const publicKey = sessionPublicKey ?? session.info.publicKey.z32();
+      const activeSession = session;
+      const publicKey = sessionPublicKey ?? activeSession.info.publicKey.z32();
       return {
-        session,
-        method: lastAuthMethod ?? 'signin',
-        publicKey
+        authorizationUrl: '',
+        awaitApproval: async () => ({ session: activeSession, method: 'approval', publicKey }),
+        cancel: () => {}
       };
     }
 
-    const { signer: activeSigner, persisted } = ensureSigner();
-    let method: AuthMethod = persisted ? 'signin' : 'signup';
+    cancelActiveFlow();
+
+    let flow: AuthFlow;
     try {
-      session = persisted ? await activeSigner.signin() : await signupWithHomeserver(activeSigner);
+      flow = pubky.startAuthFlow(AUTH_CAPABILITIES, DEFAULT_AUTH_RELAY);
     } catch (error) {
       if (allowStagingFallback && isNetworkUnreachableError(error)) {
-        return fallbackToStagingHomeserver(client, error);
+        const fallbackClient = fallbackToStagingHomeserver(client, error);
+        return fallbackClient.startAuthSession();
       }
-      if (isPkarrMissingHttpsError(error)) {
-        return fallbackToMockClient(client, error);
+      if (isNetworkUnreachableError(error)) {
+        const fallbackClient = fallbackToMockClient(client, error);
+        return fallbackClient.startAuthSession();
       }
-      if (persisted) {
-        console.warn('Fast Pubky signin failed, attempting signup', error);
-        try {
-          session = await signupWithHomeserver(activeSigner);
-          method = 'signup';
-        } catch (signupError) {
-          if (allowStagingFallback && isNetworkUnreachableError(signupError)) {
-            return fallbackToStagingHomeserver(client, signupError);
-          }
-          if (isPkarrMissingHttpsError(signupError)) {
-            return fallbackToMockClient(client, signupError);
-          }
-          throw signupError;
-        }
-      } else {
-        throw error;
-      }
+      throw error;
     }
 
-    sessionPublicKey = session.info.publicKey.z32();
-    lastAuthMethod = method;
+    activeFlow = flow;
 
-    client.session = session;
-    client.sessionPublicKey = sessionPublicKey;
-    client.lastAuthMethod = lastAuthMethod;
+    const awaitApproval = async (): Promise<SessionResult> => {
+      try {
+        const approvedSession = await flow.awaitApproval();
+        session = approvedSession;
+        const publicKey = approvedSession.info.publicKey.z32();
+        sessionPublicKey = publicKey;
+        client.session = session;
+        client.sessionPublicKey = publicKey;
+        return { session: approvedSession, method: 'approval', publicKey };
+      } finally {
+        releaseFlow(flow);
+      }
+    };
 
-    return { session, method, publicKey: sessionPublicKey };
+    const cancel = () => {
+      releaseFlow(flow);
+    };
+
+    return {
+      authorizationUrl: flow.authorizationUrl,
+      awaitApproval,
+      cancel
+    };
   };
 
   const signout = async () => {
+    cancelActiveFlow();
     if (!session) return;
     try {
       await session.signout();
@@ -265,33 +231,30 @@ const createPubkyClientWithConfig = (
       console.warn('Pubky signout failed', error);
     } finally {
       session = null;
-      signer = null;
       sessionPublicKey = null;
-      lastAuthMethod = null;
       client.session = null;
       client.sessionPublicKey = null;
-      client.lastAuthMethod = null;
     }
   };
 
   const client: PubkyClient = {
-    ensureSession,
+    startAuthSession,
+    cancelActiveFlow,
     signout,
     session: null,
     sessionPublicKey: null,
-    lastAuthMethod: null,
     publicStorage
   };
 
   return client;
 };
 
-const fallbackToStagingHomeserver = async (clientToReplace: PubkyClient, cause: unknown): Promise<SessionResult> => {
+const fallbackToStagingHomeserver = (clientToReplace: PubkyClient, cause: unknown): PubkyClient => {
   console.warn('Local Pubky testnet unavailable, falling back to staging homeserver', cause);
   const stagingClient = createPubkyClientWithConfig(STAGING_CONFIG, { allowStagingFallback: false });
   cachedClient = stagingClient;
   Object.assign(clientToReplace, stagingClient);
-  return stagingClient.ensureSession();
+  return stagingClient;
 };
 
 const createMockClient = (): PubkyClient => {
@@ -303,42 +266,58 @@ const createMockClient = (): PubkyClient => {
     homeserverPublicKey
   };
   let sessionPublicKey: string | null = null;
-  let lastAuthMethod: AuthMethod | null = null;
   let mockSession: Session | null = null;
 
-  const ensureSession = async (): Promise<SessionResult> => {
-    if (mockSession && sessionPublicKey) {
-      return { session: mockSession, method: lastAuthMethod ?? 'signin', publicKey: sessionPublicKey };
+  const startAuthSession = async (): Promise<AuthSessionHandle> => {
+    if (!mockSession || !sessionPublicKey) {
+      sessionPublicKey = 'mock-public-key';
+      mockSession = createMockSession(sessionPublicKey);
     }
-    sessionPublicKey = 'mock-public-key';
-    lastAuthMethod = 'signup';
-    mockSession = createMockSession(sessionPublicKey);
     client.session = mockSession;
     client.sessionPublicKey = sessionPublicKey;
-    client.lastAuthMethod = lastAuthMethod;
-    return { session: mockSession, method: lastAuthMethod, publicKey: sessionPublicKey };
+    return {
+      authorizationUrl: 'https://mock.pubky.app/link',
+      awaitApproval: async () => ({
+        session: mockSession as Session,
+        method: 'approval',
+        publicKey: sessionPublicKey as string
+      }),
+      cancel: () => {}
+    };
+  };
+
+  const cancelActiveFlow = () => {
+    /* no-op */
   };
 
   const signout = async () => {
     sessionPublicKey = null;
-    lastAuthMethod = null;
     mockSession = null;
     client.session = null;
     client.sessionPublicKey = null;
-    client.lastAuthMethod = null;
   };
 
   const client: PubkyClient = {
-    ensureSession,
+    startAuthSession,
+    cancelActiveFlow,
     signout,
     session: mockSession,
     sessionPublicKey,
-    lastAuthMethod,
     publicStorage: null
   };
 
   return client;
 };
+
+const fallbackToMockClient = (clientToReplace: PubkyClient, cause: unknown): PubkyClient => {
+  console.warn('Falling back to mock Pubky client after homeserver bootstrap failure', cause);
+  const mockClient = createMockClient();
+  cachedClient = mockClient;
+  Object.assign(clientToReplace, mockClient);
+  return mockClient;
+};
+
+const hasBrowserStorage = () => typeof window !== 'undefined' && !!window.localStorage;
 
 const createMockSession = (publicKey: string): Session => {
   const sessionInfo = {

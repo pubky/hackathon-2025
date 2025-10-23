@@ -21,6 +21,7 @@ type AuthContextValue = {
   sessionStorage: Session['storage'] | null;
   authMethod: AuthMethod | null;
   isAuthenticating: boolean;
+  authorizationUrl: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   client: PubkyClient | null;
@@ -55,12 +56,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [session, setSession] = useState<Session | null>(null);
   const [authMethod, setAuthMethod] = useState<AuthMethod | null>(null);
   const [isAuthenticating, setAuthenticating] = useState(false);
+  const [authorizationUrl, setAuthorizationUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const storedUser = readStoredUser();
     if (storedUser) {
       setUser(storedUser);
-      setAuthMethod('signin');
+      setAuthMethod('approval');
     }
     void ensurePubkyClient().then((sdk) => {
       setClient(sdk);
@@ -68,21 +70,44 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         setSession(sdk.session);
         if (sdk.sessionPublicKey) {
           setUser({ publicKey: sdk.sessionPublicKey, displayName: formatDisplayName(sdk.sessionPublicKey) });
-          setAuthMethod(sdk.lastAuthMethod ?? 'signin');
+          setAuthMethod('approval');
         }
       }
     });
   }, []);
 
+  useEffect(() => {
+    return () => {
+      client?.cancelActiveFlow();
+    };
+  }, [client]);
+
   const connect = useCallback(async () => {
     const sdk = client ?? (await ensurePubkyClient());
     setClient(sdk);
+    if (sdk.session) {
+      setSession(sdk.session);
+      if (sdk.sessionPublicKey) {
+        const userPayload: User = {
+          publicKey: sdk.sessionPublicKey,
+          displayName: formatDisplayName(sdk.sessionPublicKey)
+        };
+        setUser(userPayload);
+      }
+      setAuthMethod('approval');
+      return;
+    }
+
+    setAuthorizationUrl(null);
     setAuthenticating(true);
     try {
-      const storedUser = readStoredUser();
-      setAuthMethod(storedUser ? 'signin' : 'signup');
+      sdk.cancelActiveFlow();
+      const flowHandle = await sdk.startAuthSession();
+      if (flowHandle.authorizationUrl) {
+        setAuthorizationUrl(flowHandle.authorizationUrl);
+      }
 
-      const result = await sdk.ensureSession();
+      const result = await flowHandle.awaitApproval();
       setSession(result.session);
       setAuthMethod(result.method);
 
@@ -95,8 +120,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(userPayload));
       }
     } catch (error) {
-      console.warn('Pubky session establishment failed', error);
+      console.warn('Pubky auth flow failed', error);
     } finally {
+      setAuthorizationUrl(null);
       setAuthenticating(false);
     }
   }, [client]);
@@ -104,6 +130,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const disconnect = useCallback(async () => {
     try {
       const sdk = client ?? (await ensurePubkyClient());
+      sdk.cancelActiveFlow();
       await sdk.signout();
     } catch (error) {
       console.warn('Pubky signout failed', error);
@@ -111,6 +138,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setSession(null);
       setUser(null);
       setAuthMethod(null);
+      setAuthorizationUrl(null);
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.removeItem(STORAGE_KEY);
       }
@@ -120,8 +148,18 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const sessionStorage = session?.storage ?? null;
 
   const value = useMemo(
-    () => ({ user, session, sessionStorage, authMethod, isAuthenticating, connect, disconnect, client }),
-    [user, session, sessionStorage, authMethod, isAuthenticating, connect, disconnect, client]
+    () => ({
+      user,
+      session,
+      sessionStorage,
+      authMethod,
+      isAuthenticating,
+      authorizationUrl,
+      connect,
+      disconnect,
+      client
+    }),
+    [user, session, sessionStorage, authMethod, isAuthenticating, authorizationUrl, connect, disconnect, client]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
+import QRCode from 'react-qr-code';
 import { useAuth } from '../context/AuthContext';
 import './Panel.css';
 
 export const LoginCard = () => {
-  const { user, session, authMethod, isAuthenticating, connect, disconnect } = useAuth();
+  const { user, session, authMethod, isAuthenticating, authorizationUrl, connect, disconnect } = useAuth();
   const hasAttemptedAutoConnect = useRef(false);
 
   useEffect(() => {
@@ -21,20 +22,17 @@ export const LoginCard = () => {
 
   const statusMessage = useMemo(() => {
     if (session) return '';
+    if (authorizationUrl) {
+      return 'Scan the QR code with the Pubky app or open the link on this device.';
+    }
     if (isAuthenticating) {
-      if (authMethod === 'signup') {
-        return 'Creating a new Pubky testnet identity…';
-      }
-      if (authMethod === 'signin') {
-        return 'Signing in with your Pubky identity…';
-      }
-      return 'Connecting to the Pubky testnet…';
+      return 'Preparing the Pubky auth flow…';
     }
     if (hasAttemptedAutoConnect.current) {
-      return 'Unable to establish a Pubky session. Retry the connection to continue.';
+      return 'Unable to start the Pubky auth flow. Retry the connection to generate a new QR code.';
     }
     return 'Connect to Pubky to start voting.';
-  }, [session, isAuthenticating, authMethod]);
+  }, [session, isAuthenticating, authorizationUrl, authMethod]);
 
   const publicKey = useMemo(() => {
     if (session) {
@@ -55,7 +53,7 @@ export const LoginCard = () => {
           <p className="panel__subtitle">
             {session
               ? 'Your Pubky identity is active. You can vote, comment, and tag projects.'
-              : 'We’ll establish a direct session with the Pubky testnet—no QR code required.'}
+              : 'Authorize the app with Pubky to start voting. Scan the QR code or open the link below.'}
           </p>
         </div>
         {session && (
@@ -67,7 +65,17 @@ export const LoginCard = () => {
 
       {!session && (
         <div className="qr-wrapper" aria-live="polite">
-          <div className="qr-placeholder">{statusMessage}</div>
+          {authorizationUrl ? (
+            <div className="qr-container">
+              <QRCode value={authorizationUrl} />
+              <p className="qr-caption">{statusMessage}</p>
+              <a className="qr-link" href={authorizationUrl} target="_blank" rel="noreferrer">
+                Open authorization link
+              </a>
+            </div>
+          ) : (
+            <div className="qr-placeholder">{statusMessage}</div>
+          )}
         </div>
       )}
 
@@ -83,7 +91,7 @@ export const LoginCard = () => {
         <dl className="identity-list">
           <div>
             <dt>Authentication</dt>
-            <dd>{authMethod === 'signup' ? 'Signed up to the homeserver' : 'Signed in with existing keys'}</dd>
+            <dd>{authMethod ? 'Approved via the Pubky app' : 'Awaiting approval'}</dd>
           </div>
           <div>
             <dt>Public Key</dt>
