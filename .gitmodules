@@ -1,0 +1,3 @@
+[submodule "pubky-lab"]
+	path = pubky-lab
+	url = git@github.com:jvsena42/pubky-lab.git
