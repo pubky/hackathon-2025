@@ -12,9 +12,9 @@ Booky is a browser extension that syncs your bookmarks using the Pubky protocol.
 - **Two-Way Sync**: Syncs bookmarks bidirectionally between browser and homeserver
 - **Read-Only Monitoring**: Monitor and sync bookmarks from other Pubky users (read-only)
 - **Real-Time Updates**: Automatically syncs changes for every event
-- **Manual Sync**: User can sync any time at the click of a button
-- **Cross-Device Sync**: Sync bookmarks across multiple devices using the same key
-- **Conflict Resolution**: Timestamp-based conflict resolution (newest wins)
+- **Private Backup Folders**: Store files under `/priv/` as encrypted blobs
+- **Share Private Bookmarks**: Specify which other Pubky users can read particular folders
+- **Group Shared Folders**: Aggregate common folders across all monitored keys 
 
 ## Architecture
 
@@ -57,8 +57,14 @@ Bookmarks are stored on the homeserver at path `<pubky>/public/booky/` with the 
 
 ### Folder Structure
 
-- Main folder: `pub_abcdefg` (first 7 chars of your pubkey) - Two-way sync
-- Monitored folders: `pub_hijklmn` (first 7 chars of monitored pubkeys) - Read-only sync
+- **Main folder**: `pub_abcdefg` (first 7 chars of your pubkey) - Two-way sync
+  - `priv/` - Private bookmarks (synced but not publicly accessible)
+  - `priv_sharing/` - Bookmarks shared with specific users
+    - `pub_hijklmn/` - Subfolders named after monitored keys for selective sharing
+- **Monitored folders**: `pub_hijklmn` (first 7 chars of monitored pubkeys) - Read-only sync
+  - Syncs public bookmarks and any bookmarks they share with you
+- **Groups folder**: `groups/` - Merged view of common folders across all synced keys
+  - Automatically combines bookmarks from matching folder names across all users
 
 ## Setup
 
@@ -132,8 +138,21 @@ npm run build:all
 ### Syncing Bookmarks
 
 1. Add bookmarks to the `pub_abcdefg` folder (where `abcdefg` is the first 7 chars of your pubkey)
-2. Bookmarks are automatically synced to the homeserver every 20 seconds
+2. Bookmarks are automatically synced to the homeserver in real-time
 3. Changes from other devices are pulled automatically
+
+#### Private Bookmarks
+
+1. Add bookmarks to the `pub_abcdefg/priv/` folder
+2. These bookmarks are synced but not publicly accessible
+3. Only you can access them when signed in
+
+#### Sharing Bookmarks with Specific Users
+
+1. First, add the user's pubkey to your monitored list (this creates the sharing folder structure)
+2. Add bookmarks to `pub_abcdefg/priv_sharing/pub_hijklmn/` (where `pub_hijklmn` matches their folder name)
+3. The other user will see these bookmarks in their read-only `pub_abcdefg` folder for you
+4. You can organize shared bookmarks into subfolders within the sharing folder
 
 ### Monitoring Other Pubkeys
 
@@ -141,6 +160,14 @@ npm run build:all
 2. In the "Monitor Other Pubkeys" section, enter a pubkey
 3. Click "Add"
 4. A new folder `pub_hijklmn` will be created with their bookmarks (read-only)
+5. This folder will include their public bookmarks and any bookmarks they've shared with you
+
+### Using Groups Folders
+
+1. Create folders with the same name in multiple synced accounts
+2. The `groups/` folder automatically appears with a merged view
+3. All bookmarks from matching folder names across all users are combined
+4. Duplicates are automatically removed (based on URL)
 
 ### Manual Sync
 
