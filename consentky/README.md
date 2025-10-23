@@ -1,6 +1,8 @@
 ConsentKy
 Lightweight cryptographic proof of mutual consent
 
+Demo: https://consentky2-cqo9.bolt.host/
+
 ConsentKy is a decentralized consent management application that creates verifiable, time-bound proof of mutual agreement between two parties. Built on Pubky protocol for decentralized identity and Bolt Database for session coordination.
 
 What It Does
