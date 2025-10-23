@@ -441,9 +441,10 @@ export class BookmarkSync {
         if (result.title === folderName && !result.url) {
           this.folderCache.set(pubkey, result.id);
 
-          // If this is the user's own folder, ensure priv subfolder exists
+          // If this is the user's own folder, ensure priv and priv_sharing subfolders exist
           if (isOwnFolder) {
             await this.ensurePrivFolder(result.id);
+            await this.ensurePrivSharingFolder(result.id);
           }
 
           return result.id;
@@ -460,9 +461,10 @@ export class BookmarkSync {
       this.folderCache.set(pubkey, folder.id);
       logger.log('Created folder:', folderName);
 
-      // If this is the user's own folder, create priv subfolder
+      // If this is the user's own folder, create priv and priv_sharing subfolders
       if (isOwnFolder) {
         await this.ensurePrivFolder(folder.id);
+        await this.ensurePrivSharingFolder(folder.id);
       }
 
       return folder.id;
@@ -496,6 +498,34 @@ export class BookmarkSync {
       return privFolder.id;
     } catch (error) {
       logger.error('Failed to ensure priv folder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure priv_sharing subfolder exists for user's own folder
+   */
+  async ensurePrivSharingFolder(parentFolderId) {
+    try {
+      // Check if priv_sharing folder already exists
+      const children = await browser.bookmarks.getChildren(parentFolderId);
+      for (const child of children) {
+        if (!child.url && child.title === 'priv_sharing') {
+          logger.log('Priv_sharing folder already exists');
+          return child.id;
+        }
+      }
+
+      // Create priv_sharing subfolder
+      const privSharingFolder = await browser.bookmarks.create({
+        parentId: parentFolderId,
+        title: 'priv_sharing'
+      });
+
+      logger.log('Created priv_sharing subfolder:', privSharingFolder.id);
+      return privSharingFolder.id;
+    } catch (error) {
+      logger.error('Failed to ensure priv_sharing folder:', error);
       throw error;
     }
   }
@@ -561,6 +591,7 @@ export class BookmarkSync {
       // Get remote bookmarks
       const remoteBookmarks = await this.fetchRemoteBookmarks(pubkey, isTwoWay);
 
+      // Sync all bookmarks (including shared ones) to the user's folder
       if (isTwoWay) {
         // Two-way sync: merge both directions
         await this.mergeTwoWay(folderId, localBookmarks, remoteBookmarks, pubkey);
@@ -632,31 +663,63 @@ export class BookmarkSync {
     try {
       if (isOwnData) {
         // Use session storage for own data (absolute path)
-        // Fetch from both public and private folders
+        // Fetch from public, private, and priv_sharing folders
         const basePath = '/pub/booky/';
         logger.log('Fetching own bookmarks from:', basePath);
 
         const bookmarks = [];
 
-        // Fetch public bookmarks (root and subfolders, excluding priv/)
+        // Fetch public bookmarks (root and subfolders, excluding priv/ and priv_sharing/)
         await this.fetchBookmarksRecursive(basePath, '', bookmarks, false, null);
 
         // Fetch private bookmarks from priv/ folder
         logger.log('Fetching private bookmarks from:', basePath + 'priv/');
         await this.fetchBookmarksRecursive(basePath, 'priv/', bookmarks, false, null);
 
-        logger.log('Successfully fetched', bookmarks.length, 'bookmarks for own data (public + private)');
+        // Fetch shared bookmarks from priv_sharing/ folder (all subdirectories)
+        logger.log('Fetching shared bookmarks from:', basePath + 'priv_sharing/');
+        await this.fetchBookmarksRecursive(basePath, 'priv_sharing/', bookmarks, false, null);
+
+        logger.log('Successfully fetched', bookmarks.length, 'bookmarks for own data (public + private + shared)');
         return bookmarks;
       } else {
         // Use public storage for other users (addressed path)
-        // Only fetch public bookmarks, skip priv/ folder
+        // Fetch public bookmarks and bookmarks they're sharing with us
         const baseAddress = `pubky://${pubkey}/pub/booky/`;
         logger.log('Fetching public bookmarks for:', pubkey);
 
         const bookmarks = [];
+
+        // Fetch public bookmarks (root and subfolders, excluding priv/ and priv_sharing/)
         await this.fetchBookmarksRecursive(baseAddress, '', bookmarks, true, pubkey);
 
-        logger.log('Successfully fetched', bookmarks.length, 'bookmarks for', pubkey);
+        // Fetch bookmarks they're sharing with us from priv_sharing/{our_pubkey}/ folder
+        // Store them in a separate top-level shared/ folder
+        const ourPubkey = await this.keyManager.getPublicKey();
+        if (ourPubkey) {
+          const ourFolderName = this.keyManager.getFolderName(ourPubkey);
+          const sharedPath = `priv_sharing/${ourFolderName}/`;
+          logger.log('Fetching shared bookmarks from:', baseAddress + sharedPath);
+
+          try {
+            const sharedBookmarks = [];
+            await this.fetchBookmarksRecursive(baseAddress, sharedPath, sharedBookmarks, true, pubkey);
+
+            // Keep the bookmarks with their priv_sharing path - they'll be stored in the monitored user's folder
+            // Path will be like: priv_sharing/pub_abcd/ (or priv_sharing/pub_abcd/subfolder/)
+            for (const bookmark of sharedBookmarks) {
+              logger.log('Shared bookmark path:', bookmark.path, 'for URL:', bookmark.url);
+              bookmarks.push(bookmark);
+            }
+
+            logger.log('Successfully fetched', sharedBookmarks.length, 'shared bookmarks');
+          } catch (error) {
+            logger.log('No shared bookmarks or error fetching:', error.message);
+            // Continue even if there are no shared bookmarks
+          }
+        }
+
+        logger.log('Successfully fetched', bookmarks.length, 'total bookmarks for', pubkey);
         return bookmarks;
       }
     } catch (error) {
@@ -686,6 +749,18 @@ export class BookmarkSync {
         return;
       }
 
+      logger.log('Processing', entries.length, 'entries from path:', currentPath);
+
+      // Normalize basePath to remove pubky:// protocol for comparison
+      let normalizedBasePath = basePath;
+      if (basePath.startsWith('pubky://')) {
+        const parts = basePath.split('/');
+        const pubkeyIndex = parts.findIndex(p => p && p.length > 20);
+        if (pubkeyIndex >= 0) {
+          normalizedBasePath = '/' + parts.slice(pubkeyIndex + 1).join('/');
+        }
+      }
+
       for (const entry of entries) {
         try {
           // Entry format: pubky://<pubkey>/pub/booky/[path/]filename
@@ -705,23 +780,26 @@ export class BookmarkSync {
           // Check if this is a directory (ends with /)
           if (entry.endsWith('/')) {
             // It's a directory
-            // Extract the relative path from basePath
-            const relPath = entryPath.substring(basePath.length);
+            // Extract the relative path from normalized basePath
+            const relPath = entryPath.substring(normalizedBasePath.length);
 
-            // Skip priv/ folder when fetching public bookmarks for other users
-            if (isPublic && relPath === 'priv/') {
-              logger.log('Skipping priv/ folder for monitored user');
+            // Skip priv/ and priv_sharing/ folders when fetching public bookmarks for other users
+            // (priv_sharing is fetched separately with our specific pubkey path)
+            if (isPublic && (relPath === 'priv/' || relPath === 'priv_sharing/')) {
+              logger.log('Skipping', relPath, 'folder for monitored user');
               continue;
             }
 
             // Recurse into it
             await this.fetchBookmarksRecursive(basePath, relPath, bookmarks, isPublic, pubkey);
           } else {
-            // It's a file - extract relative path from basePath
-            const fullRelativePath = entryPath.substring(basePath.length);
+            // It's a file - extract relative path from normalized basePath
+            const fullRelativePath = entryPath.substring(normalizedBasePath.length);
             const pathParts = fullRelativePath.split('/');
             const filename = pathParts.pop(); // Last part is filename
             const filePath = pathParts.length > 0 ? pathParts.join('/') + '/' : ''; // Remaining is path
+
+            logger.log('Bookmark file path calculation - entryPath:', entryPath, 'normalizedBasePath:', normalizedBasePath, 'fullRelativePath:', fullRelativePath, 'filePath:', filePath);
 
             // Fetch the bookmark data using the entry directly
             let data;
@@ -855,6 +933,7 @@ export class BookmarkSync {
       const local = localMap.get(makeKey(remote));
       if (!local) {
         // Create new bookmark in correct folder
+        logger.log('Creating bookmark with path:', remote.path, 'URL:', remote.url);
         const parentId = await this.getOrCreateSubfolder(folderId, remote.path, folderCache);
         await browser.bookmarks.create({
           parentId: parentId,
