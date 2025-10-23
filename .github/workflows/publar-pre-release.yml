@@ -181,8 +181,8 @@ jobs:
         run: |
           mkdir -p dist
           # Build in dev profile for faster pre-release builds (no optimizations)
-          dx bundle --platform desktop --profile dev --package-types macos
-          dx bundle --platform desktop --profile dev --package-types dmg
+          dx bundle --profile dev --package-types macos
+          dx bundle --profile dev --package-types dmg
 
           # Find the built packages
           find target/dx/publar/bundle -name "*.app" -exec cp -r {} dist/ \;
