@@ -104,12 +104,13 @@ body {
 
 .setup-options {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
 .setup-options button {
-  flex: 1;
+  width: 100%;
 }
 
 .primary-button {
@@ -593,7 +594,8 @@ body {
   line-height: 1.4;
 }
 
-.modal-body input {
+.modal-body input,
+.modal-body textarea {
   width: 100%;
   padding: 12px 16px;
   border: 1px solid #555;
@@ -603,12 +605,19 @@ body {
   font-size: 14px;
   margin-bottom: 20px;
   transition: border-color 0.2s ease;
+  font-family: monospace;
+  resize: vertical;
 }
 
-.modal-body input:focus {
+.modal-body input:focus,
+.modal-body textarea:focus {
   outline: none;
   border-color: #007acc;
   box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+.modal-body textarea {
+  min-height: 60px;
 }
 
 .modal-actions {

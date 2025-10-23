@@ -33,18 +33,6 @@
         <input type="file" id="recovery-file-input" accept=".pkarr" style="display: none;">
       </div>
 
-      <div id="recovery-code-input-section" style="display: none;">
-        <h2>Sign In with Recovery Code</h2>
-        <p class="recovery-instructions">Paste your recovery code below to sign back in to your account.</p>
-
-        <label for="recovery-code-input">Recovery Code</label>
-        <textarea id="recovery-code-input" placeholder="Paste your recovery code here" rows="4"></textarea>
-
-        <div class="setup-options">
-          <button id="signin-with-code-button" class="primary-button">Sign In</button>
-          <button id="cancel-code-signin-button" class="secondary-button">Cancel</button>
-        </div>
-      </div>
 
       <div id="setup-result" style="display: none;">
         <div class="success-message">
@@ -118,6 +106,24 @@
           <div class="modal-actions">
             <button id="confirm-passphrase" class="primary-button">Confirm</button>
             <button id="cancel-passphrase" class="secondary-button">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recovery Code Modal -->
+    <div id="recovery-code-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Sign In with Recovery Code</h3>
+          <button id="close-recovery-code-modal" class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">Paste your recovery code below to sign back in to your account:</p>
+          <textarea id="recovery-code-modal-input" placeholder="Paste your recovery code here" rows="4"></textarea>
+          <div class="modal-actions">
+            <button id="confirm-recovery-code" class="primary-button">Sign In</button>
+            <button id="cancel-recovery-code" class="secondary-button">Cancel</button>
           </div>
         </div>
       </div>

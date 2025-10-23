@@ -11,10 +11,6 @@ const setupButton = document.getElementById('setup-button');
 const importButton = document.getElementById('import-button');
 const recoveryFileInput = document.getElementById('recovery-file-input');
 const signinRecoveryCodeButton = document.getElementById('signin-recovery-code-button');
-const recoveryCodeInputSection = document.getElementById('recovery-code-input-section');
-const recoveryCodeInput = document.getElementById('recovery-code-input');
-const signinWithCodeButton = document.getElementById('signin-with-code-button');
-const cancelCodeSigninButton = document.getElementById('cancel-code-signin-button');
 const homeserverInput = document.getElementById('homeserver');
 const inviteCodeInput = document.getElementById('invite-code');
 const setupResult = document.getElementById('setup-result');
@@ -37,6 +33,13 @@ const passphraseInput = document.getElementById('passphrase-input');
 const confirmPassphraseButton = document.getElementById('confirm-passphrase');
 const cancelPassphraseButton = document.getElementById('cancel-passphrase');
 const closePassphraseModalButton = document.getElementById('close-passphrase-modal');
+
+// Recovery code modal elements
+const recoveryCodeModal = document.getElementById('recovery-code-modal');
+const recoveryCodeModalInput = document.getElementById('recovery-code-modal-input');
+const confirmRecoveryCodeButton = document.getElementById('confirm-recovery-code');
+const cancelRecoveryCodeButton = document.getElementById('cancel-recovery-code');
+const closeRecoveryCodeModalButton = document.getElementById('close-recovery-code-modal');
 
 // Browser API compatibility
 const browserAPI = typeof chrome !== 'undefined' ? chrome : browser;
@@ -503,37 +506,35 @@ async function handleSignOut() {
 }
 
 /**
- * Show recovery code input section
+ * Show recovery code modal
  */
-function showRecoveryCodeInput() {
-  // Hide the setup form and result, but keep setup screen visible
-  document.querySelector('.setup-form').style.display = 'none';
-  setupResult.style.display = 'none';
-  recoveryCodeInputSection.style.display = 'block';
+function showRecoveryCodeModal() {
+  recoveryCodeModalInput.value = '';
+  recoveryCodeModal.style.display = 'flex';
+  recoveryCodeModalInput.focus();
 }
 
 /**
- * Hide recovery code input section
+ * Hide recovery code modal
  */
-function hideRecoveryCodeInput() {
-  recoveryCodeInputSection.style.display = 'none';
-  document.querySelector('.setup-form').style.display = 'block';
-  recoveryCodeInput.value = '';
+function hideRecoveryCodeModal() {
+  recoveryCodeModal.style.display = 'none';
+  recoveryCodeModalInput.value = '';
 }
 
 /**
- * Handle sign in with recovery code
+ * Handle sign in with recovery code from modal
  */
-async function handleSignInWithRecoveryCode() {
-  const recoveryCode = recoveryCodeInput.value.trim();
+async function handleRecoveryCodeModalConfirm() {
+  const recoveryCode = recoveryCodeModalInput.value.trim();
 
   if (!recoveryCode) {
     showError('Please enter a recovery code');
     return;
   }
 
-  signinWithCodeButton.disabled = true;
-  signinWithCodeButton.textContent = 'Signing in...';
+  confirmRecoveryCodeButton.disabled = true;
+  confirmRecoveryCodeButton.textContent = 'Signing in...';
 
   try {
     const response = await sendMessage({
@@ -542,6 +543,7 @@ async function handleSignInWithRecoveryCode() {
     });
 
     if (response.success) {
+      hideRecoveryCodeModal();
       showToast('Signed in successfully');
       // Reload popup to show main screen
       setTimeout(() => {
@@ -549,14 +551,15 @@ async function handleSignInWithRecoveryCode() {
       }, 1000);
     } else {
       showError(response.error || 'Sign in failed');
-      signinWithCodeButton.disabled = false;
-      signinWithCodeButton.textContent = 'Sign In';
+      hideRecoveryCodeModal();
     }
   } catch (error) {
     console.error('Sign in error:', error);
     showError(error.message);
-    signinWithCodeButton.disabled = false;
-    signinWithCodeButton.textContent = 'Sign In';
+    hideRecoveryCodeModal();
+  } finally {
+    confirmRecoveryCodeButton.disabled = false;
+    confirmRecoveryCodeButton.textContent = 'Sign In';
   }
 }
 
@@ -681,9 +684,7 @@ async function handlePassphraseConfirm() {
 setupButton.addEventListener('click', handleSetup);
 importButton.addEventListener('click', handleImportRecoveryFile);
 recoveryFileInput.addEventListener('change', handleRecoveryFileSelect);
-signinRecoveryCodeButton.addEventListener('click', showRecoveryCodeInput);
-signinWithCodeButton.addEventListener('click', handleSignInWithRecoveryCode);
-cancelCodeSigninButton.addEventListener('click', hideRecoveryCodeInput);
+signinRecoveryCodeButton.addEventListener('click', showRecoveryCodeModal);
 addPubkeyButton.addEventListener('click', handleAddPubkey);
 manualSyncButton.addEventListener('click', handleManualSync);
 exportButton.addEventListener('click', handleExportRecoveryFile);
@@ -695,6 +696,11 @@ confirmPassphraseButton.addEventListener('click', handlePassphraseConfirm);
 cancelPassphraseButton.addEventListener('click', hidePassphraseModal);
 closePassphraseModalButton.addEventListener('click', hidePassphraseModal);
 
+// Recovery code modal event listeners
+confirmRecoveryCodeButton.addEventListener('click', handleRecoveryCodeModalConfirm);
+cancelRecoveryCodeButton.addEventListener('click', hideRecoveryCodeModal);
+closeRecoveryCodeModalButton.addEventListener('click', hideRecoveryCodeModal);
+
 // Handle Enter key in passphrase input
 passphraseInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
@@ -702,10 +708,22 @@ passphraseInput.addEventListener('keypress', (e) => {
   }
 });
 
-// Handle Escape key to close modal
+// Handle Enter key in recovery code modal (Ctrl+Enter for newline)
+recoveryCodeModalInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.ctrlKey) {
+    e.preventDefault();
+    handleRecoveryCodeModalConfirm();
+  }
+});
+
+// Handle Escape key to close modals
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && passphraseModal.style.display === 'flex') {
-    hidePassphraseModal();
+  if (e.key === 'Escape') {
+    if (passphraseModal.style.display === 'flex') {
+      hidePassphraseModal();
+    } else if (recoveryCodeModal.style.display === 'flex') {
+      hideRecoveryCodeModal();
+    }
   }
 });
 
