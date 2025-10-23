@@ -1,15 +1,23 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import './Panel.css';
 
 export const LoginCard = () => {
   const { user, session, authMethod, isAuthenticating, connect, disconnect } = useAuth();
+  const hasAttemptedAutoConnect = useRef(false);
 
   useEffect(() => {
-    if (!session && !isAuthenticating) {
-      void connect();
+    if (session || isAuthenticating || hasAttemptedAutoConnect.current) {
+      return;
     }
+    hasAttemptedAutoConnect.current = true;
+    void connect();
   }, [session, isAuthenticating, connect]);
+
+  const handleConnect = useCallback(() => {
+    hasAttemptedAutoConnect.current = true;
+    void connect();
+  }, [connect]);
 
   const statusMessage = useMemo(() => {
     if (session) return '';
@@ -22,7 +30,10 @@ export const LoginCard = () => {
       }
       return 'Connecting to the Pubky testnet…';
     }
-    return 'Unable to establish a Pubky session.';
+    if (hasAttemptedAutoConnect.current) {
+      return 'Unable to establish a Pubky session. Retry the connection to continue.';
+    }
+    return 'Connect to Pubky to start voting.';
   }, [session, isAuthenticating, authMethod]);
 
   const publicKey = useMemo(() => {
@@ -57,6 +68,14 @@ export const LoginCard = () => {
       {!session && (
         <div className="qr-wrapper" aria-live="polite">
           <div className="qr-placeholder">{statusMessage}</div>
+        </div>
+      )}
+
+      {!session && (
+        <div className="panel__actions">
+          <button className="button button--primary" disabled={isAuthenticating} onClick={handleConnect}>
+            {isAuthenticating ? 'Connecting…' : 'Connect to Pubky'}
+          </button>
         </div>
       )}
 
