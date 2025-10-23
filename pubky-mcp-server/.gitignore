@@ -1,9 +1,8 @@
 # MCP Server - Build output
-pubky-mcp-server/dist/
-pubky-mcp-server/data/
+dist/
+data/
 
 # Dependencies
-pubky-mcp-server/node_modules/
 node_modules/
 
 # NPM
@@ -47,7 +46,6 @@ temp/
 *.tmp
 
 # Build artifacts (general)
-dist/
 build/
 out/
 
