@@ -15,6 +15,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['sdk', 'automation'],
+    teamMembers: ['Ivy Taylor', 'Marcus Chen'],
     aiScore: 86
   },
   {
@@ -30,6 +31,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['cli', 'ops'],
+    teamMembers: ['Priya Singh', 'Diego Marquez'],
     aiScore: 79
   },
   {
@@ -45,6 +47,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['browser', 'research'],
+    teamMembers: ['Lena Brooks'],
     aiScore: 75
   },
   {
@@ -60,6 +63,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['sharing'],
+    teamMembers: ['Hiro Tanaka', 'Mia Patel'],
     aiScore: 72
   },
   {
@@ -75,6 +79,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['onboarding', 'docs'],
+    teamMembers: ['Sasha Rivera'],
     aiScore: 83
   },
   {
@@ -90,6 +95,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['wiki'],
+    teamMembers: ['Omar Williams', 'Ji-Eun Park'],
     aiScore: 78
   },
   {
@@ -105,6 +111,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['identity'],
+    teamMembers: ['Noah Andersson'],
     aiScore: 82
   },
   {
@@ -120,6 +127,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['voting'],
+    teamMembers: ['Adedeji Afolabi', 'Grace Liu'],
     aiScore: 88
   },
   {
@@ -136,6 +144,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['mapping'],
+    teamMembers: ['Amelia Jones'],
     aiScore: 84
   },
   {
@@ -151,6 +160,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['infra'],
+    teamMembers: ['Logan Harper', 'Valentina Rossi'],
     aiScore: 80
   }
 ];

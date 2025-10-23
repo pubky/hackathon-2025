@@ -9,6 +9,7 @@ export interface Project {
   readiness: boolean;
   comment?: string;
   userTags: string[];
+  teamMembers?: string[];
   aiScore?: number;
 }
 

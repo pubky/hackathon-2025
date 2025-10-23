@@ -7,6 +7,16 @@
   gap: clamp(1.2rem, 3vw, 1.75rem);
 }
 
+.project-list__empty {
+  padding: 2rem 1.5rem;
+  text-align: center;
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.95rem;
+}
+
 @media (min-width: 900px) {
   .project-list__grid {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

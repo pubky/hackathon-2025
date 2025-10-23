@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProjects } from '../context/ProjectContext';
 import { LoginCard } from './LoginCard';
@@ -29,6 +29,7 @@ const TopNavAction = ({ ariaLabel, label, buttonClassName, children }: TopNavAct
 export const Layout = () => {
   const { user, session } = useAuth();
   const { submitBallot, hasPendingChanges, lastSubmittedAt } = useProjects();
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <div className="app-shell">
@@ -48,11 +49,23 @@ export const Layout = () => {
           </span>
           <span className="top-nav__brand-name">Pubky</span>
         </div>
-        <form className="top-nav__search" role="search">
+        <form
+          className="top-nav__search"
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+          }}
+        >
           <label htmlFor="project-search" className="sr-only">
             Search projects
           </label>
-          <input id="project-search" type="search" placeholder="Search projects, teams, or tags" />
+          <input
+            id="project-search"
+            type="search"
+            placeholder="Search projects, teams, or tags"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
         </form>
         <div className="top-nav__actions">
           <TopNavAction ariaLabel="Toggle theme" label="Theme">
@@ -95,7 +108,7 @@ export const Layout = () => {
           {session && <PopularVoteBoard />}
         </section>
         <section className="right-column">
-          <ProjectList />
+          <ProjectList searchQuery={searchQuery} />
         </section>
       </main>
 

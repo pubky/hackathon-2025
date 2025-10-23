@@ -1,11 +1,44 @@
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { useProjects } from '../context/ProjectContext';
 import { ProjectCard } from './ProjectCard';
 import './ProjectList.css';
 import './Panel.css';
 
-export const ProjectList = () => {
+type ProjectListProps = {
+  searchQuery?: string;
+};
+
+const normalizeQuery = (query: string) =>
+  query
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+
+export const ProjectList = ({ searchQuery = '' }: ProjectListProps) => {
   const { projects, updateProjectScore, toggleReadiness, updateComment, updateTags } = useProjects();
+  const normalizedQuery = normalizeQuery(searchQuery);
+
+  const filteredProjects = useMemo(() => {
+    if (!normalizedQuery) {
+      return projects;
+    }
+
+    const terms = normalizedQuery.split(' ');
+
+    return projects.filter((project) => {
+      const searchableContent = [
+        project.name,
+        project.description,
+        ...(project.tags ?? []),
+        ...(project.userTags ?? []),
+        ...(project.teamMembers ?? [])
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return terms.every((term) => searchableContent.includes(term));
+    });
+  }, [projects, normalizedQuery]);
 
   return (
     <div className="panel project-list">
@@ -15,19 +48,25 @@ export const ProjectList = () => {
           <p className="panel__subtitle">Score projects across the rubric, leave feedback, and apply tags.</p>
         </div>
       </header>
-      <div className="project-list__grid">
-        {projects.map((project) => (
-          <Fragment key={project.id}>
-            <ProjectCard
-              project={project}
-              onScoreChange={updateProjectScore}
-              onReadinessToggle={toggleReadiness}
-              onCommentChange={updateComment}
-              onTagsChange={updateTags}
-            />
-          </Fragment>
-        ))}
-      </div>
+      {filteredProjects.length === 0 ? (
+        <p className="project-list__empty" role="status">
+          No projects found matching “{searchQuery.trim()}”.
+        </p>
+      ) : (
+        <div className="project-list__grid">
+          {filteredProjects.map((project) => (
+            <Fragment key={project.id}>
+              <ProjectCard
+                project={project}
+                onScoreChange={updateProjectScore}
+                onReadinessToggle={toggleReadiness}
+                onCommentChange={updateComment}
+                onTagsChange={updateTags}
+              />
+            </Fragment>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
