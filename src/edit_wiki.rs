@@ -75,6 +75,7 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             app.edit_wiki_content.clear();
             app.selected_wiki_page_id.clear();
             app.selected_wiki_content.clear();
+            app.selected_wiki_fork_urls.clear();
             app.view_state = ViewState::WikiList;
             app.needs_refresh = true;
         }

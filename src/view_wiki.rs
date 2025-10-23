@@ -1,14 +1,14 @@
-use crate::{PubkyApp, ViewState};
+use crate::{utils::extract_details_wiki_url, PubkyApp, ViewState};
 
 use eframe::egui::{Context, Ui};
 use egui::CollapsingHeader;
 use egui_commonmark::CommonMarkViewer;
-use pubky::{PublicKey, PublicStorage};
+use pubky::{PubkySession, PublicStorage};
 
 pub(crate) fn update(
     app: &mut PubkyApp,
-    pk: &PublicKey,
-    public_storage: &PublicStorage,
+    session: &PubkySession,
+    pub_storage: &PublicStorage,
     ctx: &Context,
     ui: &mut Ui,
 ) {
@@ -18,6 +18,23 @@ pub(crate) fn update(
     CollapsingHeader::new("Page details").show(ui, |ui| {
         ui.label(format!("Page ID: {}", &app.selected_wiki_page_id));
         ui.label(format!("User ID: {}", &app.selected_wiki_user_id));
+    });
+
+    let fork_links = app.selected_wiki_fork_urls.clone();
+    CollapsingHeader::new(format!("Available {} forks", fork_links.len())).show(ui, |ui| {
+        for fork_link in fork_links {
+            if let Some((user_pk, page_id)) = extract_details_wiki_url(&fork_link) {
+                let mut btn_label = format!("Fork: {user_pk}");
+
+                if &app.selected_wiki_user_id == &user_pk {
+                    btn_label = format!("{btn_label} (current)");
+                }
+
+                if ui.button(btn_label).clicked() {
+                    app.navigate_to_view_wiki_page(&user_pk, &page_id, session, pub_storage);
+                }
+            }
+        }
     });
 
     // Add "Share Page Link" button with tooltip support
@@ -51,7 +68,7 @@ pub(crate) fn update(
                 && !app.selected_wiki_page_id.is_empty()
                 && !app.selected_wiki_user_id.is_empty()
             {
-                let public_storage_clone = public_storage.clone();
+                let public_storage_clone = pub_storage.clone();
                 let path_clone = app.selected_wiki_page_id.clone();
                 let user_id = app.selected_wiki_user_id.clone();
 
@@ -95,18 +112,16 @@ pub(crate) fn update(
 
             // Navigate to clicked URLs
             for url in clicked_urls {
-                let mut parts = url.split('/'); // Split on the '/' character
-                if let (Some(user_pk), Some(page_id)) = (parts.next(), parts.next()) {
-                    app.navigate_to_view_wiki_page(user_pk, page_id);
-                } else {
-                    log::warn!("Invalid Pubky Wiki link: {url}");
-                };
+                if let Some((user_pk, page_id)) = extract_details_wiki_url(&url) {
+                    app.navigate_to_view_wiki_page(&user_pk, &page_id, session, pub_storage);
+                }
             }
         });
 
     ui.add_space(20.0);
 
     // Check if this is the user's own page
+    let pk = session.info().public_key();
     let is_own_page = app.selected_wiki_user_id == pk.to_string();
 
     ui.horizontal(|ui| {
@@ -126,6 +141,7 @@ pub(crate) fn update(
         if ui.button("Go back").clicked() {
             app.selected_wiki_page_id.clear();
             app.selected_wiki_content.clear();
+            app.selected_wiki_fork_urls.clear();
             app.view_state = ViewState::WikiList;
         }
     });

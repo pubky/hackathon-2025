@@ -10,7 +10,7 @@ use pubky::{Capabilities, Pubky, PubkyAuthFlow, PubkySession, PublicStorage};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
 
-use crate::utils::{extract_title, generate_qr_image};
+use crate::utils::{extract_title, generate_qr_image, get_list};
 
 mod create_wiki;
 mod edit_wiki;
@@ -65,6 +65,7 @@ pub(crate) struct PubkyApp {
     pub(crate) view_state: ViewState,
     /// Content for the Edit Wiki view
     pub(crate) edit_wiki_content: String,
+    pub(crate) selected_wiki_fork_urls: Vec<String>,
     pub(crate) selected_wiki_page_id: String,
     pub(crate) selected_wiki_content: String,
     pub(crate) selected_wiki_user_id: String,
@@ -125,6 +126,7 @@ impl PubkyApp {
             selected_wiki_page_id: String::new(),
             selected_wiki_content: String::new(),
             selected_wiki_user_id: String::new(),
+            selected_wiki_fork_urls: vec![],
             needs_refresh: false,
             cache: CommonMarkCache::default(),
             rt: rt_arc,
@@ -140,18 +142,13 @@ impl PubkyApp {
         rt_arc_clone: Arc<Runtime>,
         state_clone: Arc<Mutex<AuthState>>,
     ) {
-        let session_storage = session.storage();
         let mut file_cache = HashMap::new();
 
-        // List files from the homeserver
-        let session_storage_list_fut = session_storage.list("/pub/wiki.app/").unwrap().send();
-        match rt_arc_clone.block_on(session_storage_list_fut) {
-            Ok(entries) => {
-                for entry in &entries {
-                    let file_url = entry.to_pubky_url();
-
+        match get_list(session, "/pub/wiki.app/", rt_arc_clone.clone()) {
+            Ok(file_urls) => {
+                for file_url in &file_urls {
                     // Synchronously fetch the content
-                    let get_path_fut = pub_storage.get(&file_url);
+                    let get_path_fut = pub_storage.get(file_url);
                     match rt_arc_clone.block_on(get_path_fut) {
                         Ok(response) => {
                             let response_text_fut = response.text();
@@ -159,16 +156,12 @@ impl PubkyApp {
                                 Ok(content) => {
                                     let file_title = extract_title(&content);
 
-                                    file_cache.insert(file_url, file_title.into());
+                                    file_cache.insert(file_url.into(), file_title.into());
                                 }
-                                Err(e) => {
-                                    log::error!("Error reading content: {e}")
-                                }
+                                Err(e) => log::error!("Error reading content: {e}"),
                             }
                         }
-                        Err(e) => {
-                            log::error!("Error fetching path {file_url}: {e}")
-                        }
+                        Err(e) => log::error!("Error fetching path {file_url}: {e}"),
                     }
                 }
             }
@@ -182,9 +175,16 @@ impl PubkyApp {
         };
     }
 
-    fn navigate_to_view_wiki_page(&mut self, user_pk: &str, page_id: &str) {
+    fn navigate_to_view_wiki_page(
+        &mut self,
+        user_pk: &str,
+        page_id: &str,
+        session: &PubkySession,
+        pub_storage: &PublicStorage,
+    ) {
         self.selected_wiki_user_id = user_pk.to_string();
         self.selected_wiki_page_id = page_id.to_string();
+        self.selected_wiki_fork_urls = self.discover_fork_urls(session, pub_storage, page_id);
         self.selected_wiki_content.clear();
 
         self.view_state = ViewState::ViewWiki;
@@ -193,6 +193,43 @@ impl PubkyApp {
     fn navigate_to_edit_selected_wiki_page(&mut self) {
         self.edit_wiki_content = self.selected_wiki_content.clone();
         self.view_state = ViewState::EditWiki;
+    }
+
+    fn get_my_follows(&self, session: &PubkySession) -> Vec<String> {
+        get_list(session, "/pub/pubky.app/follows/", self.rt.clone())
+            .inspect_err(|e| log::error!("Failed to get follows: {e}"))
+            .map(|list| {
+                list.iter()
+                    .map(|path| path.split('/').last().unwrap_or(&path).to_string())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    fn discover_fork_urls(
+        &self,
+        session: &PubkySession,
+        pub_storage: &PublicStorage,
+        page_id: &str,
+    ) -> Vec<String> {
+        let follows = self.get_my_follows(session);
+
+        let mut result = vec![];
+        for follow_pk in follows {
+            let fork_path = format!("pubky://{follow_pk}/pub/wiki.app/{page_id}");
+            log::info!("fork_path = {fork_path}");
+            let exists_fut = pub_storage.exists(fork_path);
+
+            match self.rt.block_on(exists_fut) {
+                Ok(exists) => {
+                    if exists {
+                        result.push(format!("{follow_pk}/{page_id}"));
+                    }
+                }
+                Err(e) => log::error!("Failed to check if file exists: {e}"),
+            }
+        }
+        result
     }
 }
 
@@ -281,7 +318,12 @@ impl eframe::App for PubkyApp {
 
                                             ui.horizontal(|ui| {
                                                 if ui.button(file_name).clicked() {
-                                                    self.navigate_to_view_wiki_page(&pk, file_name);
+                                                    self.navigate_to_view_wiki_page(
+                                                        &pk,
+                                                        file_name,
+                                                        &session,
+                                                        pub_storage,
+                                                    );
                                                 }
 
                                                 ui.label(file_title);
@@ -293,7 +335,7 @@ impl eframe::App for PubkyApp {
                             ViewState::CreateWiki => create_wiki::update(self, &session, ctx, ui),
                             ViewState::EditWiki => edit_wiki::update(self, &session, ctx, ui),
                             ViewState::ViewWiki => {
-                                view_wiki::update(self, own_pk, &pub_storage, ctx, ui)
+                                view_wiki::update(self, &session, &pub_storage, ctx, ui)
                             }
                         }
                     }
