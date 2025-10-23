@@ -1,0 +1,3 @@
+[submodule "homegate"]
+	path = homegate
+	url = https://github.com/pubky/homegate
