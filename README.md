@@ -12,7 +12,7 @@ This repository contains the project submissions for the Lugano Plan B Pubky Hac
 
 ## Repository Workflow
 
-Repository: `pubky/hackathon-2025`
+Repository: `pubky/hackathon-lugano-2025`
 
 1. **Fork** the repository.
 2. **Clone** your fork locally.
@@ -88,7 +88,7 @@ Two kind of development environments:
 You can embed an ephimeral testnet using the `pubky-testnet` crate for full local development.
 
 ```sh
-cargo add pubky-testnet@=0.6.0-rc.6
+cargo add pubky-testnet@=0.6.0-rc.1
 ```
 
 Check out [examples/testnet](https://github.com/pubky/pubky-core/tree/main/examples/rust/1-testnet) to learn how to create from a tiny app performing signup/put/get against an ephemeral local testnet.
@@ -96,7 +96,7 @@ Check out [examples/testnet](https://github.com/pubky/pubky-core/tree/main/examp
 You can also run it as a separate process by:
 
 ```sh
-cargo install pubky-testnet --version 0.6.0-rc.6
+cargo install pubky-testnet
 pubky-testnet
 
 # then instantiate the sdk facade with Pubky::testnet()
