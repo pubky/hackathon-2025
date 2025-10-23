@@ -45,6 +45,19 @@ Browse the links, fork any page, or create new pages.
 
 You can find binaries here: https://github.com/ok300/hackathon-2025/releases/tag/v0.1
 
+If you have problems run the macOS binary:
+
+* extract it
+* try to run it (you might see a popup saying it can't be run because it's not signed)
+* go to Settings > Privacy & Security > Security
+  * it will say "pubky-wiki tried to run, but was blocked"
+  * click on Open Anyway
+
+Alternatively, you can run from source code. Clone the repo and:
+
+```
+cargo run
+```
 
 ## License
 
