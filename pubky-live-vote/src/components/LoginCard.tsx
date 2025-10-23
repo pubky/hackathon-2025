@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { useAuth } from '../context/AuthContext';
 import './Panel.css';
@@ -14,11 +14,6 @@ export const LoginCard = () => {
     hasAttemptedAutoConnect.current = true;
     void connect();
   }, [session, isAuthenticating, connect]);
-
-  const handleConnect = useCallback(() => {
-    hasAttemptedAutoConnect.current = true;
-    void connect();
-  }, [connect]);
 
   const statusMessage = useMemo(() => {
     if (session) return '';
@@ -78,14 +73,6 @@ export const LoginCard = () => {
           ) : (
             <div className="qr-placeholder">{statusMessage}</div>
           )}
-        </div>
-      )}
-
-      {!session && (
-        <div className="panel__actions">
-          <button className="button button--primary" disabled={isAuthenticating} onClick={handleConnect}>
-            {isAuthenticating ? 'Connecting…' : 'Connect to Pubky'}
-          </button>
         </div>
       )}
 
