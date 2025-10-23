@@ -29,8 +29,9 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             let session_clone = session.clone();
             let content = app.edit_wiki_content.clone();
             let state_clone = app.state.clone();
+            let filename = app.forked_from_page_id.as_deref();
 
-            let create_wiki_post_fut = create_wiki_post(&session_clone, &content);
+            let create_wiki_post_fut = create_wiki_post(&session_clone, &content, filename);
             match app.rt.block_on(create_wiki_post_fut) {
                 Ok(wiki_page_path) => {
                     log::info!("Created wiki post at: {}", wiki_page_path);
@@ -54,11 +55,13 @@ pub(crate) fn update(app: &mut PubkyApp, session: &PubkySession, _ctx: &Context,
             }
 
             app.edit_wiki_content.clear();
+            app.forked_from_page_id = None;
             app.view_state = ViewState::WikiList;
         }
 
         if ui.button("Cancel").clicked() {
             app.edit_wiki_content.clear();
+            app.forked_from_page_id = None;
             app.view_state = ViewState::WikiList;
         }
     });

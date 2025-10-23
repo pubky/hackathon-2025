@@ -29,7 +29,9 @@ pub(crate) fn update(
     }
 
     if share_button.clicked() {
-        ctx.copy_text(app.selected_wiki_page_id.clone());
+        let user_id = &app.selected_wiki_user_id;
+        let page_id = &app.selected_wiki_page_id;
+        ctx.copy_text(format!("[link]({user_id}/{page_id})"));
         app.show_copy_tooltip = true;
     }
 
@@ -57,22 +59,14 @@ pub(crate) fn update(
 
                 // Synchronously fetch the content
                 let get_path_fut = public_storage_clone.get(&path);
-                match app.rt.block_on(get_path_fut) {
-                    Ok(response) => {
-                        let response_text_fut = response.text();
-                        match app.rt.block_on(response_text_fut) {
-                            Ok(text) => {
-                                app.selected_wiki_content = text;
-                            }
-                            Err(e) => {
-                                app.selected_wiki_content = format!("Error reading content: {}", e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        app.selected_wiki_content = format!("Error fetching path {path}: {}", e);
-                    }
-                }
+                let fetched_content = match app.rt.block_on(get_path_fut) {
+                    Ok(response) => match app.rt.block_on(response.text()) {
+                        Ok(text) => text,
+                        Err(e) => format!("Error reading content: {e}"),
+                    },
+                    Err(e) => format!("Error fetching path {path}: {e}"),
+                };
+                app.selected_wiki_content = fetched_content;
             }
 
             egui::ScrollArea::vertical().show(ui, |ui| {
@@ -119,6 +113,13 @@ pub(crate) fn update(
         // Show Edit button only for own pages
         if is_own_page && ui.button("Edit").clicked() {
             app.navigate_to_edit_selected_wiki_page();
+        }
+
+        // Fork button - available for only when viewing other user's pages
+        if !is_own_page && ui.button("Fork page").clicked() {
+            app.edit_wiki_content = app.selected_wiki_content.clone();
+            app.forked_from_page_id = Some(app.selected_wiki_page_id.clone());
+            app.view_state = ViewState::CreateWiki;
         }
 
         // Go back button

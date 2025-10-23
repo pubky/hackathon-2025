@@ -72,6 +72,8 @@ pub(crate) struct PubkyApp {
     cache: CommonMarkCache,
     rt: Arc<Runtime>,
     pub(crate) show_copy_tooltip: bool,
+    /// Page ID from which content is being forked (when forking)
+    pub(crate) forked_from_page_id: Option<String>,
 }
 
 impl PubkyApp {
@@ -127,6 +129,7 @@ impl PubkyApp {
             cache: CommonMarkCache::default(),
             rt: rt_arc,
             show_copy_tooltip: false,
+            forked_from_page_id: None,
         }
     }
 
@@ -314,8 +317,16 @@ async fn initialize_auth() -> Result<(Pubky, PubkyAuthFlow, String)> {
     Ok((pubky, flow, auth_url))
 }
 
-pub(crate) async fn create_wiki_post(session: &PubkySession, content: &str) -> Result<String> {
-    let path = format!("/pub/wiki.app/{}", Uuid::new_v4());
+pub(crate) async fn create_wiki_post(
+    session: &PubkySession,
+    content: &str,
+    filename: Option<&str>,
+) -> Result<String> {
+    let path = if let Some(fname) = filename {
+        format!("/pub/wiki.app/{}", fname)
+    } else {
+        format!("/pub/wiki.app/{}", Uuid::new_v4())
+    };
 
     // Create the post with the provided content
     session.storage().put(&path, content.to_string()).await?;
