@@ -531,6 +531,36 @@ export class BookmarkSync {
   }
 
   /**
+   * Ensure groups folder exists in bookmarks bar
+   */
+  async ensureGroupsFolder() {
+    try {
+      const bookmarkBar = await this.getBookmarksBar();
+
+      // Check if groups folder already exists
+      const children = await browser.bookmarks.getChildren(bookmarkBar);
+      for (const child of children) {
+        if (!child.url && child.title === 'groups') {
+          logger.log('Groups folder already exists');
+          return child.id;
+        }
+      }
+
+      // Create groups folder
+      const groupsFolder = await browser.bookmarks.create({
+        parentId: bookmarkBar,
+        title: 'groups'
+      });
+
+      logger.log('Created groups folder:', groupsFolder.id);
+      return groupsFolder.id;
+    } catch (error) {
+      logger.error('Failed to ensure groups folder:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a sharing folder in priv_sharing for a monitored pubkey
    * This creates a folder in the current user's priv_sharing directory
    * named after the monitored key, so bookmarks can be shared with them
@@ -615,6 +645,9 @@ export class BookmarkSync {
       for (const monitoredPubkey of monitored) {
         await this.syncFolder(monitoredPubkey, false);
       }
+
+      // Sync groups folders - merge bookmarks from matching folder names
+      await this.syncGroupsFolders();
     } finally {
       this.syncing = false;
       this.ignoreEvents = false; // Re-enable event listeners
@@ -1265,6 +1298,186 @@ export class BookmarkSync {
       logger.warn('Failed to delete bookmark:', fullPath, '-', error.message);
       // Don't throw - deletion might fail if file doesn't exist, which is okay
     }
+  }
+
+  /**
+   * Collect top-level folders by name across all synced keys
+   * Returns a Map of folderName -> Array<{pubkey, folderId, bookmarks}>
+   */
+  async collectTopLevelFoldersByName() {
+    const foldersByName = new Map();
+
+    try {
+      // Get all pubkeys (own + monitored)
+      const pubkey = await this.keyManager.getPublicKey();
+      const monitored = await this.storage.getMonitoredPubkeys();
+      const allPubkeys = pubkey ? [pubkey, ...monitored] : monitored;
+
+      // For each pubkey, get its root folder and examine top-level children
+      for (const pk of allPubkeys) {
+        const rootFolderId = this.folderCache.get(pk);
+        if (!rootFolderId) {
+          logger.warn('No folder found for pubkey:', pk);
+          continue;
+        }
+
+        // Get top-level children (folders only)
+        const children = await browser.bookmarks.getChildren(rootFolderId);
+
+        for (const child of children) {
+          // Skip if not a folder, or if it's a special folder
+          if (child.url) continue; // It's a bookmark, not a folder
+          if (child.title === 'priv' || child.title === 'priv_sharing') continue;
+
+          const folderName = child.title;
+
+          // Get all bookmarks within this folder (recursively)
+          const bookmarks = await this.getBookmarksInFolder(child.id);
+
+          // Add to our map
+          if (!foldersByName.has(folderName)) {
+            foldersByName.set(folderName, []);
+          }
+
+          foldersByName.get(folderName).push({
+            pubkey: pk,
+            folderId: child.id,
+            bookmarks: bookmarks
+          });
+
+          logger.log(`Found top-level folder "${folderName}" in ${pk.substring(0, 7)} with ${bookmarks.length} bookmarks`);
+        }
+      }
+
+      return foldersByName;
+    } catch (error) {
+      logger.error('Failed to collect top-level folders:', error);
+      return new Map();
+    }
+  }
+
+  /**
+   * Sync groups folders - merge bookmarks from matching folder names across all keys
+   */
+  async syncGroupsFolders() {
+    try {
+      logger.log('Starting groups folder sync...');
+
+      // Ensure groups folder exists
+      const groupsFolderId = await this.ensureGroupsFolder();
+
+      // Collect all top-level folders grouped by name
+      const foldersByName = await this.collectTopLevelFoldersByName();
+
+      // Get existing folders in groups
+      const existingGroupFolders = await browser.bookmarks.getChildren(groupsFolderId);
+      const existingGroupFolderMap = new Map();
+      for (const folder of existingGroupFolders) {
+        if (!folder.url) {
+          existingGroupFolderMap.set(folder.title, folder.id);
+        }
+      }
+
+      // For each unique folder name, create/update group folder
+      for (const [folderName, sources] of foldersByName.entries()) {
+        logger.log(`Processing group folder: ${folderName} (from ${sources.length} source(s))`);
+
+        // Collect all bookmarks from all sources
+        const allBookmarks = [];
+        for (const source of sources) {
+          allBookmarks.push(...source.bookmarks);
+        }
+
+        // Remove duplicates based on URL, keeping newest timestamp
+        const uniqueBookmarks = this.deduplicateBookmarks(allBookmarks);
+
+        logger.log(`Group folder "${folderName}" has ${uniqueBookmarks.length} unique bookmarks (from ${allBookmarks.length} total)`);
+
+        // Get or create group folder
+        let groupFolderId;
+        if (existingGroupFolderMap.has(folderName)) {
+          groupFolderId = existingGroupFolderMap.get(folderName);
+          logger.log(`Using existing group folder: ${folderName}`);
+        } else {
+          const newFolder = await browser.bookmarks.create({
+            parentId: groupsFolderId,
+            title: folderName
+          });
+          groupFolderId = newFolder.id;
+          logger.log(`Created new group folder: ${folderName}`);
+        }
+
+        // Get existing bookmarks in this group folder
+        const existingBookmarks = await this.getBookmarksInFolder(groupFolderId);
+        const existingUrlMap = new Map(existingBookmarks.map(b => [b.url, b]));
+
+        // Track folders we need to create for nested structure
+        const folderCache = new Map();
+
+        // Add or update bookmarks
+        for (const bookmark of uniqueBookmarks) {
+          const existing = existingUrlMap.get(bookmark.url);
+
+          if (!existing) {
+            // Create new bookmark with its folder structure
+            const parentId = await this.getOrCreateSubfolder(groupFolderId, bookmark.path, folderCache);
+            await browser.bookmarks.create({
+              parentId: parentId,
+              title: bookmark.title,
+              url: bookmark.url
+            });
+            logger.log(`Added bookmark to group "${folderName}": ${bookmark.url}`);
+          } else if (bookmark.timestamp > existing.timestamp) {
+            // Update existing bookmark if newer
+            await browser.bookmarks.update(existing.id, {
+              title: bookmark.title,
+              url: bookmark.url
+            });
+            logger.log(`Updated bookmark in group "${folderName}": ${bookmark.url}`);
+          }
+
+          // Remove from existing map (we'll delete any remaining)
+          existingUrlMap.delete(bookmark.url);
+        }
+
+        // Remove bookmarks that no longer exist in any source
+        for (const obsolete of existingUrlMap.values()) {
+          await browser.bookmarks.remove(obsolete.id);
+          logger.log(`Removed obsolete bookmark from group "${folderName}": ${obsolete.url}`);
+        }
+      }
+
+      // Remove group folders that no longer have matching source folders
+      for (const [folderName, folderId] of existingGroupFolderMap.entries()) {
+        if (!foldersByName.has(folderName)) {
+          await browser.bookmarks.removeTree(folderId);
+          logger.log(`Removed obsolete group folder: ${folderName}`);
+        }
+      }
+
+      logger.log('Groups folder sync completed');
+    } catch (error) {
+      logger.error('Failed to sync groups folders:', error);
+      // Don't throw - this is a non-critical feature
+    }
+  }
+
+  /**
+   * Remove duplicate bookmarks based on URL, keeping the one with newest timestamp
+   * @param {Array} bookmarks - Array of bookmark objects
+   * @returns {Array} - Deduplicated array
+   */
+  deduplicateBookmarks(bookmarks) {
+    const bookmarkMap = new Map();
+
+    for (const bookmark of bookmarks) {
+      const existing = bookmarkMap.get(bookmark.url);
+      if (!existing || bookmark.timestamp > existing.timestamp) {
+        bookmarkMap.set(bookmark.url, bookmark);
+      }
+    }
+
+    return Array.from(bookmarkMap.values());
   }
 
   /**
