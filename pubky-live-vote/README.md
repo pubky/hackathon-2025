@@ -1,5 +1,7 @@
 # Pubky Live Vote
 
+<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/c8823857-54c8-4800-a464-b70b8c9e7153" />
+
 Pubky Live Vote is a responsive hackathon voting interface that uses the Pubky JavaScript SDK for authentication and ballot storage. It is designed for 1–2 day events where dozens of voters need to authenticate quickly, score projects across the official rubric, provide feedback, and watch the leaderboard update in real time.
 
 ## Features
