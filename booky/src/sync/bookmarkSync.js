@@ -272,6 +272,9 @@ export class BookmarkSync {
           await this.storage.markDeleted(url, timestamp);
           await this.storage.removeBookmarkMeta(url);
 
+          // Delete from homeserver immediately (don't wait for sync)
+          await this.deleteBookmarkByUrl(url);
+
           logger.log('Bookmark moved out of synced folder, triggering sync:', url);
           this.triggerSyncAfterDelay();
         }
