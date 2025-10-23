@@ -26,6 +26,11 @@ Developing distributed systems is hard. Publar makes it easier by:
 
 If you're building on Pubky, Publar helps you move faster and catch issues early.
 
+## Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)**: Technical architecture, component details, algorithms, and data flow
+- **[SCENARIOS.md](SCENARIOS.md)**: Complete guide to creating and using automated test scenarios
+
 ## Setup & Run
 
 ### Prerequisites
@@ -40,12 +45,14 @@ If you're building on Pubky, Publar helps you move faster and catch issues early
 git clone https://github.com/yourusername/publar.git
 cd publar
 
-# Install npm dependencies for Tailwind CSS
+# IMPORTANT: Install npm dependencies FIRST (required for CSS compilation)
 npm install
 
-# Build and run (Tailwind CSS compiles automatically)
+# Build CSS and run
 cargo run
 ```
+
+**Note**: You must run `npm install` before `cargo run`. The build process uses Tailwind CSS which requires Node.js dependencies to be installed first.
 
 The application window will open automatically. Start by adding a homeserver or running a pre-built scenario.
 
@@ -66,6 +73,140 @@ Example:
 ```bash
 cargo run --example testnet_write_read http://127.0.0.1:50000/ z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK
 ```
+
+## Building for Distribution
+
+### Prerequisites
+
+Install the Dioxus CLI (`dx`):
+
+```bash
+cargo install dioxus-cli
+```
+
+Verify installation:
+```bash
+dx --version
+```
+
+### Building a macOS .app Bundle
+
+To create a distributable macOS application:
+
+```bash
+dx bundle --platform desktop --package-types "macos"
+```
+
+The `.app` bundle will be created at:
+```
+target/dx/publar/bundle/macos/bundle/macos/Publar.app
+```
+
+You can then:
+- Copy it to `/Applications/` or anywhere else
+- Distribute it to users (no Rust installation required)
+- Double-click to run like any native macOS app
+
+**Size**: ~23MB
+
+**Requirements**: macOS 10.15+ (ARM64 for Apple Silicon, x86_64 for Intel)
+
+#### macOS "Damaged" App Fix
+
+If you download a pre-release build from GitHub and macOS says the app is "damaged", run this command to remove the quarantine attribute:
+
+```bash
+# For .app bundle
+xattr -cr /path/to/Publar.app
+
+# For .dmg file
+xattr -cr /path/to/Publar.dmg
+```
+
+Then right-click the app and select "Open" (or go to System Preferences → Security & Privacy and click "Open Anyway").
+
+This is only needed for unsigned pre-release builds. Official releases will be properly code-signed and notarized.
+
+### Distribution Checklist
+
+For official distribution, you should:
+
+1. **Code Signing** (macOS):
+   ```bash
+   codesign --force --deep --sign "Developer ID Application: Your Name" Publar.app
+   ```
+
+2. **Notarization** (macOS 10.15+):
+   - Submit to Apple for notarization
+   - Required for users to run the app without security warnings
+
+3. **Create DMG** (optional):
+   ```bash
+   # Use tools like create-dmg or node-appdmg
+   create-dmg Publar.app
+   ```
+
+### Building for Windows
+
+To create a Windows MSI installer (must be run on Windows):
+
+```bash
+dx bundle --platform desktop --package-types "msi"
+```
+
+The installer will be created at:
+```
+target/dx/publar/bundle/msi/Publar_0.1.0_x64_en-US.msi
+```
+
+**Requirements**: Windows 10+ (x64)
+
+### Building for Linux
+
+#### Debian/Ubuntu (.deb)
+
+To create a Debian package (must be run on Linux):
+
+```bash
+dx bundle --platform desktop --package-types "deb"
+```
+
+The package will be created at:
+```
+target/dx/publar/bundle/deb/publar_0.1.0_amd64.deb
+```
+
+Install with:
+```bash
+sudo dpkg -i publar_0.1.0_amd64.deb
+```
+
+#### AppImage (Universal Linux)
+
+To create a portable AppImage (must be run on Linux):
+
+```bash
+dx bundle --platform desktop --package-types "appimage"
+```
+
+The AppImage will be created at:
+```
+target/dx/publar/bundle/appimage/publar_0.1.0_amd64.AppImage
+```
+
+Make executable and run:
+```bash
+chmod +x publar_0.1.0_amd64.AppImage
+./publar_0.1.0_amd64.AppImage
+```
+
+**Requirements**: Most modern Linux distributions (glibc 2.31+)
+
+### Cross-Platform Notes
+
+- **You can only bundle for your current platform** - cross-compilation is not supported
+- All builds are approximately 20-30MB in size
+- No external dependencies required for end users
 
 ## Usage
 
@@ -91,123 +232,6 @@ Scenarios run automatically with timed operations, perfect for regression testin
 ### Reset
 
 Click "Reset" to clear all nodes and connections while keeping the testnet running.
-
-## Architecture
-
-### High-Level Overview
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Publar UI (Dioxus)                  │
-│  ┌─────────────┐  ┌──────────────────┐  ┌───────────────┐  │
-│  │   Topbar    │  │  Visualization   │  │    Sidebar    │  │
-│  │   Controls  │  │  Force-Directed  │  │  Node Details │  │
-│  │             │  │      Graph       │  │  Event Log    │  │
-│  └─────────────┘  └──────────────────┘  └───────────────┘  │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-              ┌──────────────────────┐
-              │   Testnet Manager    │
-              │   (pubky-testnet)    │
-              └──────────┬───────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                ▼
-   ┌─────────┐     ┌─────────┐     ┌─────────┐
-   │Homeserver│    │Homeserver│    │Homeserver│
-   │  :50000  │    │  :50001  │    │  :50002  │
-   └─────────┘     └─────────┘     └─────────┘
-        ▲                ▲                ▲
-        │                │                │
-   ┌────┴───┐       ┌───┴────┐      ┌───┴────┐
-   │Client 1│       │Client 2│      │Client 3│
-   └────────┘       └────────┘      └────────┘
-```
-
-### Components
-
-**Frontend (Dioxus 0.6)**
-
-- **Topbar**: Controls for adding nodes, running scenarios, and resetting
-- **Network Visualization**: Interactive SVG graph with force-directed layout (Fruchterman-Reingold algorithm)
-  - Homeservers: White circles with port labels
-  - Clients: Lime green (#c7ff00) circles with truncated public keys
-  - Connections: Lime green lines showing client-homeserver relationships
-- **Context Sidebar**: Resizable panel with node details, actions, and event log
-
-**Backend (pubky-testnet + pubky)**
-
-- **Testnet Manager**: Manages multiple homeserver processes via pubky-testnet
-- **Session Management**: Maintains client sessions with homeservers
-- **Scenario Engine**: Executes timed operations (create, connect, write, read)
-
-**State Management**
-
-- Dioxus signals for reactive UI updates
-- Shared Arc<Mutex<>> for cross-task state access
-
-### Data Flow
-
-```
-User Action → Dioxus Event Handler → Testnet Manager → Homeserver HTTP API
-                                            ↓
-                                    Update Signals
-                                            ↓
-                                   UI Re-renders
-                                            ↓
-                                    Log Event Entry
-```
-
-### Key Algorithms
-
-**Force-Directed Layout**
-
-- **Repulsion**: All nodes push away from each other (prevents overlap)
-- **Spring Forces**: Connected nodes maintain ideal distance (~150px)
-- **Damping**: Velocity decay creates smooth stabilization
-- Runs continuously every 50ms for dynamic repositioning
-
-**Scenario Execution**
-
-- Operations grouped by timestamp
-- Sequential execution with precise timing
-- Async/await for non-blocking UI
-
-## File Structure
-
-```
-publar/
-├── src/
-│   ├── main.rs                      # App entry, state, event handlers
-│   ├── components/
-│   │   ├── topbar.rs                # Top control bar
-│   │   ├── network_visualization.rs # SVG graph with force layout
-│   │   └── context_sidebar.rs       # Right panel (details + log)
-│   ├── testnet.rs                   # Wrapper around pubky-testnet
-│   ├── scenario.rs                  # Scenario definitions and operations
-│   ├── force_layout.rs              # Fruchterman-Reingold algorithm
-│   └── api.rs                       # REST API (future)
-├── examples/
-│   └── testnet_write_read.rs        # External connection example
-├── assets/
-│   ├── input.css                    # Tailwind source
-│   └── tailwind.css                 # Generated CSS
-├── build.rs                         # Compiles Tailwind on build
-├── tailwind.config.js               # Tailwind configuration
-├── package.json                     # npm dependencies
-├── Cargo.toml                       # Rust dependencies
-├── Dioxus.toml                      # Dioxus bundling configuration
-└── SCENARIOS.md                     # JSON scenario documentation
-```
-
-## Key Technologies
-
-- **[Dioxus 0.6](https://dioxuslabs.com/)**: Cross-platform UI framework (desktop, web, mobile)
-- **[Tailwind CSS v3](https://tailwindcss.com/)**: Utility-first styling
-- **[Tokio](https://tokio.rs/)**: Async runtime
-- **[pubky-testnet 0.6.0-rc.6](https://github.com/pubky/pubky)**: Manages local homeserver processes
-- **[pubky 0.6.0-rc.6](https://github.com/pubky/pubky)**: Client library for Pubky protocol
 
 ## Development
 
@@ -238,75 +262,6 @@ Scenarios are stored in `~/.publar/scenarios/` as JSON files. See [SCENARIOS.md]
 
 You can also add scenarios programmatically in `src/scenario.rs` by editing the `built_in_scenarios()` function.
 
-## Building for Distribution
-
-### Prerequisites
-
-Install the Dioxus CLI:
-
-```bash
-cargo install dioxus-cli
-```
-
-### Building a macOS .app Bundle
-
-To create a distributable macOS application:
-
-```bash
-dx bundle --platform desktop --package-types "macos"
-```
-
-The `.app` bundle will be created at:
-```
-target/dx/publar/bundle/macos/bundle/macos/Publar.app
-```
-
-You can then:
-- Copy it to `/Applications/` or anywhere else
-- Distribute it to users (no Rust installation required)
-- Double-click to run like any native macOS app
-
-**Size**: ~23MB
-
-**Requirements**: macOS 10.15+ (ARM64 for Apple Silicon, x86_64 for Intel)
-
-### Distribution Checklist
-
-For official distribution, you should:
-
-1. **Code Signing** (macOS):
-   ```bash
-   codesign --force --deep --sign "Developer ID Application: Your Name" Publar.app
-   ```
-
-2. **Notarization** (macOS 10.15+):
-   - Submit to Apple for notarization
-   - Required for users to run the app without security warnings
-
-3. **Create DMG** (optional):
-   ```bash
-   # Use tools like create-dmg or node-appdmg
-   create-dmg Publar.app
-   ```
-
-### Cross-Platform Builds
-
-The `dx bundle` command supports multiple platforms:
-
-```bash
-# macOS (on macOS)
-dx bundle --platform desktop --package-types "macos"
-
-# Windows (on Windows)
-dx bundle --platform desktop --package-types "msi"
-
-# Linux (on Linux)
-dx bundle --platform desktop --package-types "deb"
-dx bundle --platform desktop --package-types "appimage"
-```
-
-**Note**: You can only bundle for your current platform. Cross-compilation is not supported.
-
 ## Troubleshooting
 
 **Issue**: App crashes on startup
@@ -325,30 +280,10 @@ dx bundle --platform desktop --package-types "appimage"
 
 - **Solution**: Click "Reset" and recreate nodes with fewer initial connections
 
-## Contributing
-
-Contributions are welcome! Areas that need help:
-
-- [ ] Add more pre-built scenarios
-- [ ] Implement REST API for external control
-- [ ] Add export/import for network topologies
-- [ ] Improve force-directed layout performance
-- [ ] Add search/filter for event log
-
-Please open an issue before starting work on major features.
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details
 
 ## Related Projects
 
-- **[Pubky](https://github.com/pubky/pubky)**: The core Pubky protocol and client library
-- **[Polar](https://github.com/jamaljsr/polar)**: Similar tool for Bitcoin Lightning Network (inspiration for Publar)
-- **[pubky-nexus](https://github.com/pubky/pubky-nexus)**: Social graph indexer for Pubky
-
-## Acknowledgments
-
-- Inspired by [Polar](https://github.com/jamaljsr/polar) for Lightning Network development
-- Built on the excellent [Dioxus](https://dioxuslabs.com/) framework
-- Thanks to the Pubky team for the testnet library
+- **[Polar](https://github.com/jamaljsr/polar)**: Similar tool for Bitcoin Lightning Network that inspired Publar's design

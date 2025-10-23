@@ -485,26 +485,12 @@ pub fn NetworkVisualization(props: NetworkVisualizationProps) -> Element {
                 }
             }
 
-            // Zoom controls overlay
+            // Zoom controls overlay (horizontal layout in bottom-right)
             div {
-                class: "absolute bottom-4 right-4 flex flex-col gap-2",
+                class: "absolute bottom-4 right-4 flex flex-row gap-1",
 
                 button {
-                    class: "w-10 h-10 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 flex items-center justify-center transition-all",
-                    onclick: move |_| {
-                        let new_zoom = (zoom() * 1.2).min(5.0);
-                        zoom.set(new_zoom);
-                    },
-                    "+"
-                }
-
-                div {
-                    class: "w-10 h-10 rounded-md bg-zinc-900 text-white border border-zinc-800 flex items-center justify-center text-xs",
-                    "{(current_zoom * 100.0) as i32}%"
-                }
-
-                button {
-                    class: "w-10 h-10 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 flex items-center justify-center transition-all",
+                    class: "w-8 h-8 rounded bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 flex items-center justify-center transition-all text-sm",
                     onclick: move |_| {
                         let new_zoom = (zoom() / 1.2).max(0.1);
                         zoom.set(new_zoom);
@@ -512,8 +498,22 @@ pub fn NetworkVisualization(props: NetworkVisualizationProps) -> Element {
                     "−"
                 }
 
+                div {
+                    class: "w-12 h-8 rounded bg-zinc-900 text-white border border-zinc-800 flex items-center justify-center text-xs",
+                    "{(current_zoom * 100.0) as i32}%"
+                }
+
                 button {
-                    class: "w-10 h-10 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 flex items-center justify-center transition-all text-xs",
+                    class: "w-8 h-8 rounded bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 flex items-center justify-center transition-all text-sm",
+                    onclick: move |_| {
+                        let new_zoom = (zoom() * 1.2).min(5.0);
+                        zoom.set(new_zoom);
+                    },
+                    "+"
+                }
+
+                button {
+                    class: "w-12 h-8 rounded bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 flex items-center justify-center transition-all text-xs",
                     onclick: move |_| {
                         zoom.set(1.0);
                         pan_offset.set((0.0, 0.0));
@@ -522,9 +522,9 @@ pub fn NetworkVisualization(props: NetworkVisualizationProps) -> Element {
                 }
             }
 
-            // Instructions overlay
+            // Instructions overlay (bottom-left)
             div {
-                class: "absolute top-4 left-4 bg-zinc-900/90 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-400",
+                class: "absolute bottom-4 left-4 bg-zinc-900/90 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-400",
                 div { "Scroll to zoom" }
                 div { "Middle-click + drag to pan" }
                 div { "Drag nodes to move" }

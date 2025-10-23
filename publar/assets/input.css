@@ -38,4 +38,9 @@
   *::-webkit-scrollbar-corner {
     background: #18181b;
   }
+
+  /* Resize handle hover effect */
+  .resize-handle-hover:hover {
+    background-color: rgba(199, 255, 0, 0.5);
+  }
 }

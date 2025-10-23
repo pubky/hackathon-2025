@@ -1,6 +1,31 @@
 # Publar Scenarios
 
-Scenarios are stored in `~/.publar/scenarios/` and define automated test sequences for Publar.
+## What Are Scenarios?
+
+Scenarios are automated test sequences that allow you to programmatically create, configure, and test Pubky networks in Publar. Instead of manually clicking through the UI to add homeservers, create clients, connect them, and write/read data, scenarios define all these operations in a JSON file that can be executed with a single click.
+
+### Why Use Scenarios?
+
+- **Reproducible Testing**: Run the same test sequence consistently across development sessions
+- **Regression Testing**: Quickly verify that your changes don't break existing functionality
+- **Complex Setups**: Create multi-node networks with precise timing in seconds instead of minutes
+- **Documentation**: Scenarios serve as executable documentation of network behavior
+- **CI/CD Integration**: Automate Pubky network testing in your build pipeline (future feature)
+
+### How They Work
+
+Scenarios define a sequence of time-stamped operations:
+1. **Create** homeservers and clients
+2. **Wait** for services to become ready
+3. **Connect** clients to homeservers
+4. **Write** data to homeservers
+5. **Read** data back to verify operations
+
+All operations execute automatically at their specified times, with results visible in the event log and network visualization.
+
+## Storage Location
+
+Scenarios are stored in `~/.publar/scenarios/` as JSON files and are automatically loaded when Publar starts.
 
 ## JSON Schema
 

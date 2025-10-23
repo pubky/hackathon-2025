@@ -61,7 +61,7 @@ pub fn ContextSidebar(props: ContextSidebarProps) -> Element {
 
             // Horizontal resize handle (left edge)
             div {
-                class: "absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-green-500/50 transition-colors z-10",
+                class: "absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize transition-colors z-10 resize-handle-hover",
                 onmousedown: move |evt| {
                     evt.stop_propagation();
                     props.on_resize_sidebar.call(-1); // Signal to start resizing (negative = start)
@@ -511,7 +511,7 @@ pub fn ContextSidebar(props: ContextSidebarProps) -> Element {
 
                 // Vertical resize handle (top edge)
                 div {
-                    class: "absolute left-0 right-0 top-0 h-1 cursor-ns-resize hover:bg-green-500/50 transition-colors z-10",
+                    class: "absolute left-0 right-0 top-0 h-1 cursor-ns-resize transition-colors z-10 resize-handle-hover",
                     onmousedown: move |evt| {
                         evt.stop_propagation();
                         props.on_resize_eventlog.call(-1); // Signal to start resizing (negative = start)

@@ -1,0 +1,259 @@
+name: Publar
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: publar
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Install Dioxus CLI (pre-built binary)
+        run: |
+          # Download pre-built binary for much faster setup (v0.7.0-rc.3 has dependency fixes)
+          curl -L https://github.com/DioxusLabs/dioxus/releases/download/v0.7.0-rc.3/dx-x86_64-unknown-linux-gnu.tar.gz -o dx.tar.gz
+          tar -xzf dx.tar.gz
+          chmod +x dx
+          sudo mv dx /usr/local/bin/dx
+          dx --version
+
+      - name: Build Tailwind CSS
+        run: npx tailwindcss -i ./assets/input.css -o ./assets/tailwind.css --minify
+
+      - name: Cache cargo build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: publar-linux
+          workspaces: publar
+
+      - name: Build Linux binary (debug mode for speed)
+        run: |
+          mkdir -p dist
+          # Build the binary directly with cargo (avoids dx bundle dependency issues)
+          cargo build --profile dev
+
+          # Copy binary to dist
+          cp target/dev/publar dist/publar-linux-x86_64
+          chmod +x dist/publar-linux-x86_64
+
+          ls -lh dist
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: publar-linux
+          path: publar/dist/*
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: publar
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Install Dioxus CLI (pre-built binary)
+        run: |
+          # Download pre-built binary for much faster setup (v0.7.0-rc.3 has dependency fixes)
+          curl -L https://github.com/DioxusLabs/dioxus/releases/download/v0.7.0-rc.3/dx-x86_64-pc-windows-msvc.zip -o dx.zip
+          unzip dx.zip
+          New-Item -ItemType Directory -Force -Path "$HOME/.cargo/bin"
+          Move-Item -Force dx.exe "$HOME/.cargo/bin/dx.exe"
+          dx --version
+
+      - name: Build Tailwind CSS
+        run: npx tailwindcss -i ./assets/input.css -o ./assets/tailwind.css --minify
+
+      - name: Cache cargo build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: publar-windows
+          workspaces: publar
+
+      - name: Build Windows installer (debug mode for speed)
+        run: |
+          mkdir -p dist
+          # Build in dev profile for faster pre-release builds (no optimizations)
+          dx bundle --platform desktop --profile dev --package-types msi
+
+          # Find and copy the built installer
+          Get-ChildItem -Path target/dx/publar/bundle -Filter "*.msi" -Recurse | Copy-Item -Destination dist/
+
+          Get-ChildItem dist
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: publar-windows
+          path: publar/dist/*
+
+  build-macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: publar
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install OpenSSL (required for dx binary)
+        run: |
+          brew install openssl@3
+          # Create symlink so dx can find OpenSSL
+          sudo mkdir -p /usr/local/opt/openssl@3/lib
+          sudo ln -sf $(brew --prefix openssl@3)/lib/libssl.3.dylib /usr/local/opt/openssl@3/lib/libssl.3.dylib
+          sudo ln -sf $(brew --prefix openssl@3)/lib/libcrypto.3.dylib /usr/local/opt/openssl@3/lib/libcrypto.3.dylib
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Install Dioxus CLI (pre-built binary)
+        run: |
+          # Download pre-built binary for much faster setup (v0.7.0-rc.3 has dependency fixes)
+          # GitHub Actions macOS runners are ARM64 (Apple Silicon)
+          curl -L https://github.com/DioxusLabs/dioxus/releases/download/v0.7.0-rc.3/dx-aarch64-apple-darwin.tar.gz -o dx.tar.gz
+          tar -xzf dx.tar.gz
+          chmod +x dx
+          sudo mv dx /usr/local/bin/dx
+          dx --version
+
+      - name: Build Tailwind CSS
+        run: npx tailwindcss -i ./assets/input.css -o ./assets/tailwind.css --minify
+
+      - name: Cache cargo build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: publar-macos
+          workspaces: publar
+
+      - name: Build macOS packages (debug mode for speed)
+        run: |
+          mkdir -p dist
+          # Build in dev profile for faster pre-release builds (no optimizations)
+          dx bundle --platform desktop --profile dev --package-types macos
+          dx bundle --platform desktop --profile dev --package-types dmg
+
+          # Find the built packages
+          find target/dx/publar/bundle -name "*.app" -exec cp -r {} dist/ \;
+          find target/dx/publar/bundle -name "*.dmg" -exec cp {} dist/ \;
+
+          # Ad-hoc sign the .app bundle
+          for app in dist/*.app; do
+            if [ -d "$app" ]; then
+              echo "Ad-hoc signing $app"
+              # Remove quarantine attributes and sign
+              sudo xattr -cr "$app"
+              codesign --force --deep --sign - "$app"
+            fi
+          done
+
+          # Also remove quarantine from DMG files
+          for dmg in dist/*.dmg; do
+            if [ -f "$dmg" ]; then
+              sudo xattr -cr "$dmg"
+            fi
+          done
+
+          ls -lh dist
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: publar-macos
+          path: publar/dist/*
+
+  publish-release:
+    needs:
+      - build-linux
+      - build-windows
+      - build-macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          # Move all artifacts to release directory
+          find dist -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.msi" -o -name "*.dmg" -o -name "*.app" \) -exec mv {} release/ \;
+
+          # Create archives for .app bundles if any
+          for app in release/*.app; do
+            if [ -d "$app" ]; then
+              zip -r "${app}.zip" "$app"
+              rm -rf "$app"
+            fi
+          done
+
+          ls -lh release
+
+      - name: Prepare release metadata
+        id: release_meta
+        run: |
+          tag="publar-pre-release-${GITHUB_RUN_NUMBER}"
+          name="Publar pre-release ${GITHUB_RUN_NUMBER}"
+          echo "tag_name=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Publish pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_meta.outputs.tag_name }}
+          name: ${{ steps.release_meta.outputs.release_name }}
+          prerelease: true
+          generate_release_notes: true
+          files: release/*
