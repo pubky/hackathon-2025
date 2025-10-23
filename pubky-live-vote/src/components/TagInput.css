@@ -1,0 +1,116 @@
+.tag-input {
+  display: grid;
+  gap: 0.95rem;
+  background: linear-gradient(145deg, rgba(18, 20, 34, 0.94), rgba(13, 15, 27, 0.92));
+  border: 1px dashed rgba(136, 150, 255, 0.45);
+  border-radius: 18px;
+  padding: clamp(0.9rem, 2vw, 1.1rem);
+  box-shadow: inset 0 0 0 1px rgba(73, 86, 170, 0.18);
+}
+
+.tag-input--disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.tag-input__header h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tag-input__header p {
+  margin: 0.35rem 0 0;
+  color: rgba(200, 208, 255, 0.72);
+  font-size: 0.92rem;
+}
+
+.tag-input__chips {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem 0.28rem 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  background: var(--tag-blue);
+  color: #0a0c17;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 20px rgba(114, 130, 255, 0.4);
+}
+
+.chip__hash {
+  opacity: 0.7;
+}
+
+.chip.tone-green {
+  background: var(--tag-green);
+  box-shadow: 0 8px 20px rgba(54, 215, 167, 0.32);
+}
+
+.chip.tone-purple {
+  background: var(--tag-purple);
+  box-shadow: 0 8px 20px rgba(215, 154, 255, 0.35);
+}
+
+.chip button {
+  background: rgba(255, 255, 255, 0.22);
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: grid;
+  place-items: center;
+  font-size: 0.9rem;
+}
+
+.chip button:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.chip button:disabled {
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.18);
+  opacity: 0.6;
+}
+
+.tag-input__form {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.tag-input__form input {
+  flex: 1;
+  border-radius: 14px;
+  border: 1px solid rgba(130, 143, 255, 0.4);
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(135deg, rgba(17, 18, 30, 0.92), rgba(12, 13, 24, 0.9));
+  color: rgba(222, 228, 255, 0.92);
+}
+
+.tag-input__form input:focus {
+  outline: none;
+  border-color: rgba(155, 168, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(121, 136, 255, 0.24);
+}
+
+.tag-input__form input:disabled {
+  cursor: not-allowed;
+  background: linear-gradient(135deg, rgba(17, 18, 30, 0.72), rgba(12, 13, 24, 0.74));
+  border-color: rgba(130, 143, 255, 0.25);
+}
+
+.tag-input__form button:disabled {
+  cursor: not-allowed;
+  background: rgba(104, 112, 166, 0.6);
+  color: rgba(22, 24, 40, 0.72);
+}

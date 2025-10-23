@@ -1,0 +1,123 @@
+{
+    "generatedAt": "2025-02-15T12:00:00.000Z",
+    "totalVoters": 5,
+    "entries": [
+        {
+            "projectId": "pubky-live-vote",
+            "total": 88.2,
+            "components": {
+                "complexity": 82,
+                "creativity": 88,
+                "readiness": 96,
+                "presentation": 92,
+                "feedback": 90,
+                "popular": 84,
+                "ai": 88
+            }
+        },
+        {
+            "projectId": "pubky-mcp-server",
+            "total": 82.5,
+            "components": {
+                "complexity": 78,
+                "creativity": 80,
+                "readiness": 88,
+                "presentation": 84,
+                "feedback": 82,
+                "popular": 80,
+                "ai": 86
+            }
+        },
+        {
+            "projectId": "pubky-homeserver-cli",
+            "total": 77.4,
+            "components": {
+                "complexity": 72,
+                "creativity": 74,
+                "readiness": 86,
+                "presentation": 80,
+                "feedback": 78,
+                "popular": 74,
+                "ai": 79
+            }
+        },
+        {
+            "projectId": "pubky-tag-extension",
+            "total": 74.1,
+            "components": {
+                "complexity": 70,
+                "creativity": 84,
+                "readiness": 68,
+                "presentation": 78,
+                "feedback": 80,
+                "popular": 70,
+                "ai": 75
+            }
+        },
+        {
+            "projectId": "booksy",
+            "total": 70.6,
+            "components": {
+                "complexity": 64,
+                "creativity": 78,
+                "readiness": 66,
+                "presentation": 80,
+                "feedback": 74,
+                "popular": 68,
+                "ai": 72
+            }
+        },
+        {
+            "projectId": "pubky-cookbook",
+            "total": 81.3,
+            "components": {
+                "complexity": 74,
+                "creativity": 76,
+                "readiness": 90,
+                "presentation": 88,
+                "feedback": 92,
+                "popular": 78,
+                "ai": 83
+            }
+        },
+        {
+            "projectId": "decentralized-wiki",
+            "total": 73.8,
+            "components": {
+                "complexity": 70,
+                "creativity": 74,
+                "readiness": 72,
+                "presentation": 72,
+                "feedback": 76,
+                "popular": 70,
+                "ai": 78
+            }
+        },
+        {
+            "projectId": "monky",
+            "total": 79.4,
+            "components": {
+                "complexity": 80,
+                "creativity": 82,
+                "readiness": 82,
+                "presentation": 70,
+                "feedback": 68,
+                "popular": 76,
+                "ai": 82
+            }
+        },
+        {
+            "projectId": "geostories",
+            "total": 85.2,
+            "components": {
+                "complexity": 78,
+                "creativity": 92,
+                "readiness": 80,
+                "presentation": 84,
+                "feedback": 82,
+                "popular": 82,
+                "ai": 84
+            }
+        }
+    ]
+}
