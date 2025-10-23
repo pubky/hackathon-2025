@@ -4,7 +4,7 @@
 
 import { Resource } from '@modelcontextprotocol/sdk/types.js';
 import { FileReader } from './utils/file-reader.js';
-import { RESOURCE_TYPES, DOC_SECTIONS, API_SECTIONS, APP_SPEC_MODELS } from './constants.js';
+import { RESOURCE_TYPES, DOC_SECTIONS, API_SECTIONS } from './constants.js';
 import { NexusApiParser } from './utils/nexus-api.js';
 import { AppSpecsParser } from './utils/app-specs.js';
 import * as path from 'path';

@@ -92,7 +92,7 @@ export class AppSpecsParser {
       if (structMatch) {
         output += `\n\n## Rust Definition\n\n\`\`\`rust\n${structMatch[0]}\n\`\`\`\n`;
       }
-    } catch (error) {
+    } catch {
       // Model file not found, skip code
     }
 
@@ -345,7 +345,7 @@ let feed = PubkyAppFeed::new(
       output += `\`\`\`javascript\n${exampleContent}\n\`\`\`\n`;
 
       return output;
-    } catch (error) {
+    } catch {
       return 'JavaScript examples not found';
     }
   }

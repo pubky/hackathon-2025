@@ -1,7 +1,7 @@
 {
   "name": "@pubky/mcp-server",
   "version": "1.0.0",
-  "description": "Complete Pubky ecosystem MCP server - Protocol, data models, and social API knowledge in one package",
+  "description": "Complete Pubky ecosystem MCP server - All 6 official projects (Pkarr, Pkdns, Pubky Core, App Specs, Nexus API, Nexus) with 75+ resources and 65+ dev tools",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -31,12 +31,18 @@
   },
   "keywords": [
     "pubky",
+    "pkarr",
+    "pkdns",
+    "pubky-core",
+    "pubky-app-specs",
+    "pubky-nexus",
+    "nexus-api",
     "mcp",
     "model-context-protocol",
-    "pubky-core",
-    "nexus-api",
     "decentralized",
     "social",
+    "dht",
+    "dns",
     "web3",
     "ai-assistant",
     "cursor"

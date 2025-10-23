@@ -85,7 +85,6 @@ import {
   FRAMEWORKS,
   CAPABILITY_ACTIONS,
   APP_SPEC_MODELS,
-  PKARR_CONCEPTS,
   PKARR_EXAMPLE_TYPES,
   DEFAULT_PKARR_RELAYS,
 } from './constants.js';
@@ -1036,15 +1035,10 @@ export class ToolHandler {
           // General search
           return await this.searchDocumentation(concept);
       }
-    } catch (error: any) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Could not find information about "${concept}". Try: homeserver, rootkey, auth, capabilities, or storage.`,
-          },
-        ],
-      };
+    } catch {
+      return createTextResponse(
+        `Could not find information about "${concept}". Try: homeserver, rootkey, auth, capabilities, or storage.`
+      );
     }
   }
 
@@ -1106,15 +1100,10 @@ export class ToolHandler {
           },
         ],
       };
-    } catch (error: any) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Could not find example "${example}". Available examples: auth_flow, storage, signup, testnet, logging, request`,
-          },
-        ],
-      };
+    } catch {
+      return createTextResponse(
+        `Could not find example "${example}". Available examples: auth_flow, storage, signup, testnet, logging, request`
+      );
     }
   }
 
@@ -2492,8 +2481,6 @@ export class ToolHandler {
   }
 
   private async setupPkdnsSystem(): Promise<{ content: Array<{ type: string; text: string }> }> {
-    const readme = await this.fileReader.readPkdnsFile('README.md');
-
     let output = `# Configure System DNS for Pkdns\n\n`;
     output += `## Why?\n\n`;
     output += `Makes Pkarr domains work system-wide in all applications.\n\n`;
@@ -2560,8 +2547,6 @@ export class ToolHandler {
   }
 
   private async setupNexusDev(): Promise<{ content: Array<{ type: string; text: string }> }> {
-    const readme = await this.fileReader.readNexusFile('README.md');
-
     let output = `# Set Up Nexus Development Environment\n\n`;
     output += `Nexus requires Neo4j (graph database) and Redis (cache).\n\n`;
     output += `## Quick Start\n\n`;

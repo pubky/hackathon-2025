@@ -155,7 +155,7 @@ async function main() {
   try {
     await fileReader.fileExists(path.join(PUBKY_CORE_ROOT, 'README.md'));
     console.error('✅ Bundled resources found');
-  } catch (error) {
+  } catch {
     console.error(`⚠️  Warning: Bundled resources not found at ${DATA_ROOT}`);
     console.error('Please run: npm run fetch-resources');
   }
