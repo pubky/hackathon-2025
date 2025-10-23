@@ -58,6 +58,21 @@
 .project-card__team {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.project-card__team-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 216, 166, 0.85);
+}
+
+.project-card__team-tags {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.45rem;
 }
 
@@ -87,6 +102,8 @@
 .tag--team {
   background: var(--tag-team);
   box-shadow: 0 6px 14px rgba(255, 186, 121, 0.38);
+  color: #2a1705;
+  border-color: rgba(255, 241, 220, 0.45);
 }
 
 .project-card__scores {

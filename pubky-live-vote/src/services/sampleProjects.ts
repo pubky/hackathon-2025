@@ -15,7 +15,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['sdk', 'automation'],
-    teamMembers: ['@Vlada'],
+    teamMembers: ['Vlada'],
     aiScore: 86
   },
   {
@@ -31,7 +31,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['cli', 'ops'],
-    teamMembers: ['@Vadimir', '@Piotr'],
+    teamMembers: ['Vladimir', 'Piotr'],
     aiScore: 79
   },
   {
@@ -47,7 +47,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['browser', 'research'],
-    teamMembers: ['@Miguel', '@Oier', '@Severin'],
+    teamMembers: ['Miguel', 'Oier', 'Severin'],
     aiScore: 75
   },
   {
@@ -63,7 +63,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['sharing'],
-    teamMembers: ['@Jams', '@Tomos'],
+    teamMembers: ['Jams', 'Tomos'],
     aiScore: 72
   },
   {
@@ -79,7 +79,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['onboarding', 'docs'],
-    teamMembers: ['@Aldert'],
+    teamMembers: ['Aldert'],
     aiScore: 83
   },
   {
@@ -95,7 +95,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['wiki'],
-    teamMembers: ['@Carlos', '@Pav', '@Ovi'],
+    teamMembers: ['Carlos', 'Pav', 'Ovi'],
     aiScore: 78
   },
   {
@@ -111,7 +111,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['identity'],
-    teamMembers: ['@Jacobo', '@Oliver'],
+    teamMembers: ['Jacobo', 'Oliver'],
     aiScore: 82
   },
   {
@@ -127,7 +127,7 @@ export const demoProjects: Project[] = [
     },
     readiness: true,
     userTags: ['voting'],
-    teamMembers: ['@JC'],
+    teamMembers: ['JC'],
     aiScore: 88
   },
   {
@@ -144,7 +144,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['mapping'],
-    teamMembers: ['@Corey'],
+    teamMembers: ['Corey'],
     aiScore: 84
   },
   {
@@ -160,7 +160,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['developer-tools'],
-    teamMembers: ['@Kevin'],
+    teamMembers: ['Kevin'],
     aiScore: 81
   },
   {
@@ -176,7 +176,7 @@ export const demoProjects: Project[] = [
     },
     readiness: false,
     userTags: ['sdk', 'playground'],
-    teamMembers: ['@Joao'],
+    teamMembers: ['Joao'],
     aiScore: 77
   },
   {

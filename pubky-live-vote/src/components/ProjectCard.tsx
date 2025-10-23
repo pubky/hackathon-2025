@@ -53,11 +53,14 @@ export const ProjectCard = ({ project, onScoreChange, onReadinessToggle, onComme
         </div>
         {project.teamMembers?.length ? (
           <div className="project-card__team" aria-label="Project team">
-            {project.teamMembers.map((member) => (
-              <span key={member} className="tag tag--team">
-                {member.startsWith('@') ? member : `@${member}`}
-              </span>
-            ))}
+            <span className="project-card__team-label">Team</span>
+            <div className="project-card__team-tags">
+              {project.teamMembers.map((member) => (
+                <span key={member} className="tag tag--team">
+                  {member.startsWith('@') ? member : `@${member}`}
+                </span>
+              ))}
+            </div>
           </div>
         ) : null}
       </header>
