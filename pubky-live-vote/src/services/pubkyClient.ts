@@ -9,8 +9,17 @@ declare global {
   }
 }
 
-const DEFAULT_HOMESERVER_URL = 'http://localhost:8787';
-const HOMESERVER_PUBLIC_KEY = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+const STAGING_HOMESERVER_URL = 'https://homeserver.staging.pubky.app';
+const STAGING_HOMESERVER_PUBLIC_KEY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
+const TESTNET_HOMESERVER_URL = 'http://localhost:8787';
+const TESTNET_HOMESERVER_PUBLIC_KEY = '8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo';
+
+const envHomeserverUrl = import.meta.env.VITE_PUBKY_HOMESERVER_URL?.trim();
+const envHomeserverPublicKey = import.meta.env.VITE_PUBKY_HOMESERVER_PUBLIC_KEY?.trim();
+
+const DEFAULT_HOMESERVER_URL = envHomeserverUrl || (import.meta.env.DEV ? TESTNET_HOMESERVER_URL : STAGING_HOMESERVER_URL);
+const DEFAULT_HOMESERVER_PUBLIC_KEY =
+  envHomeserverPublicKey || (import.meta.env.DEV ? TESTNET_HOMESERVER_PUBLIC_KEY : STAGING_HOMESERVER_PUBLIC_KEY);
 const KEYPAIR_STORAGE_KEY = 'pubky-live-vote:keypair-secret';
 const MOCK_STORAGE_PREFIX = 'pubky-live-vote:mock-storage:';
 
@@ -19,12 +28,7 @@ type HomeserverConfig = {
   homeserverPublicKey: string;
 };
 
-const resolveDefaultHomeserverUrl = () => {
-  if (import.meta.env.DEV && typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
-  }
-  return DEFAULT_HOMESERVER_URL;
-};
+const resolveDefaultHomeserverUrl = () => DEFAULT_HOMESERVER_URL;
 
 const parseHostname = (url: string): string | null => {
   try {
@@ -65,7 +69,7 @@ export interface PubkyClient {
 
 let resolvedConfig: HomeserverConfig = {
   homeserverUrl: resolveDefaultHomeserverUrl(),
-  homeserverPublicKey: HOMESERVER_PUBLIC_KEY
+  homeserverPublicKey: DEFAULT_HOMESERVER_PUBLIC_KEY
 };
 
 let cachedClient: PubkyClient | null = null;
@@ -131,7 +135,7 @@ const fallbackToMockClient = async (clientToReplace: PubkyClient, cause: unknown
 const createPubkyClient = (): PubkyClient => {
   const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
   const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
-  const homeserverPublicKey = config?.homeserverPublicKey ?? HOMESERVER_PUBLIC_KEY;
+  const homeserverPublicKey = config?.homeserverPublicKey ?? DEFAULT_HOMESERVER_PUBLIC_KEY;
   resolvedConfig = {
     homeserverUrl,
     homeserverPublicKey
@@ -245,7 +249,7 @@ const createPubkyClient = (): PubkyClient => {
 const createMockClient = (): PubkyClient => {
   const config = typeof window !== 'undefined' ? window.__PUBKY_CONFIG__ : undefined;
   const homeserverUrl = config?.homeserverUrl ?? resolveDefaultHomeserverUrl();
-  const homeserverPublicKey = config?.homeserverPublicKey ?? HOMESERVER_PUBLIC_KEY;
+  const homeserverPublicKey = config?.homeserverPublicKey ?? DEFAULT_HOMESERVER_PUBLIC_KEY;
   resolvedConfig = {
     homeserverUrl,
     homeserverPublicKey
