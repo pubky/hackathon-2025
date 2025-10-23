@@ -1,6 +1,6 @@
 import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
-import type { BallotPayload, Project, ScoreComponent } from '../types/project';
+import type { BallotPayload, BallotSessionEvent, Project, ScoreComponent } from '../types/project';
 import { enqueueBallot, flushQueue, registerQueueSender } from '../services/cacheQueue';
 import { createBallotStorageSender } from '../services/homeserverApi';
 import { demoProjects } from '../services/sampleProjects';
@@ -27,8 +27,47 @@ const RANKING_KEY = 'pubky-live-vote:popular';
 const SUBMISSION_KEY = 'pubky-live-vote:last-submission';
 const OWN_PROJECT_KEY = 'pubky-live-vote:own-project';
 
+const buildSubmissionEvent = (
+  submittedAt: string,
+  session: ReturnType<typeof useAuth>['session'],
+  authMethod: ReturnType<typeof useAuth>['authMethod']
+): BallotSessionEvent => {
+  let publicKey: string | null = null;
+  let sessionId: string | null = null;
+
+  if (session) {
+    try {
+      if (typeof session.info?.publicKey?.z32 === 'function') {
+        publicKey = session.info.publicKey.z32();
+      }
+    } catch (error) {
+      console.warn('Unable to read session public key metadata', error);
+    }
+
+    if (session.info && 'sessionId' in session.info) {
+      sessionId = (session.info as { sessionId?: string | null }).sessionId ?? null;
+    }
+  }
+
+  const metadata: Record<string, unknown> = {
+    authMethod: authMethod ?? null
+  };
+
+  if (typeof navigator !== 'undefined') {
+    metadata.userAgent = navigator.userAgent;
+    metadata.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+
+  return {
+    type: 'ballot_submitted',
+    timestamp: submittedAt,
+    session: session ? { publicKey, sessionId } : null,
+    metadata
+  } satisfies BallotSessionEvent;
+};
+
 export const ProjectProvider = ({ children }: PropsWithChildren) => {
-  const { user, sessionStorage } = useAuth();
+  const { user, sessionStorage, session, authMethod } = useAuth();
   const [projects, setProjects] = useState<Project[]>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -95,9 +134,13 @@ export const ProjectProvider = ({ children }: PropsWithChildren) => {
 
   const submitBallot = async () => {
     if (!user) return;
+    const submittedAt = new Date().toISOString();
+    const submissionEvent = buildSubmissionEvent(submittedAt, session, authMethod);
+
     const payload: BallotPayload = {
       voterId: user.publicKey,
-      submittedAt: new Date().toISOString(),
+      submittedAt,
+      events: [submissionEvent],
       popularRanking,
       scores: projects.map((project) => ({
         projectId: project.id,

@@ -64,5 +64,16 @@ export const useLiveLeaderboard = (projects: Project[], ranking: string[]) => {
     void refresh();
   }, [projects, ranking, refresh]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleSubmission = () => {
+      void refresh();
+    };
+    window.addEventListener('pubky:ballot-submitted', handleSubmission);
+    return () => {
+      window.removeEventListener('pubky:ballot-submitted', handleSubmission);
+    };
+  }, [refresh]);
+
   return { ...state, refresh };
 };

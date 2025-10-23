@@ -15,6 +15,20 @@ type Sender = (payload: BallotPayload, path: SessionPath) => Promise<void>;
 let onlineListenerAttached = false;
 let registeredSender: Sender | null = null;
 
+const notifySubmissionSynced = (payload: BallotPayload) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('pubky:ballot-submitted', {
+      detail: {
+        voterId: payload.voterId,
+        submittedAt: payload.submittedAt,
+        popularRanking: payload.popularRanking,
+        projectCount: payload.scores.length
+      }
+    })
+  );
+};
+
 const readQueue = (): QueueItem[] => {
   const raw = localStorage.getItem(QUEUE_KEY);
   if (!raw) return [];
@@ -69,6 +83,7 @@ export const flushQueue = async (sender?: Sender) => {
   for (const item of queue) {
     try {
       await activeSender(item.payload, item.path);
+      notifySubmissionSynced(item.payload);
     } catch (error) {
       console.warn('Failed to send ballot, keeping in queue', error);
       remaining.push(item);

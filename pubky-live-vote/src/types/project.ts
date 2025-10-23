@@ -12,9 +12,20 @@ export interface Project {
   aiScore?: number;
 }
 
+export interface BallotSessionEvent {
+  type: 'ballot_submitted';
+  timestamp: string;
+  session?: {
+    publicKey?: string | null;
+    sessionId?: string | null;
+  } | null;
+  metadata?: Record<string, unknown>;
+}
+
 export interface BallotPayload {
   voterId: string;
   submittedAt: string;
+  events?: BallotSessionEvent[];
   scores: Array<{
     projectId: string;
     scores: Record<ScoreComponent, number>;
