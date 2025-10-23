@@ -18,14 +18,19 @@ export const ProjectList = ({ searchQuery = '' }: ProjectListProps) => {
   const { projects, updateProjectScore, toggleReadiness, updateComment, updateTags } = useProjects();
   const normalizedQuery = normalizeQuery(searchQuery);
 
+  const sortedProjects = useMemo(
+    () => [...projects].sort((a, b) => a.name.localeCompare(b.name)),
+    [projects]
+  );
+
   const filteredProjects = useMemo(() => {
     if (!normalizedQuery) {
-      return projects;
+      return sortedProjects;
     }
 
     const terms = normalizedQuery.split(' ');
 
-    return projects.filter((project) => {
+    return sortedProjects.filter((project) => {
       const searchableContent = [
         project.name,
         project.description,
@@ -38,7 +43,7 @@ export const ProjectList = ({ searchQuery = '' }: ProjectListProps) => {
 
       return terms.every((term) => searchableContent.includes(term));
     });
-  }, [projects, normalizedQuery]);
+  }, [sortedProjects, normalizedQuery]);
 
   return (
     <div className="panel project-list">

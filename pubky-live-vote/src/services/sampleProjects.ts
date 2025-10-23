@@ -1,20 +1,14 @@
 import type { Project } from '../types/project';
 
-export const demoProjects: Project[] = [
+type ProjectSeed = Omit<Project, 'scores' | 'readiness' | 'userTags' | 'comment'>;
+
+const seeds: ProjectSeed[] = [
   {
     id: 'pubky-mcp-server',
     name: 'Pubky MCP server',
     description:
       'An MCP server can let developers talk to Pubky in plain English instead of wrestling with testnet setup, keypair management, and API docs.',
     tags: ['developer-tools', 'automation', 'sdk'],
-    scores: {
-      complexity: 8,
-      creativity: 7,
-      presentation: 7,
-      feedback: 8
-    },
-    readiness: true,
-    userTags: ['sdk', 'automation'],
     teamMembers: ['Vlada'],
     aiScore: 86
   },
@@ -23,14 +17,6 @@ export const demoProjects: Project[] = [
     name: 'CLI for pubky homeserver',
     description: 'One tool for automation of flow with commands instead of code',
     tags: ['cli', 'infrastructure', 'automation'],
-    scores: {
-      complexity: 7,
-      creativity: 6,
-      presentation: 7,
-      feedback: 7
-    },
-    readiness: true,
-    userTags: ['cli', 'ops'],
     teamMembers: ['Vladimir', 'Piotr'],
     aiScore: 79
   },
@@ -39,14 +25,6 @@ export const demoProjects: Project[] = [
     name: 'Homegate',
     description: 'Create a homeserver UI that shows different types of plans for users to sign up.',
     tags: ['browser', 'productivity', 'tagging'],
-    scores: {
-      complexity: 6,
-      creativity: 8,
-      presentation: 7,
-      feedback: 8
-    },
-    readiness: false,
-    userTags: ['browser', 'research'],
     teamMembers: ['Miguel', 'Oier', 'Severin'],
     aiScore: 75
   },
@@ -55,14 +33,6 @@ export const demoProjects: Project[] = [
     name: 'Booksy',
     description: 'A bookmark sharing browser extension',
     tags: ['community', 'browser', 'sharing'],
-    scores: {
-      complexity: 5,
-      creativity: 7,
-      presentation: 8,
-      feedback: 7
-    },
-    readiness: false,
-    userTags: ['sharing'],
     teamMembers: ['Jams', 'Tomos'],
     aiScore: 72
   },
@@ -71,14 +41,6 @@ export const demoProjects: Project[] = [
     name: 'Cookbook',
     description: 'To bmake it easy to onboard developers',
     tags: ['education', 'docs', 'developer-tools'],
-    scores: {
-      complexity: 6,
-      creativity: 6,
-      presentation: 8,
-      feedback: 9
-    },
-    readiness: true,
-    userTags: ['onboarding', 'docs'],
     teamMembers: ['Aldert'],
     aiScore: 83
   },
@@ -87,14 +49,6 @@ export const demoProjects: Project[] = [
     name: 'Decentralized Wiki',
     description: 'Pubky-based decentralized wiki',
     tags: ['knowledge', 'governance', 'pubky'],
-    scores: {
-      complexity: 7,
-      creativity: 7,
-      presentation: 6,
-      feedback: 7
-    },
-    readiness: false,
-    userTags: ['wiki'],
     teamMembers: ['Carlos', 'Pav', 'Ovi'],
     aiScore: 78
   },
@@ -103,14 +57,6 @@ export const demoProjects: Project[] = [
     name: 'ConsentKy',
     description: 'Social contracts based on keys',
     tags: ['social', 'identity', 'governance'],
-    scores: {
-      complexity: 8,
-      creativity: 8,
-      presentation: 6,
-      feedback: 6
-    },
-    readiness: true,
-    userTags: ['identity'],
     teamMembers: ['Jacobo', 'Oliver'],
     aiScore: 82
   },
@@ -119,14 +65,6 @@ export const demoProjects: Project[] = [
     name: 'Pubky Live Vote',
     description: 'Allow participants of the hackathon to vote for each projects',
     tags: ['voting', 'event', 'pubky'],
-    scores: {
-      complexity: 6,
-      creativity: 7,
-      presentation: 9,
-      feedback: 8
-    },
-    readiness: true,
-    userTags: ['voting'],
     teamMembers: ['JC'],
     aiScore: 88
   },
@@ -136,14 +74,6 @@ export const demoProjects: Project[] = [
     description:
       'A way to view and add markers to a map for sharing stories and photos to particular geographic locations using pubky-sdk',
     tags: ['mapping', 'storytelling', 'pubky'],
-    scores: {
-      complexity: 7,
-      creativity: 9,
-      presentation: 7,
-      feedback: 7
-    },
-    readiness: false,
-    userTags: ['mapping'],
     teamMembers: ['Corey'],
     aiScore: 84
   },
@@ -152,14 +82,6 @@ export const demoProjects: Project[] = [
     name: 'Publar',
     description: 'A developer tool similar to Polar (for Lightning), but for the Pubky ecosystem',
     tags: ['developer-tools', 'pubky', 'payments'],
-    scores: {
-      complexity: 7,
-      creativity: 8,
-      presentation: 7,
-      feedback: 8
-    },
-    readiness: false,
-    userTags: ['developer-tools'],
     teamMembers: ['Kevin'],
     aiScore: 81
   },
@@ -168,14 +90,6 @@ export const demoProjects: Project[] = [
     name: 'PubkyLab',
     description: 'An interactive web-based playground where developers can instantly test SDK operations',
     tags: ['developer-tools', 'playground', 'sdk'],
-    scores: {
-      complexity: 6,
-      creativity: 7,
-      presentation: 8,
-      feedback: 7
-    },
-    readiness: false,
-    userTags: ['sdk', 'playground'],
     teamMembers: ['Joao'],
     aiScore: 77
   },
@@ -184,15 +98,22 @@ export const demoProjects: Project[] = [
     name: 'P2PJobs',
     description: 'Decentralized Job Board',
     tags: ['jobs', 'marketplace', 'p2p'],
-    scores: {
-      complexity: 6,
-      creativity: 7,
-      presentation: 6,
-      feedback: 7
-    },
-    readiness: false,
-    userTags: ['jobs'],
     teamMembers: ['@P2PJobsTeam'],
     aiScore: 70
   }
 ];
+
+const createEmptyScores = (): Project['scores'] => ({
+  complexity: 0,
+  creativity: 0,
+  presentation: 0,
+  feedback: 0
+});
+
+export const demoProjects: Project[] = seeds.map((project) => ({
+  ...project,
+  scores: createEmptyScores(),
+  readiness: false,
+  comment: '',
+  userTags: []
+}));
