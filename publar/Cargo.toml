@@ -1,0 +1,36 @@
+[package]
+name = "publar"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kevin Karsopawiro <kevin@synonym.to>"]
+description = "A desktop application for visualizing, testing, and debugging Pubky network topologies"
+license = "MIT"
+repository = "https://github.com/pubky/publar"
+
+[dependencies]
+dioxus = { version = "0.6", features = ["desktop"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+pubky-testnet = "0.6.0-rc.6"
+pubky = "0.6.0-rc.6"
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors"] }
+chrono = "0.4"
+reqwest = "0.11"
+rfd = "0.14"
+
+[profile]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
