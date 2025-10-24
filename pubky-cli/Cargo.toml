@@ -1,0 +1,27 @@
+[package]
+name = "pubky-cli"
+version = "0.1.0-rc.1"
+edition = "2024"
+description = "Command-line utility for interacting with Pubky homeservers"
+license = "MIT"
+repository = "https://github.com/pubky/pubky-cli"
+readme = "README.md"
+keywords = ["pubky", "cli"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+anyhow = "1.0.99"
+clap = { version = "4.5.46", features = ["derive", "env"] }
+clap_complete = "4.5.6"
+pubky = "0.6.0-rc.6"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
+rpassword = "7.4.0"
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0.210", features = ["derive"] }
+
+[dev-dependencies]
+assert_cmd = "2.0.12"
+predicates = "3.1.2"
+pubky-testnet = "0.6.0-rc.6exp"
+tempfile = "3.10.1"
+serial_test = "3.1.1"

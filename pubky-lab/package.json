@@ -1,0 +1,25 @@
+{
+  "name": "pubkylab",
+  "version": "1.0.0",
+  "description": "Interactive Pubky SDK Playground - Test, Learn, Build",
+  "main": "pubkylab.html",
+  "scripts": {
+    "dev": "npx http-server -p 8000",
+    "start": "npx http-server -p 8000"
+  },
+  "keywords": [
+    "pubky",
+    "sdk",
+    "playground",
+    "interactive",
+    "testing",
+    "development"
+  ],
+  "author": "Pubky Community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pubky/pubkylab"
+  },
+  "homepage": "https://pubky.org"
+}

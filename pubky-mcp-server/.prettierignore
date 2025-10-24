@@ -1,0 +1,7 @@
+node_modules/
+dist/
+data/
+*.d.ts
+*.d.ts.map
+*.js.map
+package-lock.json

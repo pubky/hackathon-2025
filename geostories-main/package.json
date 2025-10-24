@@ -1,0 +1,21 @@
+{
+  "name": "geostories-app",
+  "version": "1.0.0",
+  "description": "A decentralized geo-mapping app using Pubky SDK",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "testnet": "cargo run -p pubky-testnet --manifest-path ../pubky-core/Cargo.toml"
+  },
+  "dependencies": {
+    "@synonymdev/pubky": "^0.6.0-rc.6",
+    "jdenticon": "^3.3.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1",
+    "vite": "^7.1.11"
+  }
+}

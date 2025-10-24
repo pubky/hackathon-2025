@@ -1,0 +1,49 @@
+name: home-gate-dev
+
+services:
+  phoenixd:
+    container_name: phoenixd-dev
+    image: acinq/phoenixd:latest
+    ports:
+      - "9740:9740"
+    volumes:
+      - "./phoenixd:/phoenix/.phoenix"
+    restart: unless-stopped
+
+  backend:
+    container_name: backend-dev
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8881:8881"
+    depends_on:
+      - phoenixd
+    volumes:
+      - ./back-end:/app
+      - /app/node_modules
+      - /app/dist
+    restart: unless-stopped
+    env_file:
+      - ./back-end/.env
+    environment:
+      - NODE_ENV=development
+
+  frontend:
+    container_name: frontend-dev
+    build:
+      context: ./front-end
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8882:8882"
+    depends_on:
+      - backend
+      - phoenixd
+    volumes:
+      - ./front-end:/app
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    env_file:
+      - ./front-end/.env.development
+

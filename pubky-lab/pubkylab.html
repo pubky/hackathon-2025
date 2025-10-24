@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PubkyLab - Interactive Pubky SDK Playground</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "@synonymdev/pubky": "https://cdn.jsdelivr.net/npm/@synonymdev/pubky@0.6.0-rc.6/+esm"
+        }
+    }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        button.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .output {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+
+        .output.success {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+
+        .output.error {
+            border-color: #f44336;
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #ccc;
+        }
+
+        .status-indicator.connected {
+            background: #4caf50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+
+        .status-indicator.error {
+            background: #f44336;
+            box-shadow: 0 0 8px rgba(244, 67, 54, 0.6);
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .info-box code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.85rem;
+        }
+
+        .user-info {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+
+        .user-info strong {
+            color: #667eea;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #667eea;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .logs-panel {
+            grid-column: 1 / -1;
+        }
+
+        .log-entry {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .log-entry.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .log-entry.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .log-entry.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .log-entry.warn {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 PubkyLab</h1>
+            <p>Interactive Pubky SDK Playground - Test, Learn, Build</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Setup Panel -->
+            <div class="panel">
+                <h2>
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    Setup & Configuration
+                </h2>
+                
+                <div class="info-box">
+                    Enter your homeserver public key and invitation code (if required) below to get started.
+                </div>
+
+                <div class="form-group">
+                    <label>Homeserver Public Key</label>
+                    <input type="text" id="homeserverKey" placeholder="Enter homeserver public key (z32 format)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Invitation Code (optional for signup)</label>
+                    <input type="text" id="invitationCode" placeholder="Enter invitation code if required" />
+                </div>
+
+                <div class="button-group">
+                    <button onclick="app.generateNewUser()">Generate New User</button>
+                    <button onclick="app.signup()" class="success" id="signupBtn">Sign Up</button>
+                </div>
+
+                <div id="userInfo" class="user-info" style="display: none;">
+                    <div><strong>User Public Key:</strong></div>
+                    <div id="userPubkey" style="word-break: break-all; margin: 8px 0; font-family: monospace; font-size: 0.85rem;"></div>
+                    <div><strong>Status:</strong> <span id="userStatus">Not signed in</span></div>
+                </div>
+            </div>
+
+            <!-- Operations Panel -->
+            <div class="panel">
+                <h2>Operations</h2>
+
+                <div class="tabs">
+                    <button class="tab active" onclick="app.switchTab('write')">Write</button>
+                    <button class="tab" onclick="app.switchTab('read')">Read</button>
+                    <button class="tab" onclick="app.switchTab('list')">List</button>
+                    <button class="tab" onclick="app.switchTab('delete')">Delete</button>
+                </div>
+
+                <!-- Write Tab -->
+                <div id="writeTab" class="tab-content active">
+                    <div class="form-group">
+                        <label>Path (e.g., /pub/example.com/hello.json)</label>
+                        <input type="text" id="writePath" value="/pub/example.com/hello.json" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Content Type</label>
+                        <select id="writeType">
+                            <option value="json">JSON</option>
+                            <option value="text">Text</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Content</label>
+                        <textarea id="writeContent">{"message": "Hello from PubkyLab!", "timestamp": "${new Date().toISOString()}"}</textarea>
+                    </div>
+
+                    <button onclick="app.writeData()" class="success">Write Data</button>
+                </div>
+
+                <!-- Read Tab -->
+                <div id="readTab" class="tab-content">
+                    <div class="form-group">
+                        <label>Address (pubky://user/path or /pub/path for current user)</label>
+                        <input type="text" id="readAddress" placeholder="/pub/example.com/hello.json" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Read As</label>
+                        <select id="readType">
+                            <option value="json">JSON</option>
+                            <option value="text">Text</option>
+                        </select>
+                    </div>
+
+                    <button onclick="app.readData()" class="secondary">Read Data</button>
+                </div>
+
+                <!-- List Tab -->
+                <div id="listTab" class="tab-content">
+                    <div class="form-group">
+                        <label>Directory Path (must end with /)</label>
+                        <input type="text" id="listPath" value="/pub/example.com/" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Limit</label>
+                        <input type="text" id="listLimit" value="100" />
+                    </div>
+
+                    <button onclick="app.listDirectory()">List Directory</button>
+                </div>
+
+                <!-- Delete Tab -->
+                <div id="deleteTab" class="tab-content">
+                    <div class="form-group">
+                        <label>Path to Delete</label>
+                        <input type="text" id="deletePath" placeholder="/pub/example.com/hello.json" />
+                    </div>
+
+                    <button onclick="app.deleteData()" class="danger">Delete Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="panel">
+            <h2>Output</h2>
+            <div id="output" class="output">Ready to test Pubky SDK operations...</div>
+        </div>
+
+        <!-- Logs Panel -->
+        <div class="panel logs-panel">
+            <h2>Activity Log</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                    <label style="display: inline; margin-right: 10px;">Log Level:</label>
+                    <select id="logLevel" onchange="app.setLogLevel(this.value)" style="width: auto; padding: 6px;">
+                        <option value="error">Error</option>
+                        <option value="warn">Warn</option>
+                        <option value="info" selected>Info</option>
+                        <option value="debug">Debug</option>
+                    </select>
+                </div>
+                <button onclick="app.clearLogs()" style="min-width: auto; padding: 8px 16px;">Clear Logs</button>
+            </div>
+            <div id="logs" class="output" style="max-height: 300px;"></div>
+        </div>
+
+        <div class="footer">
+            <p>
+                Built with ❤️ for the Pubky community | 
+                <a href="https://github.com/pubky/pubky-core" target="_blank">GitHub</a> | 
+                <a href="https://pubky.org" target="_blank">pubky.org</a>
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Pubky, Keypair, PublicKey, setLogLevel } from '@synonymdev/pubky';
+
+        class PubkyLab {
+            constructor() {
+                this.pubky = new Pubky();
+                this.keypair = null;
+                this.signer = null;
+                this.session = null;
+                this.init();
+            }
+
+            init() {
+                this.log('info', 'PubkyLab initialized');
+                this.updateStatus('disconnected');
+                setLogLevel('info');
+            }
+
+            log(level, message, data = null) {
+                const logsDiv = document.getElementById('logs');
+                const timestamp = new Date().toLocaleTimeString();
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${level}`;
+                entry.textContent = `[${timestamp}] ${message}`;
+                if (data) {
+                    entry.textContent += '\n' + JSON.stringify(data, null, 2);
+                }
+                logsDiv.insertBefore(entry, logsDiv.firstChild);
+                console.log(`[${level}]`, message, data);
+            }
+
+            setLogLevel(level) {
+                try {
+                    setLogLevel(level);
+                    this.log('info', `Log level set to: ${level}`);
+                } catch (error) {
+                    this.log('error', `Failed to set log level: ${error.message}`);
+                }
+            }
+
+            clearLogs() {
+                document.getElementById('logs').innerHTML = '';
+                this.log('info', 'Logs cleared');
+            }
+
+            updateStatus(status) {
+                const indicator = document.getElementById('statusIndicator');
+                indicator.className = 'status-indicator';
+                if (status === 'connected') {
+                    indicator.classList.add('connected');
+                } else if (status === 'error') {
+                    indicator.classList.add('error');
+                }
+            }
+
+            showOutput(content, isError = false) {
+                const output = document.getElementById('output');
+                output.className = 'output';
+                if (isError) {
+                    output.classList.add('error');
+                } else {
+                    output.classList.add('success');
+                }
+                output.textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+            }
+
+            async generateNewUser() {
+                try {
+                    this.keypair = Keypair.random();
+                    this.signer = this.pubky.signer(this.keypair);
+                    const pubkey = this.keypair.publicKey.z32();
+                    
+                    document.getElementById('userInfo').style.display = 'block';
+                    document.getElementById('userPubkey').textContent = pubkey;
+                    document.getElementById('userStatus').textContent = 'Generated (not signed up)';
+                    
+                    this.log('success', 'Generated new user keypair', { pubkey });
+                    this.showOutput(`New user generated!\n\nPublic Key: ${pubkey}\n\nClick "Sign Up" to create this user on the homeserver.`);
+                } catch (error) {
+                    this.log('error', 'Failed to generate user', { error: error.message });
+                    this.showOutput(`Error: ${error.message}`, true);
+                }
+            }
+
+            async signup() {
+                if (!this.signer) {
+                    this.showOutput('Please generate a new user first!', true);
+                    return;
+                }
+
+                const btn = document.getElementById('signupBtn');
+                const originalText = btn.textContent;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading"></span> Signing up...';
+
+                try {
+                    const homeserverKey = document.getElementById('homeserverKey').value.trim();
+                    const invitationCode = document.getElementById('invitationCode').value.trim() || null;
+                    
+                    const homeserver = PublicKey.from(homeserverKey);
+                    this.log('info', 'Starting signup...', { homeserver: homeserverKey });
+                    
+                    this.session = await this.signer.signup(homeserver, invitationCode);
+                    
+                    const userPk = this.session.info.publicKey.z32();
+                    document.getElementById('userStatus').textContent = 'Signed up & authenticated ✓';
+                    
+                    this.updateStatus('connected');
+                    this.log('success', 'Signup successful', {
+                        user: userPk,
+                        capabilities: this.session.info.capabilities
+                    });
+                    
+                    this.showOutput(`Successfully signed up!\n\nUser: ${userPk}\n\nCapabilities: ${this.session.info.capabilities.join(', ')}\n\nYou can now write, read, list, and delete data.`);
+                } catch (error) {
+                    this.updateStatus('error');
+                    this.log('error', 'Signup failed', { error: error.message });
+                    this.showOutput(`Signup Error: ${error.message}\n\nMake sure the homeserver key and invitation code are correct.`, true);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            }
+
+            async writeData() {
+                if (!this.session) {
+                    this.showOutput('Please sign up first!', true);
+                    return;
+                }
+
+                try {
+                    const path = document.getElementById('writePath').value.trim();
+                    const type = document.getElementById('writeType').value;
+                    const content = document.getElementById('writeContent').value.trim();
+
+                    this.log('info', 'Writing data...', { path, type });
+
+                    if (type === 'json') {
+                        const jsonData = JSON.parse(content);
+                        await this.session.storage.putJson(path, jsonData);
+                    } else {
+                        await this.session.storage.putText(path, content);
+                    }
+
+                    this.log('success', 'Data written successfully', { path });
+                    
+                    const userPk = this.session.info.publicKey.z32();
+                    const publicAddress = `pubky://${userPk}${path}`;
+                    
+                    this.showOutput(`✓ Data written successfully!\n\nPath: ${path}\nType: ${type}\nPublic Address: ${publicAddress}\n\nYou can now read this data using the Read tab.`);
+                } catch (error) {
+                    this.log('error', 'Write failed', { error: error.message });
+                    this.showOutput(`Write Error: ${error.message}`, true);
+                }
+            }
+
+            async readData() {
+                try {
+                    const address = document.getElementById('readAddress').value.trim();
+                    const type = document.getElementById('readType').value;
+
+                    if (!address) {
+                        this.showOutput('Please enter an address to read!', true);
+                        return;
+                    }
+
+                    this.log('info', 'Reading data...', { address, type });
+
+                    let data;
+                    let fullAddress;
+
+                    if (address.startsWith('/')) {
+                        if (!this.session) {
+                            this.showOutput('For relative paths, please sign up first!', true);
+                            return;
+                        }
+                        fullAddress = address;
+                        if (type === 'json') {
+                            data = await this.session.storage.getJson(fullAddress);
+                        } else {
+                            data = await this.session.storage.getText(fullAddress);
+                        }
+                    } else {
+                        fullAddress = address.startsWith('pubky://') ? address : `pubky://${address}`;
+                        if (type === 'json') {
+                            data = await this.pubky.publicStorage.getJson(fullAddress);
+                        } else {
+                            data = await this.pubky.publicStorage.getText(fullAddress);
+                        }
+                    }
+
+                    this.log('success', 'Data read successfully', { address: fullAddress });
+                    this.showOutput(`✓ Data read successfully!\n\nAddress: ${fullAddress}\n\nContent:\n${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}`);
+                } catch (error) {
+                    this.log('error', 'Read failed', { error: error.message });
+                    this.showOutput(`Read Error: ${error.message}\n\nMake sure the address exists and is accessible.`, true);
+                }
+            }
+
+            async listDirectory() {
+                if (!this.session) {
+                    this.showOutput('Please sign up first!', true);
+                    return;
+                }
+
+                try {
+                    const path = document.getElementById('listPath').value.trim();
+                    const limit = parseInt(document.getElementById('listLimit').value) || 100;
+
+                    if (!path.endsWith('/')) {
+                        this.showOutput('Directory path must end with /', true);
+                        return;
+                    }
+
+                    this.log('info', 'Listing directory...', { path, limit });
+
+                    const items = await this.session.storage.list(path, null, false, limit, false);
+
+                    this.log('success', 'Directory listed successfully', { path, count: items.length });
+                    
+                    if (items.length === 0) {
+                        this.showOutput(`✓ Directory listed successfully!\n\nPath: ${path}\n\nNo items found. The directory is empty.`);
+                    } else {
+                        const itemsList = items.map(item => `  - ${item}`).join('\n');
+                        this.showOutput(`✓ Directory listed successfully!\n\nPath: ${path}\nItems (${items.length}):\n\n${itemsList}`);
+                    }
+                } catch (error) {
+                    this.log('error', 'List failed', { error: error.message });
+                    this.showOutput(`List Error: ${error.message}`, true);
+                }
+            }
+
+            async deleteData() {
+                if (!this.session) {
+                    this.showOutput('Please sign up first!', true);
+                    return;
+                }
+
+                try {
+                    const path = document.getElementById('deletePath').value.trim();
+
+                    if (!path) {
+                        this.showOutput('Please enter a path to delete!', true);
+                        return;
+                    }
+
+                    if (!confirm(`Are you sure you want to delete: ${path}?`)) {
+                        return;
+                    }
+
+                    this.log('info', 'Deleting data...', { path });
+
+                    await this.session.storage.delete(path);
+
+                    this.log('success', 'Data deleted successfully', { path });
+                    this.showOutput(`✓ Data deleted successfully!\n\nPath: ${path}\n\nThe file has been removed from your storage.`);
+                } catch (error) {
+                    this.log('error', 'Delete failed', { error: error.message });
+                    this.showOutput(`Delete Error: ${error.message}`, true);
+                }
+            }
+
+            switchTab(tabName) {
+                // Update tab buttons
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                event.target.classList.add('active');
+
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(`${tabName}Tab`).classList.add('active');
+
+                this.log('info', `Switched to ${tabName} tab`);
+            }
+        }
+
+        // Initialize the app
+        window.app = new PubkyLab();
+        
+        // Welcome message
+        console.log('%c🚀 Welcome to PubkyLab!', 'font-size: 20px; color: #667eea; font-weight: bold;');
+        console.log('%cExplore the Pubky SDK interactively.', 'font-size: 14px; color: #764ba2;');
+    </script>
+</body>
+</html>

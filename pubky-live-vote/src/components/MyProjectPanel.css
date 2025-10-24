@@ -1,0 +1,29 @@
+.my-project {
+  gap: 1.4rem;
+}
+
+.my-project__body {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.my-project__label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: rgba(206, 214, 255, 0.78);
+}
+
+.my-project__label select {
+  border-radius: 14px;
+  border: 1px solid rgba(130, 145, 255, 0.38);
+  background: linear-gradient(135deg, rgba(17, 18, 30, 0.92), rgba(12, 14, 26, 0.94));
+  color: rgba(223, 228, 255, 0.9);
+  padding: 0.55rem 0.8rem;
+}
+
+.my-project__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(198, 205, 255, 0.6);
+}

@@ -1,0 +1,12 @@
+[application]
+name = "publar"
+default_platform = "desktop"
+
+[bundle]
+identifier = "com.synonym.publar"
+publisher = "Synonym"
+icon = []
+
+[application.desktop]
+window_width = 800
+window_height = 600

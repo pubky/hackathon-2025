@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoStories - Decentralized Story Mapping</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Leaflet Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
+    <style id="geocoder-custom-styles">
+        /* Custom Geocoder Styling */
+        .leaflet-control-geocoder {
+            border-radius: 24px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+            border: none !important;
+            overflow: hidden;
+        }
+
+        .leaflet-control-geocoder-form {
+            border-radius: 24px !important;
+            background: white !important;
+        }
+
+        .leaflet-control-geocoder-form input {
+            padding: 0.7rem 1rem !important;
+            border: 2px solid #e0e0e0 !important;
+            border-radius: 24px !important;
+            font-size: 0.9rem !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+            transition: all 0.2s !important;
+            background: #fafafa !important;
+            width: 250px !important;
+        }
+
+        .leaflet-control-geocoder-form input:focus {
+            outline: none !important;
+            border-color: #667eea !important;
+            background: #fff !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+        }
+
+        .leaflet-control-geocoder-form input::placeholder {
+            color: #999 !important;
+        }
+
+        .leaflet-control-geocoder-alternatives {
+            background: white !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            border: 2px solid #e0e0e0 !important;
+            margin-top: 0.5rem !important;
+            overflow: hidden !important;
+        }
+
+        .leaflet-control-geocoder-alternatives-minimized {
+            display: none !important;
+        }
+
+        .leaflet-control-geocoder-alternative {
+            padding: 0.8rem 1rem !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+            cursor: pointer !important;
+            transition: all 0.2s !important;
+            font-size: 0.9rem !important;
+        }
+
+        .leaflet-control-geocoder-alternative:last-child {
+            border-bottom: none !important;
+        }
+
+        .leaflet-control-geocoder-alternative:hover {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f0ff 100%) !important;
+            padding-left: 1.3rem !important;
+        }
+
+        .leaflet-control-geocoder-alternative-selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+        }
+
+        .leaflet-control-geocoder-icon {
+            background-image: none !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            width: 34px !important;
+            height: 34px !important;
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+        }
+
+        .leaflet-control-geocoder-icon:hover {
+            transform: scale(1.1) rotate(12deg) !important;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5) !important;
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+        }
+
+        .leaflet-control-geocoder-icon:active {
+            transform: scale(0.95) !important;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4) !important;
+        }
+
+        .leaflet-control-geocoder-icon::after {
+            content: "🔍" !important;
+            font-size: 17px !important;
+            line-height: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        .leaflet-control-geocoder-icon:hover::after {
+            transform: scale(1.05) !important;
+        }
+
+        .leaflet-control-geocoder-expanded .leaflet-control-geocoder-icon {
+            display: none !important;
+        }
+
+        .leaflet-touch .leaflet-control-geocoder-icon {
+            width: 34px !important;
+            height: 34px !important;
+        }
+    </style>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+            transition: none; /* Disable transitions during resize */
+        }
+
+        /* Desktop mode - force relative positioning */
+        header.desktop-mode {
+            position: relative !important;
+            transform: none !important;
+        }
+
+        .header-left {
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0.5rem;
+            border-radius: 8px;
+            margin: -0.5rem;
+        }
+
+        .header-left:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .header-left:active {
+            transform: translateY(0);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.2rem;
+        }
+
+        .header-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        .header-search {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            max-width: 500px;
+            flex: 1;
+        }
+
+        .header-search input {
+            flex: 1;
+            min-width: 0;
+            padding: 0.7rem 1.2rem;
+            border: none;
+            border-radius: 24px;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+        }
+
+        .header-search input:focus {
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: white;
+        }
+
+        .header-search input::placeholder {
+            color: #999;
+        }
+
+        .header-search button {
+            padding: 0.7rem 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+            width: auto;
+            min-width: 80px;
+        }
+
+        .header-search button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .friends-btn {
+            padding: 0.6rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+            width: auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .friends-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .friends-btn.hidden {
+            display: none;
+        }
+
+        .friends-btn-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: width 0.3s ease, opacity 0.5s ease;
+            width: 0%;
+            opacity: 1;
+            z-index: 0;
+        }
+
+        .friends-btn-text {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* User Menu Dropdown */
+        .user-menu {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .user-menu.hidden {
+            display: none;
+        }
+
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            padding: 0;
+        }
+
+        .user-avatar:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%);
+            border-color: rgba(255, 255, 255, 0.7);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .user-avatar:active {
+            transform: translateY(0);
+        }
+
+        #userInitials {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            line-height: 1;
+        }
+
+        #userInitials svg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 0.75rem);
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            min-width: 240px;
+            z-index: 10000;
+            overflow: hidden;
+            animation: dropdownSlideIn 0.2s ease-out;
+        }
+
+        .user-dropdown.hidden {
+            display: none;
+        }
+
+        @keyframes dropdownSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-dropdown-header {
+            padding: 1rem;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f0ff 100%);
+            border-bottom: 1px solid #e8e8f0;
+        }
+
+        .user-pubky-display {
+            font-size: 0.75rem;
+            color: #666;
+            font-family: monospace;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        .user-dropdown-divider {
+            height: 1px;
+            background: #e8e8f0;
+        }
+
+        .user-dropdown-item {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: white;
+            border: none;
+            text-align: left;
+            font-size: 0.9rem;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-dropdown-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scaleY(0);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .user-dropdown-item:hover {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f0ff 100%);
+            padding-left: 1.25rem;
+        }
+
+        .user-dropdown-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .user-dropdown-item:active {
+            background: linear-gradient(135deg, #f0f0ff 0%, #e8e8ff 100%);
+            transform: scale(0.98);
+        }
+
+        .logout-item {
+            color: #dc3545;
+        }
+
+        .logout-item::before {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .logout-item:hover {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+            color: #c82333;
+        }
+
+        .logout-item:active {
+            background: linear-gradient(135deg, #ffe5e5 0%, #ffd5d5 100%);
+        }
+
+        .dropdown-icon {
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #f0f0f0 0%, #e8e8e8 100%);
+            transition: all 0.2s;
+        }
+
+        .user-dropdown-item:hover .dropdown-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scale(1.1);
+        }
+
+        .logout-item .dropdown-icon {
+            background: linear-gradient(135deg, #ffe5e5 0%, #ffd5d5 100%);
+        }
+
+        .logout-item:hover .dropdown-icon {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        /* Friends Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        /* Custom scrollbar for modal */
+        .modal::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+
+        .modal::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+        }
+
+        .modal::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal h2 {
+            margin: 0 0 1.5rem 0;
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            width: auto;
+            padding: 0.5rem;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .friends-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .friend-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .friend-item:hover {
+            transform: translateX(4px) translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            border-left-color: #764ba2;
+        }
+
+        .friend-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #667eea;
+            flex-shrink: 0;
+        }
+
+        .friend-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .friend-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.2rem;
+            font-size: 1rem;
+        }
+
+        .friend-bio {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .friend-pubkey {
+            font-size: 0.7rem;
+            color: #999;
+            font-family: monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .friend-markers {
+            font-size: 0.85rem;
+            color: #667eea;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .loading-friends {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .no-friends {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+        }
+
+        .show-all-btn {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            margin-bottom: 1rem;
+        }
+
+        .show-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        }
+
+        .show-all-btn:active {
+            transform: translateY(0);
+        }
+
+        .friend-legend {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: row;
+        }
+
+        /* Desktop mode container - force row layout */
+        .container.desktop-mode {
+            flex-direction: row !important;
+        }
+
+        .sidebar {
+            width: 420px;
+            min-width: 320px;
+            max-width: 650px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Desktop mode sidebar - force normal layout */
+        .sidebar.desktop-mode {
+            position: relative !important;
+            height: auto !important;
+            max-height: none !important;
+            bottom: auto !important;
+            left: auto !important;
+            right: auto !important;
+            transform: none !important;
+            border-radius: 0 !important;
+            z-index: auto !important;
+        }
+
+        .sidebar-handle {
+            display: none; /* Hidden on desktop */
+        }
+
+        .mobile-fab-container {
+            display: none; /* Hidden on desktop */
+        }
+
+        .mobile-modal-backdrop {
+            display: none;
+        }
+
+        .mobile-close-btn {
+            display: none; /* Hidden on desktop */
+        }
+
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            cursor: ew-resize;
+            background: transparent;
+            transition: all 0.2s;
+            z-index: 1000;
+            pointer-events: auto;
+            user-select: none;
+        }
+
+        .resize-handle:hover,
+        .resize-handle.dragging {
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .resize-handle::before {
+            content: '';
+            position: absolute;
+            right: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 50px;
+            background: #ccc;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .resize-handle:hover::before,
+        .resize-handle.dragging::before {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 80px;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .sidebar-section {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 1rem;
+        }
+
+        /* Custom scrollbar styling */
+        .sidebar-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+
+        #map {
+            flex: 1;
+            height: 100%;
+        }
+
+        /* Desktop mode map - reset to normal layout */
+        .container.desktop-mode #map {
+            position: relative !important;
+            height: 100% !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            z-index: auto !important;
+        }
+
+        .status {
+            padding: 0.6rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .status.compact {
+            padding: 0.4rem 0.7rem;
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status.connected {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            box-shadow: 0 2px 6px rgba(21, 87, 36, 0.1);
+        }
+
+        .status.disconnected {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            box-shadow: 0 2px 6px rgba(114, 28, 36, 0.1);
+        }
+
+        .status.testnet {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            box-shadow: 0 2px 6px rgba(133, 100, 4, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+
+        input:hover,
+        textarea:hover {
+            border-color: #ccc;
+            background: #fff;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        input[type="file"] {
+            font-size: 0.85rem;
+            padding: 0.5rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            margin-top: 0;
+        }
+
+        .button-group.two-buttons {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .cancel-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
+        }
+
+        .cancel-btn:hover {
+            background: linear-gradient(135deg, #5a6268 0%, #545b62 100%) !important;
+        }
+
+        .small-text {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        .marker-list {
+            list-style: none;
+        }
+
+        .marker-item {
+            background: white;
+            padding: 1.2rem 1.4rem;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            border-left: 5px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .marker-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .marker-item:hover::before {
+            opacity: 1;
+        }
+
+        .marker-item:hover {
+            transform: translateX(6px) translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+            border-left-color: #764ba2;
+        }
+
+        .marker-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+            text-align: left;
+            position: relative;
+        }
+
+        .marker-desc {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.7rem;
+            line-height: 1.6;
+            text-align: left;
+            position: relative;
+        }
+
+        .marker-meta {
+            font-size: 0.8rem;
+            color: #999;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        .marker-meta::before {
+            content: '📍';
+            font-size: 0.75rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.7rem;
+            background: #f0f0f0;
+            color: #666;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn:hover {
+            background: #e5e5e5;
+            color: #333;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .tab-btn.active:hover {
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .photo-preview {
+            max-width: 100%;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .coordinates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: #666;
+            font-style: italic;
+            margin-top: 0.3rem;
+        }
+
+        #qrContainer {
+            display: none;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        #qrContainer h3 {
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        #qrCode {
+            margin: 0 auto 1rem;
+            display: block;
+            transition: transform 0.2s;
+        }
+
+        #qrCode:hover {
+            transform: scale(1.05);
+        }
+
+        .auth-instructions {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .marker-actions {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 1rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid #f0f0f0;
+            position: relative;
+        }
+
+        .marker-actions button {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            white-space: nowrap;
+        }
+
+        .marker-actions .edit-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .marker-actions .edit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.35);
+        }
+
+        .marker-actions .edit-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.2);
+        }
+
+        .marker-actions .delete-btn {
+            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+            color: white;
+        }
+
+        .marker-actions .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.35);
+        }
+
+        .marker-actions .delete-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(244, 67, 54, 0.2);
+        }
+
+        .popup-actions {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 1rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .popup-actions button {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            white-space: nowrap;
+        }
+
+        .popup-actions .edit-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .popup-actions .edit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.35);
+        }
+
+        .popup-actions .edit-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.2);
+        }
+
+        .popup-actions .delete-btn {
+            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+            color: white;
+        }
+
+        .popup-actions .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.35);
+        }
+
+        .popup-actions .delete-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(244, 67, 54, 0.2);
+        }
+
+        /* Leaflet Popup Styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18) !important;
+            padding: 0 !important;
+            min-width: 220px !important;
+            max-width: 300px !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 0 !important;
+            padding: 1rem !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+            min-width: 200px !important;
+            max-width: 280px !important;
+            max-height: 400px !important;
+            overflow-y: auto !important;
+        }
+
+        /* Popup content scrollbar */
+        .leaflet-popup-content::-webkit-scrollbar {
+            width: 6px !important;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-track {
+            background: #f1f1f1 !important;
+            border-radius: 3px !important;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-radius: 3px !important;
+        }
+
+        .leaflet-popup-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+        }
+
+        .leaflet-popup-tip {
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .leaflet-popup-close-button {
+            font-size: 24px !important;
+            padding: 8px !important;
+            color: #999 !important;
+            transition: all 0.2s !important;
+            top: 8px !important;
+            right: 8px !important;
+            width: 32px !important;
+            height: 32px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .leaflet-popup-close-button:hover {
+            color: #667eea !important;
+            background: rgba(102, 126, 234, 0.1) !important;
+            border-radius: 6px !important;
+        }
+
+        .leaflet-popup-close-button:active {
+            background: rgba(102, 126, 234, 0.2) !important;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 1024px) {
+            header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .header-right {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .header-search {
+                max-width: 100%;
+                order: 1;
+            }
+
+            .friends-btn {
+                order: 2;
+            }
+
+            .user-menu {
+                order: 3;
+                align-self: flex-end;
+            }
+
+            .sidebar {
+                width: 320px;
+                min-width: 280px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 0.8rem;
+            }
+
+            .header-right {
+                position: relative;
+            }
+
+            /* Compact mobile layout */
+            .header-search {
+                width: 100%;
+            }
+
+            .header-search input {
+                font-size: 0.85rem;
+                padding: 0.6rem 1rem;
+            }
+
+            .header-search button {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.85rem;
+                min-width: 70px;
+            }
+
+            .friends-btn {
+                width: 100%;
+                padding: 0.65rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            /* Move user avatar to absolute top-right */
+            .user-menu {
+                position: absolute;
+                top: -3.5rem;
+                right: 0;
+            }
+
+            .user-avatar {
+                width: 38px;
+                height: 38px;
+                font-size: 0.9rem;
+            }
+
+            .container {
+                flex-direction: column;
+                position: relative;
+            }
+
+            .sidebar {
+                width: 100% !important;
+                max-width: 100%;
+                height: 50vh;
+                max-height: 50vh;
+                border-bottom: none;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+                border-radius: 16px 16px 0 0;
+                transition: transform 0.3s ease-out;
+                transform: translateY(100%);
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(10px);
+            }
+
+            .sidebar.show {
+                transform: translateY(0);
+            }
+
+            .sidebar-handle {
+                display: none;
+            }
+
+            .resize-handle {
+                display: none !important;
+            }
+
+            #map {
+                height: 100vh;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 0;
+            }
+
+            /* Adjust map padding to account for header */
+            body {
+                padding-top: 0;
+            }
+
+            /* Mobile mode - only apply if NOT in desktop-mode */
+            header:not(.desktop-mode) {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                transition: transform 0.3s ease-out !important;
+                transform: translateY(0) !important;
+            }
+
+            header:not(.desktop-mode).mobile-hidden {
+                transform: translateY(-100%) !important;
+            }
+
+            /* Add padding to body to account for fixed header */
+            body {
+                padding-top: 0;
+            }
+
+            /* Ensure container accounts for header */
+            .container {
+                margin-top: 0;
+                height: 100vh;
+            }
+
+            /* Hide tabs on mobile - controlled by FABs */
+            .tab-buttons {
+                display: none;
+            }
+
+            /* Mobile FAB buttons */
+            .mobile-fab-container {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                position: fixed;
+                bottom: 2rem;
+                right: 1.5rem;
+                z-index: 900;
+            }
+
+            .mobile-fab {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                font-size: 1.8rem;
+                font-weight: 300;
+                cursor: pointer;
+                box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+                transition: all 0.3s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+            }
+
+            .mobile-fab:active {
+                transform: scale(0.95);
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            }
+
+            .mobile-fab.secondary {
+                background: rgba(255, 255, 255, 0.95);
+                color: #667eea;
+                font-size: 1.5rem;
+                width: 56px;
+                height: 56px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            /* Mobile modal backdrop */
+            .mobile-modal-backdrop {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: transparent;
+                z-index: 999;
+                pointer-events: none;
+            }
+
+            .mobile-modal-backdrop.active {
+                display: block;
+            }
+
+            /* Sidebar gets higher z-index and pointer events */
+            .sidebar.show {
+                pointer-events: auto;
+            }
+
+            /* Close button for mobile sidebar */
+            .mobile-close-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: #f0f0f0;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                transition: all 0.2s;
+                z-index: 10;
+                line-height: 1;
+                color: #666;
+                padding: 0;
+            }
+
+            .mobile-close-btn:active {
+                background: #e0e0e0;
+                transform: scale(0.95);
+            }
+
+            .sidebar-section {
+                position: relative;
+                display: none; /* Hide status section on mobile */
+            }
+
+            /* Make sidebar content take full height on mobile */
+            .sidebar-content {
+                padding: 1rem 1.5rem 1.5rem 1.5rem;
+            }
+
+            /* Mobile popup optimizations */
+            .leaflet-popup-content-wrapper {
+                min-width: 240px !important;
+            }
+
+            .leaflet-popup-content {
+                padding: 1rem 1.2rem !important;
+            }
+
+            .popup-actions button {
+                padding: 0.7rem 1rem !important;
+                font-size: 0.9rem !important;
+            }
+
+            .leaflet-popup-close-button {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 26px !important;
+                top: 6px !important;
+                right: 6px !important;
+            }
+        }
+
+        /* Ensure mobile backdrop doesn't interfere on desktop */
+        @media (min-width: 769px) {
+            .mobile-modal-backdrop {
+                display: none !important;
+            }
+
+            #sidebar.show {
+                transform: none !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .subtitle {
+                display: none;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+            }
+
+            .header-search input::placeholder {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Smooth transitions */
+        * {
+            scroll-behavior: smooth;
+        }
+
+        /* Focus visible for accessibility */
+        *:focus-visible {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        /* Highlighted marker - elegant purple glow matching app theme */
+        .marker-highlighted {
+            filter: drop-shadow(0 0 16px rgba(102, 126, 234, 0.9))
+                    drop-shadow(0 0 10px rgba(118, 75, 162, 0.8))
+                    drop-shadow(0 0 6px rgba(102, 126, 234, 0.6))
+                    brightness(1.4)
+                    saturate(0.8)
+                    contrast(1.15) !important;
+            animation: markerPulseGlow 1.5s ease-in-out infinite !important;
+            transition: filter 0.15s ease-out !important;
+        }
+
+        /* Add smooth transition to all marker icons */
+        .leaflet-marker-icon {
+            transition: filter 0.15s ease-out;
+        }
+
+        /* Subtle pulsing glow animation */
+        @keyframes markerPulseGlow {
+            0%, 100% {
+                filter: drop-shadow(0 0 16px rgba(102, 126, 234, 0.9))
+                        drop-shadow(0 0 10px rgba(118, 75, 162, 0.8))
+                        drop-shadow(0 0 6px rgba(102, 126, 234, 0.6))
+                        brightness(1.4)
+                        saturate(1.5)
+                        contrast(1.15);
+            }
+            50% {
+                filter: drop-shadow(0 0 20px rgba(102, 126, 234, 1))
+                        drop-shadow(0 0 14px rgba(118, 75, 162, 0.9))
+                        drop-shadow(0 0 8px rgba(102, 126, 234, 0.7))
+                        brightness(1.5)
+                        saturate(1.6)
+                        contrast(1.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left" onclick="app.goHome()" title="Click to return to your markers">
+            <h1>GeoStories</h1>
+            <div class="subtitle">Decentralized story mapping powered by Pubky</div>
+        </div>
+        <div class="header-right">
+            <button id="friendsBtn" class="friends-btn hidden" onclick="app.showFriendsModal()">
+                <div class="friends-btn-progress" id="friendsBtnProgress"></div>
+                <span class="friends-btn-text" id="friendsBtnText">View Friends (0)</span>
+            </button>
+            <div class="header-search">
+                <input type="text" id="pubkyInputHeader" placeholder="Enter pubky to view markers..." onkeypress="if(event.key === 'Enter') app.loadUserMarkersFromHeader()">
+                <button onclick="app.loadUserMarkersFromHeader()">Load</button>
+            </div>
+            <div id="userMenu" class="user-menu hidden">
+                <button class="user-avatar" onclick="app.toggleUserMenu()" title="User menu">
+                    <span id="userInitials">U</span>
+                </button>
+                <div id="userDropdown" class="user-dropdown hidden">
+                    <div class="user-dropdown-header">
+                        <div class="user-pubky-display" id="userPubkyDisplay">Not authenticated</div>
+                    </div>
+                    <div class="user-dropdown-divider"></div>
+                    <button class="user-dropdown-item" onclick="app.refreshAllData()">
+                        <span class="dropdown-icon">🔄</span>
+                        Refresh Data
+                    </button>
+                    <button class="user-dropdown-item" onclick="app.clearCacheAndReload()">
+                        <span class="dropdown-icon">🗑️</span>
+                        Clear Cache
+                    </button>
+                    <div class="user-dropdown-divider"></div>
+                    <button class="user-dropdown-item logout-item" onclick="app.logout()">
+                        <span class="dropdown-icon">🚪</span>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar" id="sidebar">
+            <button class="mobile-close-btn" id="mobileCloseBtn" onclick="app.closeMobileSidebar()">×</button>
+            <div class="sidebar-handle" id="sidebarHandle"></div>
+            <div class="resize-handle" id="resizeHandle"></div>
+            <div class="sidebar-section">
+                <div id="status" class="status testnet">
+                    Connecting to Pubky...
+                </div>
+
+                <button id="connectBtn" onclick="app.connect()" class="hidden">Connect to Pubky</button>
+
+                <div id="qrContainer">
+                    <h3>Scan or Click to Authorize</h3>
+                    <div id="qrCode" style="display: flex; justify-content: center;"></div>
+                    <p class="auth-instructions">
+                        Scan this QR code or click it to open Pubky Ring and grant GeoStories permission to write markers.
+                    </p>
+                </div>
+
+                <div style="margin-top: 1rem;" id="authBtnContainer" class="hidden">
+                    <button id="authWithQRBtn" onclick="app.startAuthFlow()">Authorize with QR Code</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="app.switchTab('add')">Add Story</button>
+                    <button class="tab-btn" onclick="app.switchTab('view')">View Stories</button>
+                </div>
+
+                <!-- Add Marker Tab -->
+                <div id="addTab" class="tab-content active">
+                    <div class="help-text">Click on the map to set marker location</div>
+
+                    <form id="markerForm" onsubmit="app.addMarker(event)">
+                        <div class="form-group coordinates">
+                            <div>
+                                <label for="latitude">Latitude</label>
+                                <input type="number" id="latitude" step="any" required readonly>
+                            </div>
+                            <div>
+                                <label for="longitude">Longitude</label>
+                                <input type="number" id="longitude" step="any" required readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="title">Story Title</label>
+                            <input type="text" id="title" required placeholder="A memorable moment...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea id="description" required placeholder="Tell your story..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="photo">Add Photo (optional)</label>
+                            <input type="file" id="photo" accept="image/*" onchange="app.previewPhoto(event)">
+                            <img id="photoPreview" class="photo-preview" style="display: none;">
+                        </div>
+
+                        <div class="button-group" id="formButtons">
+                            <button type="submit" id="submitBtn" disabled>Add Story to Map</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- View Markers Tab -->
+                <div id="viewTab" class="tab-content">
+                    <div id="markerList" class="loading">
+                        No markers loaded. Connect and add your first story!
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main id="map"></main>
+
+        <!-- Mobile FAB Buttons -->
+        <div class="mobile-fab-container">
+            <button class="mobile-fab secondary" id="mobileFabStories" onclick="app.showMobileStories()" title="View Stories">📍</button>
+            <button class="mobile-fab" id="mobileFabAdd" onclick="app.showMobileAddStory()" title="Add Story">+</button>
+            <button class="mobile-fab" id="mobileFabSignIn" onclick="app.startAuthFlow()" title="Sign In" style="display: none;">🔐</button>
+        </div>
+
+        <!-- Mobile Modal Backdrop -->
+        <div class="mobile-modal-backdrop" id="mobileBackdrop"></div>
+    </div>
+
+    <!-- Friends Modal -->
+    <div id="friendsModal" class="modal-overlay" onclick="if(event.target === this) app.closeFriendsModal()">
+        <div class="modal">
+            <h2>Friends with GeoStories</h2>
+            <div id="friendsListContainer">
+                <div class="loading-friends">Loading friends...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Auth Modal -->
+    <div id="mobileAuthModal" class="modal-overlay" onclick="if(event.target === this) app.closeMobileAuthModal()">
+        <div class="modal" style="position: relative;">
+            <button class="modal-close" onclick="app.closeMobileAuthModal()">×</button>
+            <h2>Sign In to GeoStories</h2>
+            <div id="mobileQrContainer" style="text-align: center; padding: 1rem;">
+                <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Scan or tap the QR code to authorize with Pubky Ring</p>
+                <div id="mobileQrCode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
+                <p class="auth-instructions">
+                    Scan this QR code or click it to open Pubky Ring and grant GeoStories permission to write markers.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet Geocoder JS -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <!-- QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- App Script -->
+    <script type="module" src="/app.js"></script>
+</body>
+</html>
