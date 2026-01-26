@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Custom scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3f3f46 #18181b;
+  }
+
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #18181b;
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #52525b;
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: #71717a;
+  }
+
+  /* Scrollbar corner (when both scrollbars are present) */
+  *::-webkit-scrollbar-corner {
+    background: #18181b;
+  }
+
+  /* Resize handle hover effect */
+  .resize-handle-hover:hover {
+    background-color: rgba(199, 255, 0, 0.5);
+  }
+}
