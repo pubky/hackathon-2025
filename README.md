@@ -155,7 +155,7 @@ curl -X GET \
 | Feedback                  | Clear documentation of process and friction points                                |         15% |
 | Popular Vote              | Participants vote; self-vote = disqualification                                   |         15% |
 | AI Vote                   | Average of ChatGPT and Claude to: `Rate this project from 0 to 10 {all codebase}` |         15% |
-| Boss’ Vote                | John’s personal vote                                                              | Tie-breaker |
+| Boss’ Vote                | Organizer's personal vote                                                         | Tie-breaker |
 
 Total weighted points = 100. Tie resolved by Boss’ vote.
 
